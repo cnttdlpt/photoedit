@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {parseCube,sampleLut,processPixels,defaults} from './dist/engine.mjs';
+const identity='LUT_3D_SIZE 2\n0 0 0\n1 0 0\n0 1 0\n1 1 0\n0 0 1\n1 0 1\n0 1 1\n1 1 1';
+test('Identity LUT preserves interpolated RGB and clamps input',()=>{const l=parseCube(identity);for(const rgb of [[12,43,178],[255,255,255],[0,0,0],[129,100,42]])sampleLut(l,...rgb).forEach((v,i)=>assert.ok(Math.abs(v-rgb[i])<.0001));assert.deepEqual(sampleLut(l,-100,300,0),[0,255,0])});
+test('Reject broken and unsupported LUTs',()=>{assert.throws(()=>parseCube(identity+'\n0 0 0'));assert.throws(()=>parseCube('LUT_1D_SIZE 2'));assert.throws(()=>parseCube('DOMAIN_MAX 0 1 1\n'+identity));assert.throws(()=>parseCube(identity.replace('1 1 1','NaN 1 1')))});
+test('Neutral processing is byte-identical including alpha',()=>{const p=new Uint8ClampedArray([12,43,178,128,255,21,0,255]);assert.deepEqual(processPixels(p,2,1,defaults),p)});
+test('Exposure and film change pixels without changing alpha',()=>{const p=new Uint8ClampedArray([64,70,82,128]);const r=processPixels(p,1,1,{...defaults,exposure:1});assert.equal(r[0],128);assert.equal(r[3],128);assert.notDeepEqual(processPixels(p,1,1,{...defaults,film:'Classic Chrome'}),p)});
+test('Zero LUT intensity preserves original pixels',()=>{const p=new Uint8ClampedArray([45,178,66,255]);assert.deepEqual(processPixels(p,1,1,{...defaults,lutAmount:0},parseCube(identity)),p)});

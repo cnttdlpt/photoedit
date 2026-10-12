@@ -1,0 +1,9 @@
+.gradle/
+local.properties
+**/build/
+.idea/
+tools/cache/
+tools/categories.json
+tools/urls.json
+*.jks
+*.keystore

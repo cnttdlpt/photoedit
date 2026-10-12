@@ -1,0 +1,181 @@
+{
+  "articleCount": 364,
+  "recipeCount": 391,
+  "reviewRequired": [
+    {
+      "id": "92de4d75c504085f-3",
+      "name": "Monochrome (Monochrome+Y, Monochrome+R, Monochrome+G) · biến thể 3",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2018/09/30/my-fujifilm-xf10-film-simulation-recipes/"
+    },
+    {
+      "id": "69a876c1c4313eaf-3",
+      "name": "Monochrome (+Y, +R, +G) · biến thể 3",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2020/01/21/first-fujifilm-x-t1-film-simulation-recipes/"
+    },
+    {
+      "id": "25e8f14ff4d57316-1",
+      "name": "Faded Monochrome",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2020/03/09/fujifilm-x-t1-x-trans-ii-faded-monochrome-film-simulation-recipe/"
+    },
+    {
+      "id": "fe8346a923e808e1-1",
+      "name": "Sepia · biến thể 1",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2020/07/01/sepia-the-forgotten-film-simulation/"
+    },
+    {
+      "id": "fe8346a923e808e1-2",
+      "name": "Sepia · biến thể 2",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2020/07/01/sepia-the-forgotten-film-simulation/"
+    },
+    {
+      "id": "f0f7ad7085c51cbc-1",
+      "name": "Acros",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2017/08/27/my-fujifilm-x100f-acros-film-simulation-recipe/"
+    },
+    {
+      "id": "5bb1499889089bf5-1",
+      "name": "Acros Push Process",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2017/11/11/my-fujifilm-x100f-acros-push-process-film-simulation-recipe/"
+    },
+    {
+      "id": "693c97db3a2689a7-1",
+      "name": "Agfa Scala",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2018/08/12/my-fujifilm-x100f-agfa-scala-film-simulation-recipe/"
+    },
+    {
+      "id": "b1b9d7f4aac8534e-1",
+      "name": "Ilford HP5 Plus",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2018/12/01/my-fujifilm-x100f-ilford-hp5-plus-film-simulation-recipe/"
+    },
+    {
+      "id": "799e1936f9c8d209-1",
+      "name": "Kodak Tri-X Push Process",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2018/08/25/not-my-fujifilm-x-pro2-tri-x-push-process-film-simulation-recipe/"
+    },
+    {
+      "id": "f3f43b8192a10835-1",
+      "name": "Agfa APX 400",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2019/04/18/my-fujifilm-x-t30-acros-film-simulation-recipe-agfa-apx-400/"
+    },
+    {
+      "id": "f10a7b9ffdbc5536-1",
+      "name": "Ilford HP5 Push Process",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2019/05/29/my-fujifilm-x-t30-ilford-hp5-plus-400-push-process-film-simulation-recipe/"
+    },
+    {
+      "id": "66d0227c51ad1e9a-1",
+      "name": "Ilford Delta Push Process",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2020/04/24/not-my-fujifilm-x-t30-ilford-delta-push-process-film-simulation-recipe/"
+    },
+    {
+      "id": "2adeecf3308e6934-1",
+      "name": "Dramatic Monochrome",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2020/02/11/my-fujifilm-x-t30-dramatic-monochrome-film-simulation-recipe/"
+    },
+    {
+      "id": "5ade09a236c3ddf4-1",
+      "name": "Faded Monochrome",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2019/06/21/my-fujifilm-x-t30-faded-monochrome-film-simulation-recipe/"
+    },
+    {
+      "id": "fbda318530c5bd3a-1",
+      "name": "Acros · biến thể 1",
+      "missing": [
+        "White Balance"
+      ],
+      "sourceUrl": "https://fujixweekly.com/2020/02/24/my-fujifilm-x-t30-split-toned-bw-film-simulation-recipe/"
+    }
+  ],
+  "unresolved": [
+    {
+      "id": "79d7ccd3aeecc9e3",
+      "url": "https://fujixweekly.com/2024/07/16/fujifilm-x-t4-es-extended-spectrum-infrared-camera/",
+      "name": "Fujifilm X-T4 ES",
+      "sensors": [
+        "full-spectrum-recipes"
+      ],
+      "reason": "no_structured_recipe_found"
+    },
+    {
+      "id": "40f99fcec234285a",
+      "url": "https://fujixweekly.com/2024/11/14/photographing-in-aerochrome-when-will-more-infrared-recipes-get-published/",
+      "name": "Photographing in Aerochrome",
+      "sensors": [
+        "full-spectrum-recipes"
+      ],
+      "reason": "no_structured_recipe_found"
+    },
+    {
+      "id": "d4ffeafd208ae6cc",
+      "url": "https://fujixweekly.com/2024/11/22/philadelphia-in-aerochrome-infrared-photography-in-the-city-of-brotherly-love/",
+      "name": "Philadelphia in Aerochrome — Infrared Photography in the City of Brotherly Love",
+      "sensors": [
+        "full-spectrum-recipes"
+      ],
+      "reason": "no_structured_recipe_found"
+    },
+    {
+      "id": "2b1f8f04f9307051",
+      "url": "https://fujixweekly.com/2026/05/02/vision-daylight-a-fxw-app-patron-early-access-video-recipe-for-fujifilm-cameras/",
+      "name": "",
+      "sensors": [
+        "video-recipes"
+      ],
+      "reason": "no_structured_recipe_found"
+    },
+    {
+      "id": "d50523b25f5cd1b5",
+      "url": "https://fujixweekly.com/2026/05/02/retro-cinematic-a-fxw-app-patron-early-access-video-recipe-for-fujifilm-cameras/",
+      "name": "",
+      "sensors": [
+        "video-recipes"
+      ],
+      "reason": "no_structured_recipe_found"
+    }
+  ]
+}

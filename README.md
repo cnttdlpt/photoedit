@@ -1,5 +1,9 @@
 # IRO — Phòng màu ảnh
 
+**Bản native:** [iOS / iPhone / iPad](ios/README.md) · [Android](android/README.md). Mở `ios/IRO.xcodeproj` trong Xcode để chạy bản iOS chuyển từ cốt lõi Android.
+
+## Bản web ban đầu
+
 App chỉnh màu ảnh chạy trong trình duyệt; ảnh không gửi lên máy chủ. Không cần cài thư viện.
 
 Chạy `npm start`, mở http://127.0.0.1:4173. Kiểm tra bộ xử lý bằng `npm test`.

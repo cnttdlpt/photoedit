@@ -1,17 +1,18 @@
 <resources>
-    <style name="AppTheme" parent="android:style/Theme.Material.NoActionBar">
-        <item name="android:fontFamily">sans</item>
-        <item name="android:colorAccent">#D7E9AE</item>
-        <item name="android:windowBackground">#121614</item>
-        <item name="android:colorBackground">#1D2420</item>
-        <item name="android:textColorPrimary">#F2F0E7</item>
-        <item name="android:textColorSecondary">#A2AFA4</item>
-        <item name="android:colorControlNormal">#A2AFA4</item>
-        <item name="android:colorControlActivated">#D7E9AE</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:statusBarColor">#121614</item>
-        <item name="android:navigationBarColor">#121614</item>
+    <!-- Giao diện sáng Liquid Glass & Warm Amber đồng bộ với ios/IRO/Views/Studio.swift -->
+    <style name="AppTheme" parent="android:style/Theme.DeviceDefault.Light.NoActionBar">
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:colorAccent">#E07A3B</item>
+        <item name="android:windowBackground">#F9F9FB</item>
+        <item name="android:colorBackground">#F6F7F9</item>
+        <item name="android:textColorPrimary">#16181C</item>
+        <item name="android:textColorSecondary">#8A8E98</item>
+        <item name="android:colorControlNormal">#8A8E98</item>
+        <item name="android:colorControlActivated">#E07A3B</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#F9F9FB</item>
+        <item name="android:navigationBarColor">#F9F9FB</item>
         <item name="android:windowActionModeOverlay">true</item>
-        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 </resources>

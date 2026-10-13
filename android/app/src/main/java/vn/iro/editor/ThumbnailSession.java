@@ -100,13 +100,11 @@ final class ThumbnailSession implements AutoCloseable {
             }
             return;
         }
-        if (file == null && direct == null) {
-            target.show(original, "Chưa có LUT · ảnh gốc");
-            return;
-        }
+        final boolean hasLut = (file != null || direct != null);
+        final String successMsg = hasLut ? "Đã gắn LUT" : "Đã áp thông số recipe";
         Bitmap cached = thumbnails.get(key);
         if (cached != null) {
-            target.show(cached, "Đã gắn LUT");
+            target.show(cached, successMsg);
             return;
         }
         if (failed.contains(key)) {
@@ -114,7 +112,7 @@ final class ThumbnailSession implements AutoCloseable {
             return;
         }
 
-        // Hiển thị tạm ảnh gốc trong lúc luồng nền đang nội suy LUT
+        // Hiển thị tạm ảnh gốc trong lúc luồng nền đang xử lý thông số / nội suy LUT
         target.show(original, "Đang tạo ảnh màu…");
         List<Target> existing = waiting.get(key);
         if (existing != null) {
@@ -175,7 +173,7 @@ final class ThumbnailSession implements AutoCloseable {
                     for (Target listener : listeners) {
                         listener.show(
                                 rendered == null ? original : rendered,
-                                rendered == null ? "LUT lỗi · ảnh gốc" : "Đã gắn LUT");
+                                rendered == null ? "LUT lỗi · ảnh gốc" : successMsg);
                     }
                 }
             });

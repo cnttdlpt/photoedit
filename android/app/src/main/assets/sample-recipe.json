@@ -3,7 +3,9 @@
   "name": "Classic Chrome · ảnh tham khảo của bạn",
   "film": "Classic Chrome",
   "sourceUrl": "",
-  "sensors": ["USER REFERENCE"],
+  "sensors": [
+    "USER REFERENCE"
+  ],
   "rawSettings": {
     "Dynamic Range": "DR200",
     "Grain Effect": "Weak",
@@ -15,5 +17,13 @@
     "Noise Reduction": "-2",
     "ISO": "up to ISO 12800",
     "Exposure Compensation": "+2/3"
-  }
+  },
+  "sampleAsset": "fujixweekly/81d5fe70de5f1d99-1.jpg",
+  "sampleImageUrl": "https://i0.wp.com/live.staticflickr.com/65535/50282280033_200a237a8f_c.jpg",
+  "sampleImages": [
+    "https://i0.wp.com/live.staticflickr.com/65535/50282280033_200a237a8f_c.jpg",
+    "https://i0.wp.com/live.staticflickr.com/65535/50283154812_52e3a999cf_c.jpg",
+    "https://i0.wp.com/live.staticflickr.com/65535/50283030676_dd7151aca1_c.jpg",
+    "https://i0.wp.com/live.staticflickr.com/65535/50282344088_e09bed212c_c.jpg"
+  ]
 }

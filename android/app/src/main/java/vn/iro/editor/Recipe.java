@@ -31,6 +31,12 @@ public final class Recipe {
     public String name;
     public String film;
     public String sourceUrl;
+    /** Đường dẫn ảnh mẫu đóng gói sẵn trong {@code assets/fujixweekly/} để hiển thị tức thì khi offline. */
+    public String sampleAsset;
+    /** Đường dẫn ảnh mẫu chính trực tiếp từ bài viết trên {@code fujixweekly.com}. */
+    public String sampleImageUrl;
+    /** Danh sách các ảnh mẫu chụp bằng công thức này trên {@code fujixweekly.com}. */
+    public final List<String> sampleImages = new ArrayList<>();
     /** Chuỗi cảm biến ghép bằng {@code " / "} để hiển thị và lọc nhanh. */
     public String sensors;
     public boolean reviewRequired;
@@ -50,7 +56,22 @@ public final class Recipe {
         this.name = json.optString("name", "Recipe tùy chỉnh");
         this.film = json.optString("film", "Original");
         this.sourceUrl = json.optString("sourceUrl", "");
+        this.sampleAsset = json.optString("sampleAsset", "");
+        this.sampleImageUrl = json.optString("sampleImageUrl", "");
         this.reviewRequired = json.optBoolean("reviewRequired", false);
+
+        JSONArray sampleArray = json.optJSONArray("sampleImages");
+        if (sampleArray != null) {
+            for (int i = 0; i < sampleArray.length(); i++) {
+                String u = sampleArray.optString(i, "");
+                if (!u.isEmpty()) {
+                    this.sampleImages.add(u);
+                }
+            }
+        }
+        if (this.sampleImages.isEmpty() && !this.sampleImageUrl.isEmpty()) {
+            this.sampleImages.add(this.sampleImageUrl);
+        }
 
         // Đọc danh sách cảm biến (sensors)
         JSONArray sensorArray = json.optJSONArray("sensors");
@@ -109,6 +130,15 @@ public final class Recipe {
         json.put("name", name);
         json.put("film", film);
         json.put("sourceUrl", sourceUrl);
+        if (sampleAsset != null && !sampleAsset.isEmpty()) {
+            json.put("sampleAsset", sampleAsset);
+        }
+        if (sampleImageUrl != null && !sampleImageUrl.isEmpty()) {
+            json.put("sampleImageUrl", sampleImageUrl);
+        }
+        if (!sampleImages.isEmpty()) {
+            json.put("sampleImages", new JSONArray(sampleImages));
+        }
         json.put("sensors", new JSONArray(sensors.isEmpty() ? new String[0] : sensors.split(" / ")));
         json.put("rawSettings", new JSONObject(raw));
         json.put("reviewRequired", reviewRequired);

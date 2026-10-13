@@ -292,7 +292,10 @@ public class MainActivity extends Activity {
     // Thành phần bên trong tab Màu phim (Filters Section)
     private TextView filterActiveRecipeTitle;
     private TextView filterLutStatusBadge;
+    private LinearLayout filterPreviewModeRow;
     private LinearLayout filterCarouselContainer;
+    private LinearLayout landingFilmShowcaseRow;
+    private boolean showFujiSampleThumbnails = true;
 
     // Thành phần bên trong tab Khung ảnh (Frames Section)
     private TextView frameActiveStyleTitle;
@@ -673,47 +676,95 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.WRAP_CONTENT);
         showcaseLp.topMargin = dp(10);
 
-        TextView chipHeader = text("Giả lập màu phim (Film Simulation)", 11.5f, StudioStyle.MUTED);
+        TextView chipHeader = text("Ảnh mô phỏng bộ lọc (Fuji X Weekly)", 11.5f, StudioStyle.MUTED);
         chipHeader.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         chipHeader.setPadding(0, 0, 0, dp(8));
         filmShowcase.addView(chipHeader);
 
         HorizontalScrollView filmScroll = new HorizontalScrollView(this);
         filmScroll.setHorizontalScrollBarEnabled(false);
-        LinearLayout filmRow = row();
-        String[] sampleFilms = {
-                "Classic Chrome", "Velvia", "Classic Negative", "Astia",
-                "Nostalgic Neg.", "Acros+G", "Eterna", "Reala Ace"
-        };
-        for (int i = 0; i < sampleFilms.length; i++) {
-            final String filmName = sampleFilms[i];
-            LinearLayout pill = row();
-            pill.setPadding(dp(12), dp(6), dp(12), dp(6));
-            pill.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(14)));
-
-            TextView label = text(filmName, 11.5f, StudioStyle.INK);
-            label.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-            pill.addView(label);
-
-            pill.setOnClickListener(v -> {
-                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
-                loadStudioSamplePhoto(filmName);
-            });
-            MotionStudio.attachExpressiveTouch(pill, 0.95f);
-
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT);
-            if (i > 0) {
-                lp.leftMargin = dp(6);
-            }
-            filmRow.addView(pill, lp);
-        }
-        filmScroll.addView(filmRow);
+        landingFilmShowcaseRow = row();
+        filmScroll.addView(landingFilmShowcaseRow);
         filmShowcase.addView(filmScroll);
+        syncLandingFilmShowcase();
         col.addView(filmShowcase, showcaseLp);
 
         return col;
+    }
+
+    /**
+     * Hiển thị dải thẻ ảnh mẫu mô phỏng thực tế từ Fuji X Weekly cho từng dòng giả lập màu phim trên màn hình chờ.
+     */
+    private void syncLandingFilmShowcase() {
+        if (landingFilmShowcaseRow == null) {
+            return;
+        }
+        landingFilmShowcaseRow.removeAllViews();
+        String[][] sampleFilms = {
+                {"Classic Chrome", "fujixweekly/81d5fe70de5f1d99-1.jpg"},
+                {"Velvia", "fujixweekly/92de4d75c504085f-2.jpg"},
+                {"Classic Negative", "fujixweekly/41e9d8d13b47cb69-1.jpg"},
+                {"Provia", "fujixweekly/e7f223f80133cdc6-1.jpg"},
+                {"Astia", "fujixweekly/f0f7ad7085c51cbc-1.jpg"},
+                {"Nostalgic Neg.", "fujixweekly/719ae3813306e68f-1.jpg"},
+                {"Eterna", "fujixweekly/60e77bc572e5df19-1.jpg"},
+                {"Reala Ace", "fujixweekly/6c40768bfbe17205-1.jpg"},
+                {"Acros", "fujixweekly/9bb5686bd857b678-1.jpg"}
+        };
+        for (int i = 0; i < sampleFilms.length; i++) {
+            final String filmName = sampleFilms[i][0];
+            final String defaultAsset = sampleFilms[i][1];
+
+            Recipe matchedRecipe = null;
+            for (Recipe r : recipes) {
+                if (r.film != null && r.film.toLowerCase(Locale.ROOT).contains(filmName.toLowerCase(Locale.ROOT))) {
+                    matchedRecipe = r;
+                    break;
+                }
+            }
+            final Recipe targetRecipe = matchedRecipe;
+
+            LinearLayout card = column();
+            card.setGravity(Gravity.CENTER_HORIZONTAL);
+            card.setPadding(dp(6), dp(6), dp(6), dp(8));
+            card.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(14)));
+
+            ImageView thumb = new ImageView(this);
+            thumb.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            thumb.setBackground(StudioStyle.shape(StudioStyle.SURFACE_CONTAINER, 0, dp(10)));
+            thumb.setClipToOutline(true);
+            card.addView(thumb, new LinearLayout.LayoutParams(dp(96), dp(64)));
+
+            if (targetRecipe != null) {
+                FujiSampleLoader.bindSample(this, thumb, null, targetRecipe);
+            } else {
+                Bitmap b = FujiSampleLoader.decodeAssetThumb(this, defaultAsset, 360);
+                if (b != null) {
+                    thumb.setImageBitmap(b);
+                }
+            }
+
+            TextView label = text(filmName, 11f, StudioStyle.INK);
+            label.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+            label.setSingleLine(true);
+            label.setEllipsize(TextUtils.TruncateAt.END);
+            label.setPadding(0, dp(5), 0, 0);
+            card.addView(label);
+
+            card.setOnClickListener(v -> {
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                loadStudioSamplePhoto(filmName);
+            });
+            MotionStudio.attachExpressiveTouch(card, 0.95f);
+
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    dp(108),
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            if (i > 0) {
+                lp.leftMargin = dp(8);
+            }
+            landingFilmShowcaseRow.addView(card, lp);
+        }
     }
 
     private View buildAlbumCard(String title, String subtitle, String iconName, int accentColor, Runnable action) {
@@ -1315,10 +1366,10 @@ public class MainActivity extends Activity {
         LinearLayout section = column();
 
         LinearLayout topRow = row();
-        topRow.setPadding(dp(2), 0, dp(2), dp(8));
+        topRow.setPadding(dp(2), 0, dp(2), dp(6));
 
         ImageView sparkIcon = new ImageView(this);
-        sparkIcon.setImageDrawable(new StudioStyle.Icon("sparkles", StudioStyle.WARM_AMBER, dp(15)));
+        sparkIcon.setImageDrawable(new StudioStyle.Icon("sparkles", StudioStyle.INK, dp(15)));
         topRow.addView(sparkIcon, new LinearLayout.LayoutParams(dp(15), dp(15)));
 
         filterActiveRecipeTitle = text("Nguyên bản", 13f, StudioStyle.INK);
@@ -1339,14 +1390,19 @@ public class MainActivity extends Activity {
         lutBadgeParams.rightMargin = dp(6);
         topRow.addView(filterLutStatusBadge, lutBadgeParams);
 
-        TextView openLibraryPill = text("+ Kho 392 màu", 11.5f, StudioStyle.WARM_AMBER);
+        TextView openLibraryPill = text("+ Kho 392 màu", 11.5f, StudioStyle.INK);
         openLibraryPill.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         openLibraryPill.setPadding(dp(10), dp(4), dp(10), dp(4));
-        openLibraryPill.setBackground(StudioStyle.shape(StudioStyle.WARM_AMBER_LIGHT, 0x44e07a3b, dp(14)));
+        openLibraryPill.setBackground(StudioStyle.shape(StudioStyle.WARM_AMBER_LIGHT, StudioStyle.LINE, dp(14)));
         openLibraryPill.setOnClickListener(v -> showLibrary());
         topRow.addView(openLibraryPill);
 
         section.addView(topRow);
+
+        // Hàng chuyển đổi chế độ xem thu nhỏ: Ảnh mẫu FujiXWeekly vs Áp lên ảnh đang mở
+        filterPreviewModeRow = row();
+        filterPreviewModeRow.setPadding(dp(2), 0, dp(2), dp(6));
+        section.addView(filterPreviewModeRow);
 
         if (wideLayoutActive) {
             ScrollView vScroll = new ScrollView(this);
@@ -1851,10 +1907,10 @@ public class MainActivity extends Activity {
         String lutBadgeText;
         if (activeLut != null) {
             lutBadgeText = "LUT ✓";
-            filterLutStatusBadge.setTextColor(StudioStyle.WARM_AMBER);
+            filterLutStatusBadge.setTextColor(StudioStyle.INK);
         } else if (!"Original".equals(settings.film)) {
             lutBadgeText = "Thiếu LUT ›";
-            filterLutStatusBadge.setTextColor(StudioStyle.WARM_AMBER);
+            filterLutStatusBadge.setTextColor(StudioStyle.INK);
         } else {
             lutBadgeText = "＋ LUT ›";
             filterLutStatusBadge.setTextColor(StudioStyle.MUTED);
@@ -1864,6 +1920,59 @@ public class MainActivity extends Activity {
         if (canvasRecipeChip != null) {
             String filmInfo = "Original".equals(settings.film) ? "" : (" · " + settings.film);
             canvasRecipeChip.setText("✦ " + activeName + filmInfo + (activeLut != null ? " · LUT ✓" : ""));
+        }
+
+        if (filterPreviewModeRow != null) {
+            filterPreviewModeRow.removeAllViews();
+
+            TextView fujiSampleBtn = text("Ảnh mẫu FujiXWeekly", 11f, showFujiSampleThumbnails ? Color.WHITE : StudioStyle.INK);
+            fujiSampleBtn.setTypeface(Typeface.create("sans-serif-medium", showFujiSampleThumbnails ? Typeface.BOLD : Typeface.NORMAL));
+            fujiSampleBtn.setPadding(dp(10), dp(4), dp(10), dp(4));
+            fujiSampleBtn.setBackground(StudioStyle.surface(
+                    showFujiSampleThumbnails ? StudioStyle.INK : StudioStyle.SURFACE,
+                    showFujiSampleThumbnails ? 0 : StudioStyle.LINE,
+                    dp(999)));
+            fujiSampleBtn.setOnClickListener(v -> {
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                if (!showFujiSampleThumbnails) {
+                    showFujiSampleThumbnails = true;
+                    syncFiltersSection();
+                }
+            });
+            filterPreviewModeRow.addView(fujiSampleBtn);
+
+            TextView userPhotoBtn = text("Ảnh đang mở", 11f, !showFujiSampleThumbnails ? Color.WHITE : StudioStyle.INK);
+            userPhotoBtn.setTypeface(Typeface.create("sans-serif-medium", !showFujiSampleThumbnails ? Typeface.BOLD : Typeface.NORMAL));
+            userPhotoBtn.setPadding(dp(10), dp(4), dp(10), dp(4));
+            userPhotoBtn.setBackground(StudioStyle.surface(
+                    !showFujiSampleThumbnails ? StudioStyle.INK : StudioStyle.SURFACE,
+                    !showFujiSampleThumbnails ? 0 : StudioStyle.LINE,
+                    dp(999)));
+            LinearLayout.LayoutParams userLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            userLp.leftMargin = dp(6);
+            userPhotoBtn.setLayoutParams(userLp);
+            userPhotoBtn.setOnClickListener(v -> {
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                if (showFujiSampleThumbnails) {
+                    showFujiSampleThumbnails = false;
+                    syncFiltersSection();
+                }
+            });
+            filterPreviewModeRow.addView(userPhotoBtn);
+
+            View spacer = new View(this);
+            filterPreviewModeRow.addView(spacer, new LinearLayout.LayoutParams(0, 1, 1f));
+
+            if (currentRecipe != null) {
+                TextView detailBtn = text("Ảnh mẫu ›", 10.5f, StudioStyle.INK);
+                detailBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+                detailBtn.setPadding(dp(9), dp(4), dp(9), dp(4));
+                detailBtn.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(999)));
+                detailBtn.setOnClickListener(v -> showRecipe(currentRecipe));
+                filterPreviewModeRow.addView(detailBtn);
+            }
         }
 
         filterCarouselContainer.removeAllViews();
@@ -1908,7 +2017,7 @@ public class MainActivity extends Activity {
                 final Recipe r = recipes.get(i);
                 View card = buildFilterGridCard(r);
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                        dp(68),
+                        dp(76),
                         LinearLayout.LayoutParams.WRAP_CONTENT);
                 lp.leftMargin = dp(10);
                 filterCarouselContainer.addView(card, lp);
@@ -1927,7 +2036,7 @@ public class MainActivity extends Activity {
         card.setPadding(dp(6), dp(6), dp(6), dp(6));
         card.setBackground(StudioStyle.surface(
                 selected ? StudioStyle.WARM_AMBER_LIGHT : Color.WHITE,
-                selected ? StudioStyle.WARM_AMBER : StudioStyle.LINE,
+                selected ? StudioStyle.INK : StudioStyle.LINE,
                 dp(16)));
 
         ImageView thumb = new ImageView(this);
@@ -1935,33 +2044,42 @@ public class MainActivity extends Activity {
         thumb.setBackground(StudioStyle.shape(StudioStyle.SURFACE_CONTAINER, 0, dp(11)));
         thumb.setClipToOutline(true);
         thumb.setImageDrawable(new StudioStyle.Icon(isOriginal ? "compare" : "photo", StudioStyle.MUTED, dp(18)));
-        card.addView(thumb, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(56)));
+        card.addView(thumb, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(60)));
 
-        if (inlineFilterSession != null) {
-            if (isOriginal) {
-                if (inlineFilterSession.original != null) {
-                    thumb.setImageBitmap(inlineFilterSession.original);
-                }
-            } else {
-                Settings s = r.adjustments(new ArrayList<>());
-                String lutFile = prefs.getString("lut." + s.film, null);
-                inlineFilterSession.bind(
-                        thumb,
-                        null,
-                        "inline-" + r.id,
-                        s,
-                        lutFile == null ? null : new File(getFilesDir(), lutFile),
-                        null);
+        if (isOriginal) {
+            if (inlineFilterSession != null && inlineFilterSession.original != null) {
+                thumb.setImageBitmap(inlineFilterSession.original);
             }
+        } else if (showFujiSampleThumbnails || inlineFilterSession == null) {
+            // Hiển thị ảnh mô phỏng thực tế của bộ lọc từ Fuji X Weekly
+            FujiSampleLoader.bindSample(this, thumb, null, r);
+        } else {
+            Settings s = r.adjustments(new ArrayList<>());
+            String lutFile = prefs.getString("lut." + s.film, null);
+            inlineFilterSession.bind(
+                    thumb,
+                    null,
+                    "inline-" + r.id,
+                    s,
+                    lutFile == null ? null : new File(getFilesDir(), lutFile),
+                    null);
         }
 
-        TextView name = text(isOriginal ? "Gốc" : r.name, 10.5f, selected ? StudioStyle.WARM_AMBER : StudioStyle.INK);
+        TextView name = text(isOriginal ? "Gốc" : r.name, 10.5f, StudioStyle.INK);
         name.setTypeface(Typeface.create("sans-serif-medium", selected ? Typeface.BOLD : Typeface.NORMAL));
         name.setSingleLine(true);
         name.setEllipsize(TextUtils.TruncateAt.END);
         name.setGravity(Gravity.CENTER);
         name.setPadding(0, dp(4), 0, 0);
         card.addView(name, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        TextView filmSub = text(isOriginal ? "Ảnh gốc" : r.film, 9f, StudioStyle.MUTED);
+        filmSub.setSingleLine(true);
+        filmSub.setEllipsize(TextUtils.TruncateAt.END);
+        filmSub.setGravity(Gravity.CENTER);
+        card.addView(filmSub, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
 
@@ -2552,93 +2670,42 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Khởi tạo bức ảnh mẫu Studio độ phân giải cao ngay trong bộ nhớ kèm siêu dữ liệu EXIF Fujifilm X-T5,
-     * giúp người dùng thử nghiệm tức thì trên Máy tính bảng / Máy ảo chỉ với 1 chạm.
+     * Mở trực tiếp bức ảnh mẫu thực tế từ Fuji X Weekly của một {@link Recipe} cụ thể vào bàn dựng ảnh.
      */
-    private void loadStudioSamplePhoto(final String optionalFilmKeyword) {
+    private void loadRecipeSamplePhoto(final Recipe targetRecipe) {
+        if (targetRecipe == null) {
+            loadStudioSamplePhoto(null);
+            return;
+        }
         if (statusLabel != null) {
-            statusLabel.setText("Đang dựng ảnh mẫu Studio…");
+            statusLabel.setText("Đang mở ảnh mẫu Fuji X Weekly: " + targetRecipe.name + "…");
         }
         executor.execute(() -> {
             try {
-                int w = 1280;
-                int h = 860;
-                Bitmap sample = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-                android.graphics.Canvas c = new android.graphics.Canvas(sample);
-                android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-
-                // 1. Bầu trời hoàng hôn chuyển sắc (Golden Hour Sky Gradient)
-                p.setShader(new android.graphics.LinearGradient(
-                        0, 0, w, h * 0.72f,
-                        new int[]{0xff1e3c64, 0xff4a6fa5, 0xffe07a3b, 0xfff7c582},
-                        new float[]{0f, 0.38f, 0.76f, 1f},
-                        android.graphics.Shader.TileMode.CLAMP));
-                c.drawRect(0, 0, w, h, p);
-
-                // 2. Mặt trời rực sáng (Radial Sun Glow)
-                p.setShader(new android.graphics.RadialGradient(
-                        w * 0.72f, h * 0.30f, w * 0.22f,
-                        new int[]{0xfffff7e0, 0xddffbe6b, 0x00ffbe6b},
-                        new float[]{0f, 0.45f, 1f},
-                        android.graphics.Shader.TileMode.CLAMP));
-                c.drawCircle(w * 0.72f, h * 0.30f, w * 0.22f, p);
-                p.setShader(null);
-
-                // 3. Dãy núi xa và tiền cảnh có chiều sâu vùng tối (Shadow & Midtone Test Zones)
-                android.graphics.Path farMtn = new android.graphics.Path();
-                farMtn.moveTo(0, h);
-                farMtn.lineTo(0, h * 0.58f);
-                farMtn.lineTo(w * 0.26f, h * 0.42f);
-                farMtn.lineTo(w * 0.52f, h * 0.60f);
-                farMtn.lineTo(w * 0.80f, h * 0.39f);
-                farMtn.lineTo(w, h * 0.52f);
-                farMtn.lineTo(w, h);
-                farMtn.close();
-                p.setColor(0xff2c3a4f);
-                c.drawPath(farMtn, p);
-
-                android.graphics.Path nearHills = new android.graphics.Path();
-                nearHills.moveTo(0, h);
-                nearHills.lineTo(0, h * 0.70f);
-                nearHills.lineTo(w * 0.35f, h * 0.62f);
-                nearHills.lineTo(w * 0.68f, h * 0.74f);
-                nearHills.lineTo(w, h * 0.64f);
-                nearHills.lineTo(w, h);
-                nearHills.close();
-                p.setColor(0xff1b2533);
-                c.drawPath(nearHills, p);
-
-                // 4. Bảng 6 ô màu chuẩn ở góc dưới trái (Skin Tone, Foliage, Sky Blue, Crimson, Gold, Neutral Grey)
-                int[] chartColors = {0xffe2a887, 0xff4c8557, 0xff3b82b6, 0xffc84b31, 0xffe8b84b, 0xff808080};
-                float boxW = 46f;
-                float boxH = 34f;
-                float startX = 42f;
-                float startY = h - 72f;
-                for (int i = 0; i < chartColors.length; i++) {
-                    float left = startX + i * (boxW + 10f);
-                    p.setColor(chartColors[i]);
-                    c.drawRoundRect(left, startY, left + boxW, startY + boxH, 8f, 8f, p);
+                Bitmap loaded = FujiSampleLoader.loadSampleBitmapBlocking(this, targetRecipe, 1280);
+                if (loaded == null) {
+                    loadStudioSamplePhoto(targetRecipe.film);
+                    return;
                 }
-
-                // Lưu vào vùng riêng của app để tính năng Xuất ảnh 1x/2x đọc được từ Uri
+                final Bitmap sample = loaded.copy(Bitmap.Config.ARGB_8888, false);
                 File folder = new File(getFilesDir(), "imported-photos");
                 if (!folder.isDirectory()) {
                     folder.mkdirs();
                 }
-                File sampleFile = new File(folder, "photo-studio-sample.img");
+                File sampleFile = new File(folder, "photo-fuji-sample.img");
                 try (FileOutputStream out = new FileOutputStream(sampleFile)) {
-                    sample.compress(Bitmap.CompressFormat.JPEG, 98, out);
+                    sample.compress(Bitmap.CompressFormat.JPEG, 96, out);
                 }
                 final Uri sampleUri = Uri.fromFile(sampleFile);
 
                 final PhotoInfo sampleExif = new PhotoInfo();
-                sampleExif.camera = "FUJIFILM X-T5";
-                sampleExif.focal = "35 mm (eq.)";
-                sampleExif.aperture = "f/1.4";
+                sampleExif.camera = "FUJIFILM (" + (targetRecipe.sensors.isEmpty() ? "X-Trans" : targetRecipe.sensors) + ")";
+                sampleExif.focal = "35 mm";
+                sampleExif.aperture = "f/2.0";
                 sampleExif.shutter = "1/500 s";
-                sampleExif.iso = "ISO 160";
-                sampleExif.date = "2026.10.12 15:00";
-                sampleExif.author = "IRO Studio";
+                sampleExif.iso = targetRecipe.raw.getOrDefault("ISO", "ISO 400");
+                sampleExif.date = "Fuji X Weekly";
+                sampleExif.author = targetRecipe.film;
 
                 runOnUiThread(() -> {
                     if (dead) {
@@ -2661,18 +2728,118 @@ public class MainActivity extends Activity {
                     }
                     inlineFilterSession = thumbnailSession();
 
-                    // Nếu người dùng bấm vào một chip Film Simulation cụ thể thì áp dụng công thức đó luôn
-                    if (optionalFilmKeyword != null && !recipes.isEmpty()) {
-                        for (Recipe r : recipes) {
-                            if ((r.film + " " + r.name).toLowerCase(Locale.ROOT)
-                                    .contains(optionalFilmKeyword.toLowerCase(Locale.ROOT))) {
-                                recipeNotes.clear();
-                                settings = r.adjustments(recipeNotes);
-                                currentRecipe = r;
-                                selectedTab = EditorToolTab.FILTERS;
-                                break;
-                            }
+                    recipeNotes.clear();
+                    settings = targetRecipe.adjustments(recipeNotes);
+                    currentRecipe = targetRecipe;
+                    selectedTab = EditorToolTab.FILTERS;
+
+                    prefs.edit().putString("photo", sampleUri.toString()).apply();
+                    savePhotoFrame();
+                    syncAllUiControls();
+                    loadBoundLut();
+                    showImage();
+                    requestRenderImmediate();
+                });
+            } catch (Exception e) {
+                error(e);
+            }
+        });
+    }
+
+    /**
+     * Khởi tạo bức ảnh mẫu Fuji X Weekly thực tế (hoặc ảnh mẫu Studio dự phòng) kèm siêu dữ liệu EXIF Fujifilm,
+     * giúp người dùng thử nghiệm tức thì trên Máy tính bảng / Điện thoại chỉ với 1 chạm.
+     */
+    private void loadStudioSamplePhoto(final String optionalFilmKeyword) {
+        if (statusLabel != null) {
+            statusLabel.setText("Đang mở ảnh mẫu Fuji X Weekly…");
+        }
+        executor.execute(() -> {
+            try {
+                Recipe matchedRecipe = null;
+                if (optionalFilmKeyword != null && !recipes.isEmpty()) {
+                    for (Recipe r : recipes) {
+                        if ((r.film + " " + r.name).toLowerCase(Locale.ROOT)
+                                .contains(optionalFilmKeyword.toLowerCase(Locale.ROOT))) {
+                            matchedRecipe = r;
+                            break;
                         }
+                    }
+                }
+                if (matchedRecipe == null && recipes.size() > 1) {
+                    matchedRecipe = recipes.get(1);
+                }
+
+                Bitmap fujiBmp = (matchedRecipe != null)
+                        ? FujiSampleLoader.loadSampleBitmapBlocking(this, matchedRecipe, 1280)
+                        : FujiSampleLoader.decodeAssetThumb(this, "fujixweekly/81d5fe70de5f1d99-1.jpg", 1280);
+
+                final Bitmap sample;
+                if (fujiBmp != null) {
+                    sample = fujiBmp.copy(Bitmap.Config.ARGB_8888, false);
+                } else {
+                    int w = 1280;
+                    int h = 860;
+                    sample = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                    android.graphics.Canvas c = new android.graphics.Canvas(sample);
+                    android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                    p.setShader(new android.graphics.LinearGradient(
+                            0, 0, w, h * 0.72f,
+                            new int[]{0xff1e3c64, 0xff4a6fa5, 0xffe07a3b, 0xfff7c582},
+                            new float[]{0f, 0.38f, 0.76f, 1f},
+                            android.graphics.Shader.TileMode.CLAMP));
+                    c.drawRect(0, 0, w, h, p);
+                    p.setShader(null);
+                }
+
+                // Lưu vào vùng riêng của app để tính năng Xuất ảnh 1x/2x đọc được từ Uri
+                File folder = new File(getFilesDir(), "imported-photos");
+                if (!folder.isDirectory()) {
+                    folder.mkdirs();
+                }
+                File sampleFile = new File(folder, "photo-studio-sample.img");
+                try (FileOutputStream out = new FileOutputStream(sampleFile)) {
+                    sample.compress(Bitmap.CompressFormat.JPEG, 98, out);
+                }
+                final Uri sampleUri = Uri.fromFile(sampleFile);
+
+                final PhotoInfo sampleExif = new PhotoInfo();
+                sampleExif.camera = "FUJIFILM X-T5";
+                sampleExif.focal = "35 mm (eq.)";
+                sampleExif.aperture = "f/1.4";
+                sampleExif.shutter = "1/500 s";
+                sampleExif.iso = "ISO 160";
+                sampleExif.date = "2026.10.12 15:00";
+                sampleExif.author = "Fuji X Weekly";
+
+                final Recipe initialRecipe = (optionalFilmKeyword != null) ? matchedRecipe : null;
+
+                runOnUiThread(() -> {
+                    if (dead) {
+                        sample.recycle();
+                        return;
+                    }
+                    imageUri = sampleUri;
+                    preview = sample;
+                    rendered = null;
+                    isComparing = false;
+                    isAutoBalanced = false;
+                    photoInfo = sampleExif;
+                    frameVersion++;
+                    frameSource = null;
+                    framePreview = null;
+                    history.clear();
+
+                    if (inlineFilterSession != null) {
+                        closeThumbnails(inlineFilterSession);
+                    }
+                    inlineFilterSession = thumbnailSession();
+
+                    if (initialRecipe != null) {
+                        recipeNotes.clear();
+                        settings = initialRecipe.adjustments(recipeNotes);
+                        currentRecipe = initialRecipe;
+                        selectedTab = EditorToolTab.FILTERS;
                     }
 
                     prefs.edit().putString("photo", sampleUri.toString()).apply();
@@ -3382,6 +3549,7 @@ public class MainActivity extends Activity {
                     if (dead) return;
                     recipes.clear();
                     recipes.addAll(parsed);
+                    syncLandingFilmShowcase();
                     syncFiltersSection();
                 });
             } catch (Exception e) {
@@ -3396,6 +3564,8 @@ public class MainActivity extends Activity {
             return;
         }
         ThumbnailSession thumbnails = thumbnailSession();
+        final boolean[] libFujiSamples = {showFujiSampleThumbnails || preview == null};
+
         LinearLayout layout = column();
         layout.setPadding(dp(16), dp(8), dp(16), 0);
 
@@ -3418,6 +3588,21 @@ public class MainActivity extends Activity {
         sensor.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, options));
         layout.addView(sensor);
 
+        LinearLayout modeRow = row();
+        modeRow.setPadding(0, dp(4), 0, dp(4));
+        final TextView fujiBtn = text("Ảnh mẫu FujiXWeekly", 11f, Color.WHITE);
+        final TextView userBtn = text("Ảnh đang mở", 11f, StudioStyle.INK);
+        fujiBtn.setPadding(dp(10), dp(5), dp(10), dp(5));
+        userBtn.setPadding(dp(10), dp(5), dp(10), dp(5));
+        LinearLayout.LayoutParams userLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        userLp.leftMargin = dp(6);
+        userBtn.setLayoutParams(userLp);
+        modeRow.addView(fujiBtn);
+        modeRow.addView(userBtn);
+        layout.addView(modeRow);
+
         TextView count = text("", 11, StudioStyle.MUTED);
         count.setPadding(dp(4), dp(4), dp(4), dp(4));
         layout.addView(count);
@@ -3439,16 +3624,16 @@ public class MainActivity extends Activity {
                 card.setPadding(dp(8), dp(8), dp(8), dp(8));
                 card.setBackground(StudioStyle.surface(
                         selected ? StudioStyle.WARM_AMBER_LIGHT : StudioStyle.SURFACE,
-                        selected ? StudioStyle.WARM_AMBER : StudioStyle.LINE,
+                        selected ? StudioStyle.INK : StudioStyle.LINE,
                         dp(16)));
 
                 ImageView symbol = thumbnail();
                 symbol.setContentDescription("Minh họa màu " + recipe.name);
-                card.addView(symbol, new LinearLayout.LayoutParams(dp(72), dp(76)));
+                card.addView(symbol, new LinearLayout.LayoutParams(dp(82), dp(76)));
 
                 LinearLayout description = column();
                 description.setPadding(dp(10), 0, dp(4), 0);
-                TextView name = text(recipe.name, 14.5f, StudioStyle.INK);
+                TextView name = text(recipe.name, 14f, StudioStyle.INK);
                 name.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
                 name.setMaxLines(2);
                 name.setEllipsize(TextUtils.TruncateAt.END);
@@ -3459,23 +3644,27 @@ public class MainActivity extends Activity {
                 detail.setMaxLines(2);
                 description.addView(detail);
 
-                TextView previewState = text("", 10.5f, StudioStyle.WARM_AMBER);
+                TextView previewState = text("", 10.5f, StudioStyle.MUTED);
                 previewState.setPadding(0, dp(4), 0, 0);
                 description.addView(previewState);
 
-                Settings recipeSettings = recipe.adjustments(new ArrayList<>());
-                String lutFile = prefs.getString("lut." + recipeSettings.film, null);
-                thumbnails.bind(
-                        symbol,
-                        previewState,
-                        recipe.id,
-                        recipeSettings,
-                        lutFile == null ? null : new File(getFilesDir(), lutFile),
-                        null);
+                if (libFujiSamples[0] || preview == null) {
+                    FujiSampleLoader.bindSample(MainActivity.this, symbol, previewState, recipe);
+                } else {
+                    Settings recipeSettings = recipe.adjustments(new ArrayList<>());
+                    String lutFile = prefs.getString("lut." + recipeSettings.film, null);
+                    thumbnails.bind(
+                            symbol,
+                            previewState,
+                            recipe.id,
+                            recipeSettings,
+                            lutFile == null ? null : new File(getFilesDir(), lutFile),
+                            null);
+                }
 
                 card.addView(description, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
                 if (selected) {
-                    TextView check = text("✓", 18, StudioStyle.WARM_AMBER);
+                    TextView check = text("✓", 18, StudioStyle.INK);
                     check.setPadding(dp(6), 0, dp(6), 0);
                     card.addView(check);
                 }
@@ -3483,6 +3672,35 @@ public class MainActivity extends Activity {
             }
         };
         list.setAdapter(adapter);
+
+        Runnable syncModeButtons = () -> {
+            boolean fuji = libFujiSamples[0];
+            fujiBtn.setTextColor(fuji ? Color.WHITE : StudioStyle.INK);
+            fujiBtn.setTypeface(Typeface.create("sans-serif-medium", fuji ? Typeface.BOLD : Typeface.NORMAL));
+            fujiBtn.setBackground(StudioStyle.surface(fuji ? StudioStyle.INK : StudioStyle.SURFACE, fuji ? 0 : StudioStyle.LINE, dp(999)));
+
+            userBtn.setTextColor(!fuji ? Color.WHITE : StudioStyle.INK);
+            userBtn.setTypeface(Typeface.create("sans-serif-medium", !fuji ? Typeface.BOLD : Typeface.NORMAL));
+            userBtn.setBackground(StudioStyle.surface(!fuji ? StudioStyle.INK : StudioStyle.SURFACE, !fuji ? 0 : StudioStyle.LINE, dp(999)));
+            adapter.notifyDataSetChanged();
+        };
+        fujiBtn.setOnClickListener(v -> {
+            libFujiSamples[0] = true;
+            showFujiSampleThumbnails = true;
+            syncModeButtons.run();
+            syncFiltersSection();
+        });
+        userBtn.setOnClickListener(v -> {
+            if (preview == null) {
+                message("Hãy mở ảnh trước để xem thử trên ảnh của bạn");
+                return;
+            }
+            libFujiSamples[0] = false;
+            showFujiSampleThumbnails = false;
+            syncModeButtons.run();
+            syncFiltersSection();
+        });
+        syncModeButtons.run();
 
         Runnable filter = () -> {
             String q = search.getText().toString().trim().toLowerCase(Locale.ROOT);
@@ -3496,7 +3714,7 @@ public class MainActivity extends Activity {
                     adapter.add(r.name);
                 }
             }
-            count.setText(filtered.size() + " / " + recipes.size() + " recipe · chạm để dùng, giữ để xem thông số");
+            count.setText(filtered.size() + " / " + recipes.size() + " recipe · chạm để áp dụng, giữ để xem bộ ảnh mẫu FujiXWeekly");
         };
 
         search.addTextChangedListener(new TextWatcher() {
@@ -3510,7 +3728,7 @@ public class MainActivity extends Activity {
         });
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Chọn màu phim (" + recipes.size() + " công thức)")
+                .setTitle("Kho màu phim Fuji X Weekly (" + recipes.size() + ")")
                 .setView(layout)
                 .setNeutralButton("Nguyên bản", (d, w) -> applyOriginalLook(false))
                 .setNegativeButton("Đóng", null)
@@ -3519,7 +3737,11 @@ public class MainActivity extends Activity {
         list.setOnItemClickListener((p, v, pos, id) -> {
             Recipe r = filtered.get(pos);
             dialog.dismiss();
-            applyRecipe(r);
+            if (preview == null) {
+                loadRecipeSamplePhoto(r);
+            } else {
+                applyRecipe(r);
+            }
         });
         list.setOnItemLongClickListener((p, v, pos, id) -> {
             showRecipe(filtered.get(pos));
@@ -3536,8 +3758,53 @@ public class MainActivity extends Activity {
         return notes.isEmpty() ? "" : "\nCách áp dụng trong IRO:\n" + String.join("\n", notes) + "\n";
     }
 
-    private void showRecipe(Recipe r) {
+    private void showRecipe(final Recipe r) {
         ScrollView scroll = new ScrollView(this);
+        LinearLayout content = column();
+        content.setPadding(dp(20), dp(12), dp(20), dp(12));
+
+        // Bộ sưu tập ảnh mẫu mô phỏng từ Fuji X Weekly
+        TextView galleryLabel = text("Ảnh mô phỏng từ Fuji X Weekly (" + r.film + ")", 12f, StudioStyle.MUTED);
+        galleryLabel.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        galleryLabel.setPadding(0, 0, 0, dp(6));
+        content.addView(galleryLabel);
+
+        HorizontalScrollView galleryScroll = new HorizontalScrollView(this);
+        galleryScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout galleryRow = row();
+        List<String> urls = r.sampleImages.isEmpty()
+                ? (r.sampleImageUrl != null && !r.sampleImageUrl.isEmpty()
+                        ? Arrays.asList(r.sampleImageUrl)
+                        : Arrays.asList(""))
+                : r.sampleImages;
+        for (int i = 0; i < urls.size(); i++) {
+            String url = urls.get(i);
+            ImageView sampleView = new ImageView(this);
+            sampleView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            sampleView.setBackground(StudioStyle.shape(StudioStyle.SURFACE_CONTAINER, StudioStyle.LINE, dp(14)));
+            sampleView.setClipToOutline(true);
+            FujiSampleLoader.bindGalleryUrl(this, sampleView, url, r.sampleAsset);
+            LinearLayout.LayoutParams imgLp = new LinearLayout.LayoutParams(dp(230), dp(156));
+            if (i > 0) {
+                imgLp.leftMargin = dp(8);
+            }
+            galleryRow.addView(sampleView, imgLp);
+        }
+        galleryScroll.addView(galleryRow);
+        content.addView(galleryScroll);
+
+        TextView trySampleBtn = text("Mở ảnh mẫu Fuji này vào bàn dựng", 12f, Color.WHITE);
+        trySampleBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        trySampleBtn.setGravity(Gravity.CENTER);
+        trySampleBtn.setPadding(dp(14), dp(9), dp(14), dp(9));
+        trySampleBtn.setBackground(StudioStyle.surface(StudioStyle.INK, 0, dp(14)));
+        LinearLayout.LayoutParams tryLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        tryLp.topMargin = dp(8);
+        tryLp.bottomMargin = dp(10);
+        content.addView(trySampleBtn, tryLp);
+
         TextView text = text(
                 r.description()
                         + applicationNotes(r)
@@ -3545,13 +3812,19 @@ public class MainActivity extends Activity {
                         + "\n\nThông số này dành cho máy Fuji. App áp dụng gần đúng các chỉnh sửa hậu kỳ; màu nền cần LUT riêng. Các giá trị thiếu trong nguồn không được tự điền.",
                 13, StudioStyle.INK);
         text.setTextIsSelectable(true);
-        text.setPadding(dp(20), dp(12), dp(20), dp(12));
-        scroll.addView(text);
+        content.addView(text);
+        scroll.addView(content);
 
-        new AlertDialog.Builder(this)
+        final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(r.name)
                 .setView(scroll)
-                .setPositiveButton("Dùng recipe", (d, w) -> applyRecipe(r))
+                .setPositiveButton("Dùng recipe", (d, w) -> {
+                    if (preview == null) {
+                        loadRecipeSamplePhoto(r);
+                    } else {
+                        applyRecipe(r);
+                    }
+                })
                 .setNeutralButton("Mở bài nguồn", (d, w) -> {
                     Uri uri = Uri.parse(r.sourceUrl);
                     if ("https".equals(uri.getScheme())) {
@@ -3561,7 +3834,13 @@ public class MainActivity extends Activity {
                     }
                 })
                 .setNegativeButton("Đóng", null)
-                .show();
+                .create();
+
+        trySampleBtn.setOnClickListener(v -> {
+            dialog.dismiss();
+            loadRecipeSamplePhoto(r);
+        });
+        dialog.show();
     }
 
     private void applyRecipe(Recipe r) {

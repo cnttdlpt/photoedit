@@ -38,70 +38,63 @@ import android.view.View;
 final class StudioStyle {
 
     // =========================================================================
-    // BẢNG MÀU GOOGLE MATERIAL 3 RGB SPECTRUM (Google Blue, Red, Green, Yellow)
+    // BẢNG MÀU TỐI GIẢN (MINIMAL STUDIO PALETTE)
     // =========================================================================
 
-    /** Nền sáng chuẩn Google Material 3 (#F8FAFD). */
-    static final int BG = 0xfff8fafd;
-    static final int PORCELAIN = 0xfff8fafd;
+    /** Nền chính xám trắng trung tính dịu mắt (#F6F7F9). */
+    static final int BG = 0xfff6f7f9;
+    static final int PORCELAIN = 0xfff6f7f9;
 
-    /** Nền bề mặt thẻ (#F3F6FC). */
-    static final int SURFACE = 0xfff3f6fc;
+    /** Nền bề mặt phụ (#EFF1F5). */
+    static final int SURFACE = 0xffeff1f5;
 
-    /** Nền bề mặt cấp 2 (#EAEFF8). */
-    static final int SURFACE_CONTAINER = 0xffeaeff8;
+    /** Nền bề mặt cấp 2 (#E6E9EF). */
+    static final int SURFACE_CONTAINER = 0xffe6e9ef;
 
-    /** Đường viền mảnh (#DEE3EC). */
-    static final int LINE = 0xffdee3ec;
+    /** Đường viền mảnh trung tính (#E1E4EA). */
+    static final int LINE = 0xffe1e4ea;
 
-    /** Màu chữ chính mực đậm (#1B1C1E). */
-    static final int INK = 0xff1b1c1e;
+    /** Màu chữ & nút chính mực đen than (#181A1F). */
+    static final int INK = 0xff181a1f;
 
-    /** Màu chữ phụ xám trung tính (#6E7480). */
-    static final int MUTED = 0xff6e7480;
+    /** Màu chữ phụ xám trung tính (#6E737D). */
+    static final int MUTED = 0xff6e737d;
 
-    // 4 màu thương hiệu Google RGB + Y (Red, Green, Blue, Yellow)
-    /** Kênh Đỏ Google (Google Red #EA4335). */
-    static final int GOOGLE_RED = 0xffea4335;
-    static final int RED_TONAL = 0xfffce8e6;
+    // Màu kênh chức năng (chỉ dùng cho biểu đồ RGB / Đường cong R-G-B khi cần phân biệt kênh)
+    static final int GOOGLE_RED = 0xffd9483b;
+    static final int RED_TONAL = 0xfffbeae8;
 
-    /** Kênh Lục Google (Google Green #34A853). */
-    static final int GOOGLE_GREEN = 0xff34a853;
-    static final int GREEN_TONAL = 0xffe6f4ea;
+    static final int GOOGLE_GREEN = 0xff2e9b52;
+    static final int GREEN_TONAL = 0xffe8f5ec;
 
-    /** Kênh Lam Google (Google Blue #1A73E8 - Màu nhấn chính chuẩn Material 3). */
-    static final int GOOGLE_BLUE = 0xff1a73e8;
-    static final int BLUE_TONAL = 0xffe8f0fe;
+    static final int GOOGLE_BLUE = 0xff2563eb;
+    static final int BLUE_TONAL = 0xffedf2fd;
 
-    /** Kênh Vàng/Ánh sáng Google (Google Yellow/Amber #F29900). */
-    static final int GOOGLE_YELLOW = 0xfff29900;
-    static final int YELLOW_TONAL = 0xfffef7e0;
+    static final int GOOGLE_YELLOW = 0xffd9822b;
+    static final int YELLOW_TONAL = 0xfffbf2e6;
 
-    /** Điểm nhấn mặc định dùng Google Blue (#1A73E8) để đồng bộ chuẩn Google Photos. */
-    static final int WARM_AMBER = GOOGLE_BLUE;
-    static final int ACCENT = GOOGLE_BLUE;
+    /** Màu nhấn chính của toàn bộ giao diện: Đen than tối giản (#181A1F). */
+    static final int WARM_AMBER = INK;
+    static final int ACCENT = INK;
 
-    /** Nền xanh nhạt Tonal cho các huy hiệu đang kích hoạt (#E8F0FE). */
-    static final int WARM_AMBER_LIGHT = BLUE_TONAL;
+    /** Nền xám nhạt cho các nút/thẻ đang chọn (#EAECEF). */
+    static final int WARM_AMBER_LIGHT = 0xffeaecef;
 
-    /** Màu viên thuốc tối (#14161A). */
-    static final int DARK_PILL = 0xff14161a;
+    /** Màu viên thuốc tối (#181A1F). */
+    static final int DARK_PILL = 0xff181a1f;
 
     private StudioStyle() {
     }
 
     /**
-     * Trả về màu nền Tonal dịu tương ứng với từng kênh màu RGB của Google.
+     * Trả về màu nền Tonal trung tính nhẹ nhàng.
      */
     static int tonalForChannel(int channelColor) {
-        if (channelColor == GOOGLE_RED) return RED_TONAL;
-        if (channelColor == GOOGLE_GREEN) return GREEN_TONAL;
-        if (channelColor == GOOGLE_YELLOW) return YELLOW_TONAL;
-        return BLUE_TONAL;
+        return WARM_AMBER_LIGHT;
     }
 
     /**
-     * Tạo hình chữ nhật bo góc cơ bản với màu nền và đường viền.
+     * Tạo hình chữ nhật bo góc cơ bản với màu nền và đường viền mảnh 1px.
      */
     static GradientDrawable shape(int fill, int stroke, float radius) {
         GradientDrawable d = new GradientDrawable();
@@ -114,114 +107,77 @@ final class StudioStyle {
     }
 
     /**
-     * Tạo bề mặt có hiệu ứng gợn sóng khi chạm (RippleDrawable) với điểm nhấn Google RGB Blue.
+     * Tạo bề mặt phẳng có hiệu ứng chạm nhẹ (RippleDrawable) trung tính.
      */
     static Drawable surface(int fill, int stroke, float radius) {
         return new RippleDrawable(
-                ColorStateList.valueOf(0x221a73e8),
+                ColorStateList.valueOf(0x16181a1f),
                 shape(fill, stroke, radius),
                 shape(0xffffffff, 0, radius));
     }
 
     /**
-     * Tạo thẻ kính mờ Liquid Glass pha sắc trắng xanh chuẩn Google Material 3.
+     * Tạo thẻ phẳng tối giản (nền trắng sạch + viền xám mảnh).
      */
     static Drawable liquidGlassCard(float radius) {
-        GradientDrawable base = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{0xf6ffffff, 0xe8f3f7fd});
-        base.setCornerRadius(radius);
-        base.setStroke(2, 0xffdde3ee);
-        return base;
+        return shape(0xffffffff, LINE, radius);
     }
 
     /**
-     * Tạo nút tròn kính mờ Liquid Glass.
+     * Tạo nút tròn tối giản.
      */
     static Drawable liquidGlassCircle() {
-        GradientDrawable circle = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{0xfaffffff, 0xebf1f5fc});
+        GradientDrawable circle = new GradientDrawable();
+        circle.setColor(0xffffffff);
         circle.setShape(GradientDrawable.OVAL);
-        circle.setStroke(2, 0xffdde3ee);
+        circle.setStroke(2, LINE);
         return new RippleDrawable(
-                ColorStateList.valueOf(0x221a73e8),
+                ColorStateList.valueOf(0x16181a1f),
                 circle,
                 circle);
     }
 
     /**
-     * Tạo nút viên thuốc (Capsule Pill) màu Google Blue nổi bật.
+     * Tạo nút viên thuốc chính màu đen than tối giản (#181A1F).
      */
     static Drawable warmAmberPill(float radius) {
-        GradientDrawable pill = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{0xff4285f4, GOOGLE_BLUE});
-        pill.setCornerRadius(radius);
         return new RippleDrawable(
-                ColorStateList.valueOf(0x33ffffff),
-                pill,
+                ColorStateList.valueOf(0x28ffffff),
+                shape(INK, 0, radius),
                 shape(0xffffffff, 0, radius));
     }
 
     /**
-     * Tạo nút viên thuốc dải quang phổ Google RGB (Red -> Yellow -> Green -> Blue)
-     * đặc trưng của Google AI / Google Photos Magic Editor.
+     * Nút viên thuốc trạng thái đang bật (đồng bộ màu đen than tối giản thay vì cầu vồng).
      */
     static Drawable rgbSpectrumPill(float radius) {
-        GradientDrawable spectrum = new GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                new int[]{GOOGLE_RED, 0xfff9ab00, GOOGLE_GREEN, GOOGLE_BLUE});
-        spectrum.setCornerRadius(radius);
-        return new RippleDrawable(
-                ColorStateList.valueOf(0x33ffffff),
-                spectrum,
-                shape(0xffffffff, 0, radius));
+        return warmAmberPill(radius);
     }
 
     /**
-     * Tạo thẻ/viên thuốc có viền chuyển sắc 4 màu Google RGB (Red, Yellow, Green, Blue)
-     * và phần ruột màu sáng bên trong.
+     * Viên thuốc viền mảnh tối giản (thay thế viền cầu vồng cũ).
      */
     static Drawable rgbBorderPill(int innerFill, float radius) {
-        GradientDrawable outerSpectrum = new GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                new int[]{GOOGLE_RED, 0xfffbbc04, GOOGLE_GREEN, GOOGLE_BLUE});
-        outerSpectrum.setCornerRadius(radius);
-
-        GradientDrawable inner = new GradientDrawable();
-        inner.setColor(innerFill);
-        inner.setCornerRadius(Math.max(1f, radius - 4f));
-
-        LayerDrawable layered = new LayerDrawable(new Drawable[]{outerSpectrum, inner});
-        layered.setLayerInset(1, 4, 4, 4, 4);
-        return new RippleDrawable(
-                ColorStateList.valueOf(0x224285f4),
-                layered,
-                shape(0xffffffff, 0, radius));
+        return surface(innerFill, LINE, radius);
     }
 
     /**
-     * Tạo viên thuốc kính mờ trắng.
+     * Tạo viên thuốc trắng viền mảnh.
      */
     static Drawable liquidGlassPill(float radius) {
-        return surface(0xf5ffffff, LINE, radius);
+        return surface(0xffffffff, LINE, radius);
     }
 
     static ColorStateList inkStates() {
         return new ColorStateList(
                 new int[][]{new int[]{android.R.attr.state_selected}, new int[]{}},
-                new int[]{GOOGLE_BLUE, INK});
+                new int[]{INK, MUTED});
     }
 
     /**
-     * Lớp nền {@code AntigravityBackground} nâng cấp lên chuẩn Google RGB Ambient Mesh:
-     * Vẽ nền sáng {@code #F8FAFD} kèm 3 quầng sáng quang phổ R - G - B dịu ở 3 góc màn hình
-     * tạo chiều sâu kính mờ đặc trưng của Google Photos & Gemini Studio.
+     * Lớp nền tối giản: chỉ dùng màu nền xám trắng phẳng dịu mắt (#F6F7F9) giúp mắt tập trung hoàn toàn vào màu ảnh.
      */
     static final class AntigravityBackground extends View {
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-
         AntigravityBackground(Context context) {
             super(context);
             setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -230,48 +186,7 @@ final class StudioStyle {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            float w = getWidth();
-            float h = getHeight();
-            if (w <= 0 || h <= 0) {
-                return;
-            }
-
-            // 1. Nền sáng cơ bản (#F8FAFD)
             canvas.drawColor(PORCELAIN);
-
-            // 2. Góc trên trái: Quầng sáng Kênh Lam (Google Blue #4285F4)
-            float blueRadius = Math.max(1f, w * 0.58f);
-            float blueCx = w * 0.14f;
-            float blueCy = h * 0.12f;
-            paint.setShader(new RadialGradient(
-                    blueCx, blueCy, blueRadius,
-                    new int[]{0x42cfe2ff, 0x18e8f0fe, 0x00ffffff},
-                    new float[]{0f, 0.55f, 1f},
-                    Shader.TileMode.CLAMP));
-            canvas.drawCircle(blueCx, blueCy, blueRadius, paint);
-
-            // 3. Góc trên phải: Quầng sáng Kênh Đỏ - Vàng (Google Red #EA4335 & Yellow #FBBC04)
-            float redRadius = Math.max(1f, w * 0.55f);
-            float redCx = w * 0.86f;
-            float redCy = h * 0.14f;
-            paint.setShader(new RadialGradient(
-                    redCx, redCy, redRadius,
-                    new int[]{0x38ffd8d4, 0x1effefd0, 0x00ffffff},
-                    new float[]{0f, 0.55f, 1f},
-                    Shader.TileMode.CLAMP));
-            canvas.drawCircle(redCx, redCy, redRadius, paint);
-
-            // 4. Góc dưới trái/giữa: Quầng sáng Kênh Lục (Google Green #34A853)
-            float greenRadius = Math.max(1f, w * 0.58f);
-            float greenCx = w * 0.24f;
-            float greenCy = h * 0.88f;
-            paint.setShader(new RadialGradient(
-                    greenCx, greenCy, greenRadius,
-                    new int[]{0x3ad2f4dc, 0x00ffffff},
-                    new float[]{0f, 1f},
-                    Shader.TileMode.CLAMP));
-            canvas.drawCircle(greenCx, greenCy, greenRadius, paint);
-            paint.setShader(null);
         }
     }
 

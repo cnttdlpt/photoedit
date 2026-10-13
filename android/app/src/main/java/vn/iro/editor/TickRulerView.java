@@ -45,13 +45,12 @@ public final class TickRulerView extends View {
     private final float tickSpacingPx;
     private static final int MAJOR_TICK_INTERVAL = 5;
 
-    private int accentColor = StudioStyle.GOOGLE_BLUE;
+    private int accentColor = StudioStyle.INK;
 
     private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tickPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint needlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint spectrumPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF boundsRect = new RectF();
     private final Path clipPath = new Path();
     private final Path trianglePath = new Path();
@@ -62,10 +61,10 @@ public final class TickRulerView extends View {
         this.tickSpacingPx = 8.5f * density;
 
         bgPaint.setStyle(Paint.Style.FILL);
-        bgPaint.setColor(0xd8ffffff);
+        bgPaint.setColor(StudioStyle.SURFACE);
 
         borderPaint.setStyle(Paint.Style.STROKE);
-        borderPaint.setStrokeWidth(1.1f * density);
+        borderPaint.setStrokeWidth(1.0f * density);
         borderPaint.setColor(StudioStyle.LINE);
 
         tickPaint.setStyle(Paint.Style.STROKE);
@@ -73,14 +72,10 @@ public final class TickRulerView extends View {
 
         needlePaint.setStyle(Paint.Style.FILL);
         needlePaint.setColor(accentColor);
-
-        spectrumPaint.setStyle(Paint.Style.STROKE);
-        spectrumPaint.setStrokeWidth(2.4f * density);
-        spectrumPaint.setStrokeCap(Paint.Cap.ROUND);
     }
 
     /**
-     * Đổi màu kênh RGB cho kim chỉ thị và các vạch đang kích hoạt (Red / Green / Blue / Yellow).
+     * Đổi màu cho kim chỉ thị và các vạch đang kích hoạt.
      */
     public void setAccentColor(int color) {
         this.accentColor = color;
@@ -121,25 +116,17 @@ public final class TickRulerView extends View {
             return;
         }
 
-        float cornerRadius = 15f * density;
+        float cornerRadius = 12f * density;
         boundsRect.set(0, 0, width, height);
 
-        // 1. Vẽ nền kính bo góc
+        // 1. Vẽ nền phẳng tối giản
         canvas.drawRoundRect(boundsRect, cornerRadius, cornerRadius, bgPaint);
 
-        // 2. Cắt vùng vẽ bên trong khung bo góc và vẽ dải quang phổ RGB + vạch thước
+        // 2. Cắt vùng vẽ bên trong khung bo góc và vẽ vạch thước
         canvas.save();
         clipPath.reset();
         clipPath.addRoundRect(boundsRect, cornerRadius, cornerRadius, Path.Direction.CW);
         canvas.clipPath(clipPath);
-
-        // Dải quang phổ Google RGB mảnh ở đáy thước
-        spectrumPaint.setShader(new android.graphics.LinearGradient(
-                0, 0, width, 0,
-                new int[]{StudioStyle.GOOGLE_RED, StudioStyle.GOOGLE_YELLOW, StudioStyle.GOOGLE_GREEN, StudioStyle.GOOGLE_BLUE},
-                new float[]{0f, 0.33f, 0.67f, 1f},
-                android.graphics.Shader.TileMode.CLAMP));
-        canvas.drawLine(10f * density, height - 2.2f * density, width - 10f * density, height - 2.2f * density, spectrumPaint);
 
         double span = maxValue - minValue;
         if (span > 0 && step > 0) {

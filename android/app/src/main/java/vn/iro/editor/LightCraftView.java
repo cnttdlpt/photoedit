@@ -47,8 +47,8 @@ public final class LightCraftView {
 
         /** Kênh đường cong đang hiển thị và tương tác. */
         public enum Channel {
-            PARAMETRIC("Tham số", 0xffe2e8f0),
-            MASTER("RGB", 0xffffffff),
+            PARAMETRIC("Tham số", StudioStyle.INK),
+            MASTER("RGB", StudioStyle.INK),
             RED("Đỏ", StudioStyle.GOOGLE_RED),
             GREEN("Lục", StudioStyle.GOOGLE_GREEN),
             BLUE("Lam", StudioStyle.GOOGLE_BLUE);
@@ -117,25 +117,20 @@ public final class LightCraftView {
             float pad = dp(10);
             plotRect.set(pad, pad, w - pad, h - pad);
 
-            // 1. Nền tối chuẩn Darkroom của LightCraft (t.canvas trong edit.rs)
+            // 1. Nền sáng phẳng tối giản (#EFF1F5) + viền mảnh
             paint.setPathEffect(null);
             paint.setStyle(Paint.Style.FILL);
-            paint.setShader(new LinearGradient(
-                    0, 0, 0, h,
-                    0xff141821, 0xff1c2230,
-                    Shader.TileMode.CLAMP));
-            canvas.drawRoundRect(0, 0, w, h, dp(16), dp(16), paint);
-            paint.setShader(null);
+            paint.setColor(StudioStyle.SURFACE);
+            canvas.drawRoundRect(0, 0, w, h, dp(12), dp(12), paint);
 
-            // Viền mảnh quanh khung đồ thị
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(1.2f));
-            paint.setColor(0x444285f4);
-            canvas.drawRoundRect(dp(1), dp(1), w - dp(1), h - dp(1), dp(16), dp(16), paint);
+            paint.setStrokeWidth(dp(1.0f));
+            paint.setColor(StudioStyle.LINE);
+            canvas.drawRoundRect(dp(0.5f), dp(0.5f), w - dp(0.5f), h - dp(0.5f), dp(12), dp(12), paint);
 
-            // 2. Lưới 4×4 và đường chéo tham chiếu y = x (dòng 799-810 trong edit.rs)
-            paint.setStrokeWidth(dp(0.9f));
-            paint.setColor(0x28ffffff);
+            // 2. Lưới 4×4 và đường chéo tham chiếu y = x
+            paint.setStrokeWidth(dp(0.8f));
+            paint.setColor(0x16181a1f);
             for (int i = 1; i < 4; i++) {
                 float f = i / 4.0f;
                 float gx = plotRect.left + plotRect.width() * f;
@@ -143,10 +138,9 @@ public final class LightCraftView {
                 canvas.drawLine(gx, plotRect.top, gx, plotRect.bottom, paint);
                 canvas.drawLine(plotRect.left, gy, plotRect.right, gy, paint);
             }
-            // Nếu đang ở chế độ Parametric, vẽ 3 vạch chia vùng (Shadows 25% / Mid 50% / Highlights 75%)
             if (activeChannel == Channel.PARAMETRIC) {
                 paint.setPathEffect(splitDash);
-                paint.setColor(0x44fbbc04);
+                paint.setColor(0x28181a1f);
                 for (float split : new float[]{0.25f, 0.50f, 0.75f}) {
                     float sx = plotRect.left + plotRect.width() * split;
                     canvas.drawLine(sx, plotRect.top, sx, plotRect.bottom, paint);
@@ -154,13 +148,13 @@ public final class LightCraftView {
                 paint.setPathEffect(null);
             }
 
-            paint.setColor(0x40ffffff);
+            paint.setColor(0x28181a1f);
             canvas.drawLine(plotRect.left, plotRect.bottom, plotRect.right, plotRect.top, paint);
 
-            // 3. Vẽ mờ 3 đường cong R/G/B phía sau để đối chiếu trực quan
+            // 3. Vẽ mờ 3 đường cong R/G/B phía sau
             float[][] luts = LightCraftEngine.buildToneCurveLuts(state, 128);
-            int[] bgColors = {0x55ea4335, 0x5534a853, 0x554285f4};
-            paint.setStrokeWidth(dp(1.3f));
+            int[] bgColors = {0x38d9483b, 0x382e9b52, 0x382563eb};
+            paint.setStrokeWidth(dp(1.1f));
             for (int ch = 0; ch < 3; ch++) {
                 buildLutPath(luts[ch], curvePath);
                 paint.setColor(bgColors[ch]);
@@ -182,7 +176,6 @@ public final class LightCraftView {
 
             buildLutPath(mainLut, curvePath);
 
-            // Đổ bóng gradient nhẹ bên dưới đường cong chính
             fillPath.set(curvePath);
             fillPath.lineTo(plotRect.right, plotRect.bottom);
             fillPath.lineTo(plotRect.left, plotRect.bottom);
@@ -190,18 +183,18 @@ public final class LightCraftView {
             paint.setStyle(Paint.Style.FILL);
             paint.setShader(new LinearGradient(
                     0, plotRect.top, 0, plotRect.bottom,
-                    (mainColor & 0x00ffffff) | 0x38000000,
+                    (mainColor & 0x00ffffff) | 0x18000000,
                     0x00000000,
                     Shader.TileMode.CLAMP));
             canvas.drawPath(fillPath, paint);
             paint.setShader(null);
 
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(dp(2.4f));
+            paint.setStrokeWidth(dp(2.0f));
             paint.setColor(mainColor);
             canvas.drawPath(curvePath, paint);
 
-            // 5. Vẽ các điểm điều khiển (Control Points) nếu đang ở chế độ Point Curve
+            // 5. Vẽ các điểm điều khiển (Control Points)
             if (activeChannel != Channel.PARAMETRIC) {
                 List<float[]> pts = activePoints();
                 for (int i = 0; i < pts.size(); i++) {
@@ -209,34 +202,33 @@ public final class LightCraftView {
                     float cx = plotRect.left + pt[0] * plotRect.width();
                     float cy = plotRect.bottom - pt[1] * plotRect.height();
                     boolean activePt = (i == draggingPointIndex);
-                    float rad = dp(activePt ? 6.5f : 4.8f);
+                    float rad = dp(activePt ? 6.0f : 4.4f);
 
                     paint.setStyle(Paint.Style.FILL);
-                    paint.setColor(mainColor);
+                    paint.setColor(Color.WHITE);
                     canvas.drawCircle(cx, cy, rad, paint);
 
                     paint.setStyle(Paint.Style.STROKE);
-                    paint.setStrokeWidth(dp(1.6f));
-                    paint.setColor(0xff141821);
+                    paint.setStrokeWidth(dp(1.8f));
+                    paint.setColor(mainColor);
                     canvas.drawCircle(cx, cy, rad, paint);
                 }
 
-                // Hiển thị thông số Input / Output (0..255) góc trên trái giống dòng 883-891 của edit.rs
-                textPaint.setTextSize(dp(10.5f));
-                textPaint.setColor(0xdde2e8f0);
+                textPaint.setTextSize(dp(10f));
+                textPaint.setColor(StudioStyle.MUTED);
                 if (draggingPointIndex >= 0 && draggingPointIndex < pts.size()) {
                     float[] q = pts.get(draggingPointIndex);
-                    String io = String.format(Locale.US, "In %d  →  Out %d",
+                    String io = String.format(Locale.US, "In %d → Out %d",
                             Math.round(q[0] * 255f), Math.round(q[1] * 255f));
-                    canvas.drawText(io, plotRect.left + dp(6), plotRect.top + dp(14), textPaint);
+                    canvas.drawText(io, plotRect.left + dp(6), plotRect.top + dp(13), textPaint);
                 } else {
-                    canvas.drawText("Chạm thêm điểm · Chạm đúp xóa điểm", plotRect.left + dp(6), plotRect.top + dp(14), textPaint);
+                    canvas.drawText("Chạm thêm điểm · Chạm đúp xóa", plotRect.left + dp(6), plotRect.top + dp(13), textPaint);
                 }
             } else {
-                textPaint.setTextSize(dp(10.5f));
-                textPaint.setColor(0xdde2e8f0);
-                canvas.drawText("Đường cong 4 vùng Tham số (Shadows · Darks · Lights · Highlights)",
-                        plotRect.left + dp(6), plotRect.top + dp(14), textPaint);
+                textPaint.setTextSize(dp(10f));
+                textPaint.setColor(StudioStyle.MUTED);
+                canvas.drawText("Đường cong 4 vùng tham số",
+                        plotRect.left + dp(6), plotRect.top + dp(13), textPaint);
             }
         }
 
@@ -411,11 +403,16 @@ public final class LightCraftView {
             int h = getHeight();
             if (w <= 0 || h <= 0) return;
 
-            // Vẽ thẻ nền tối chuẩn phòng tối LightCraft
+            // Vẽ thẻ nền phẳng tối giản (#EFF1F5) + viền mảnh
             ringPaint.setPathEffect(null);
             ringPaint.setStyle(Paint.Style.FILL);
-            ringPaint.setColor(0xff141821);
-            canvas.drawRoundRect(0, 0, w, h, dp(16), dp(16), ringPaint);
+            ringPaint.setColor(StudioStyle.SURFACE);
+            canvas.drawRoundRect(0, 0, w, h, dp(12), dp(12), ringPaint);
+
+            ringPaint.setStyle(Paint.Style.STROKE);
+            ringPaint.setStrokeWidth(dp(1f));
+            ringPaint.setColor(StudioStyle.LINE);
+            canvas.drawRoundRect(dp(0.5f), dp(0.5f), w - dp(0.5f), h - dp(0.5f), dp(12), dp(12), ringPaint);
 
             float cellW = w / 3.0f;
             float maxR = Math.min(cellW * 0.41f, (h - dp(38)) * 0.45f);
@@ -434,7 +431,7 @@ public final class LightCraftView {
 
             // 1. Vẽ đĩa quang phổ Hue (SweepGradient) + khử bão hòa ở tâm (RadialGradient trắng/xám)
             canvas.save();
-            canvas.scale(1f, -1f, x, y); // Đảo trục Y để góc dương quay ngược chiều kim đồng hồ giống wheel_pick trong edit.rs
+            canvas.scale(1f, -1f, x, y);
             wheelPaint.setStyle(Paint.Style.FILL);
             wheelPaint.setShader(new SweepGradient(x, y, SWEEP_COLORS, null));
             canvas.drawCircle(x, y, r, wheelPaint);
@@ -442,29 +439,29 @@ public final class LightCraftView {
 
             wheelPaint.setShader(new RadialGradient(
                     x, y, r,
-                    new int[]{0xFF808080, 0x88808080, 0x00808080},
-                    new float[]{0f, 0.45f, 1f},
+                    new int[]{0xFFF4F5F7, 0x99F4F5F7, 0x00F4F5F7},
+                    new float[]{0f, 0.48f, 1f},
                     Shader.TileMode.CLAMP));
             canvas.drawCircle(x, y, r, wheelPaint);
             wheelPaint.setShader(null);
 
-            // 2. Vòng hướng dẫn độ bão hòa 35% và 70% (giống dòng 1298-1305 trong edit.rs)
+            // 2. Vòng hướng dẫn độ bão hòa
             ringPaint.setStyle(Paint.Style.STROKE);
             ringPaint.setPathEffect(guideDash);
             ringPaint.setStrokeWidth(dp(0.8f));
-            ringPaint.setColor(0x36ffffff);
+            ringPaint.setColor(0x28181a1f);
             canvas.drawCircle(x, y, r * 0.45f, ringPaint);
             canvas.drawCircle(x, y, r * 0.75f, ringPaint);
             ringPaint.setPathEffect(null);
 
             // Viền ngoài bánh xe
-            ringPaint.setStrokeWidth(dp(1.4f));
-            ringPaint.setColor(idx == activeWheelIndex ? StudioStyle.GOOGLE_BLUE : 0x55ffffff);
+            ringPaint.setStrokeWidth(dp(1.2f));
+            ringPaint.setColor(idx == activeWheelIndex ? StudioStyle.INK : StudioStyle.LINE);
             canvas.drawCircle(x, y, r, ringPaint);
 
-            // 3. Điểm trung tính ở tâm (neutral centre) và hạt điều khiển (dot)
+            // 3. Điểm trung tính ở tâm và hạt điều khiển
             ringPaint.setStyle(Paint.Style.FILL);
-            ringPaint.setColor(0x99ffffff);
+            ringPaint.setColor(0x66181a1f);
             canvas.drawCircle(x, y, dp(2f), ringPaint);
 
             float radAngle = (float) Math.toRadians(wh.hue);
@@ -472,30 +469,28 @@ public final class LightCraftView {
             float dotX = x + (float) Math.cos(radAngle) * dist;
             float dotY = y - (float) Math.sin(radAngle) * dist;
 
-            // Tia nối từ tâm tới điểm màu đang chọn
             ringPaint.setStyle(Paint.Style.STROKE);
-            ringPaint.setStrokeWidth(dp(1.2f));
-            ringPaint.setColor(0x88ffffff);
+            ringPaint.setStrokeWidth(dp(1.1f));
+            ringPaint.setColor(0x88181a1f);
             canvas.drawLine(x, y, dotX, dotY, ringPaint);
 
-            // Hạt tròn điều khiển (trắng viền đen giống dòng 1330-1331 trong edit.rs)
             ringPaint.setStyle(Paint.Style.FILL);
             ringPaint.setColor(Color.WHITE);
-            canvas.drawCircle(dotX, dotY, dp(5.5f), ringPaint);
+            canvas.drawCircle(dotX, dotY, dp(5.2f), ringPaint);
             ringPaint.setStyle(Paint.Style.STROKE);
-            ringPaint.setStrokeWidth(dp(1.5f));
-            ringPaint.setColor(0xff111827);
-            canvas.drawCircle(dotX, dotY, dp(5.5f), ringPaint);
+            ringPaint.setStrokeWidth(dp(1.6f));
+            ringPaint.setColor(StudioStyle.INK);
+            canvas.drawCircle(dotX, dotY, dp(5.2f), ringPaint);
 
             // 4. Thông số H° / S% phía trên bánh xe và tên vùng phía dưới
             textPaint.setTextSize(dp(9.5f));
-            textPaint.setColor(wh.sat > 0.5f ? 0xfffbbc04 : 0x99e2e8f0);
-            String readout = String.format(Locale.US, "H %d° · S %d%%", Math.round(wh.hue), Math.round(wh.sat));
+            textPaint.setColor(wh.sat > 0.5f ? StudioStyle.INK : StudioStyle.MUTED);
+            String readout = String.format(Locale.US, "%d° · %d%%", Math.round(wh.hue), Math.round(wh.sat));
             canvas.drawText(readout, x, y - r - dp(5), textPaint);
 
-            textPaint.setTextSize(dp(10.5f));
-            textPaint.setColor(0xffe2e8f0);
-            canvas.drawText(WHEEL_LABELS[idx], x, y + r + dp(14), textPaint);
+            textPaint.setTextSize(dp(10f));
+            textPaint.setColor(StudioStyle.INK);
+            canvas.drawText(WHEEL_LABELS[idx], x, y + r + dp(13), textPaint);
         }
 
         @Override

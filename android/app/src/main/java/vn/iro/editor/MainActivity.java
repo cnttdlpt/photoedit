@@ -188,36 +188,10 @@ public class MainActivity extends Activity {
         }
 
         /**
-         * Trả về màu chủ đạo theo kênh RGB chuẩn Google cho từng thông số tinh chỉnh:
-         * <ul>
-         *     <li>Kênh Đỏ ({@link StudioStyle#GOOGLE_RED}): Shift Đỏ, Độ đậm màu, Color Chrome, Cường độ LUT.</li>
-         *     <li>Kênh Lục ({@link StudioStyle#GOOGLE_GREEN}): Độ nét, Độ trong (Clarity), Hạt Grain, Khử nhiễu NR.</li>
-         *     <li>Kênh Lam ({@link StudioStyle#GOOGLE_BLUE}): Shift Xanh, Chrome Blue, Vùng tối (Shadow).</li>
-         *     <li>Kênh Vàng Sáng ({@link StudioStyle#GOOGLE_YELLOW}): Phơi sáng, Vùng sáng (Highlight), Nhiệt độ màu.</li>
-         * </ul>
+         * Trả về màu chủ đạo tối giản đồng nhất ({@link StudioStyle#INK}) cho toàn bộ thông số tinh chỉnh.
          */
         public int channelColor() {
-            switch (this) {
-                case RED:
-                case COLOR:
-                case COLOR_CHROME:
-                case LUT_AMOUNT:
-                    return StudioStyle.GOOGLE_RED;
-                case SHARPNESS:
-                case CLARITY:
-                case GRAIN:
-                case NR:
-                    return StudioStyle.GOOGLE_GREEN;
-                case BLUE:
-                case CHROME_BLUE:
-                case SHADOW:
-                    return StudioStyle.GOOGLE_BLUE;
-                case EXPOSURE:
-                case HIGHLIGHT:
-                case TEMP:
-                default:
-                    return StudioStyle.GOOGLE_YELLOW;
-            }
+            return StudioStyle.INK;
         }
 
         public String formatValue(Settings s) {
@@ -487,21 +461,16 @@ public class MainActivity extends Activity {
         outer.setPadding(dp(4), dp(4), dp(4), dp(16));
         scroll.addView(outer);
 
-        // 1. Thanh App Bar & Tìm kiếm kiểu Google Material 3 Search Bar
+        // 1. Thanh App Bar & Tìm kiếm tối giản
         LinearLayout topBar = row();
         topBar.setPadding(0, 0, 0, dp(14));
 
         if (wideLayoutActive) {
-            // Huy hiệu thương hiệu viền dải quang phổ Google RGB bên trái trên máy tính bảng / khổ ngang
             LinearLayout brandPill = row();
             brandPill.setPadding(dp(12), dp(8), dp(14), dp(8));
-            brandPill.setBackground(StudioStyle.rgbBorderPill(Color.WHITE, dp(20)));
-            ImageView spark = new ImageView(this);
-            spark.setImageDrawable(new StudioStyle.Icon("sparkles", StudioStyle.GOOGLE_BLUE, dp(16)));
-            brandPill.addView(spark, new LinearLayout.LayoutParams(dp(16), dp(16)));
-            TextView brandTitle = text("IRO RGB Studio", 13.5f, StudioStyle.INK);
+            brandPill.setBackground(StudioStyle.surface(Color.WHITE, StudioStyle.LINE, dp(18)));
+            TextView brandTitle = text("IRO Studio", 13.5f, StudioStyle.INK);
             brandTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-            brandTitle.setPadding(dp(8), 0, 0, 0);
             brandPill.addView(brandTitle);
             LinearLayout.LayoutParams brandLp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -511,46 +480,42 @@ public class MainActivity extends Activity {
         }
 
         LinearLayout searchBox = row();
-        searchBox.setPadding(dp(16), dp(11), dp(16), dp(11));
-        searchBox.setBackground(StudioStyle.rgbBorderPill(Color.WHITE, dp(24)));
+        searchBox.setPadding(dp(14), dp(10), dp(14), dp(10));
+        searchBox.setBackground(StudioStyle.surface(Color.WHITE, StudioStyle.LINE, dp(20)));
         ImageView searchIcon = new ImageView(this);
-        searchIcon.setImageDrawable(new StudioStyle.Icon("search", StudioStyle.GOOGLE_BLUE, dp(17)));
-        searchBox.addView(searchIcon, new LinearLayout.LayoutParams(dp(17), dp(17)));
-        TextView searchHint = text("Tìm kiếm 392 công thức màu phim, quang phổ RGB, 3D LUT...", 13.5f, StudioStyle.MUTED);
+        searchIcon.setImageDrawable(new StudioStyle.Icon("search", StudioStyle.MUTED, dp(16)));
+        searchBox.addView(searchIcon, new LinearLayout.LayoutParams(dp(16), dp(16)));
+        TextView searchHint = text("Tìm kiếm công thức màu phim, 3D LUT...", 13f, StudioStyle.MUTED);
         searchHint.setPadding(dp(10), 0, 0, 0);
         searchHint.setSingleLine(true);
         searchHint.setEllipsize(TextUtils.TruncateAt.END);
         searchBox.addView(searchHint, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        TextView shortcutBadge = text("392 màu", 11, StudioStyle.GOOGLE_BLUE);
+        TextView shortcutBadge = text("392", 11, StudioStyle.INK);
         shortcutBadge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        shortcutBadge.setPadding(dp(10), dp(4), dp(10), dp(4));
-        shortcutBadge.setBackground(StudioStyle.shape(StudioStyle.BLUE_TONAL, 0, dp(12)));
+        shortcutBadge.setPadding(dp(8), dp(3), dp(8), dp(3));
+        shortcutBadge.setBackground(StudioStyle.shape(StudioStyle.SURFACE, 0, dp(10)));
         searchBox.addView(shortcutBadge);
         searchBox.setOnClickListener(v -> showLibrary());
         MotionStudio.attachExpressiveTouch(searchBox, 0.98f);
         topBar.addView(searchBox, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
-        View lutCloudBtn = createCircleIconButton("film", StudioStyle.GOOGLE_BLUE, dp(42), this::showOnlineLuts);
+        View lutCloudBtn = createCircleIconButton("film", StudioStyle.INK, dp(40), this::showOnlineLuts);
         lutCloudBtn.setContentDescription("Kho LUT trực tuyến");
-        LinearLayout.LayoutParams lutParams = new LinearLayout.LayoutParams(dp(42), dp(42));
-        lutParams.leftMargin = dp(10);
+        LinearLayout.LayoutParams lutParams = new LinearLayout.LayoutParams(dp(40), dp(40));
+        lutParams.leftMargin = dp(8);
         topBar.addView(lutCloudBtn, lutParams);
 
-        View menuBtn = createCircleTextButton("⋯", StudioStyle.INK, dp(42), this::showMore);
-        LinearLayout.LayoutParams menuParams = new LinearLayout.LayoutParams(dp(42), dp(42));
+        View menuBtn = createCircleTextButton("⋯", StudioStyle.INK, dp(40), this::showMore);
+        LinearLayout.LayoutParams menuParams = new LinearLayout.LayoutParams(dp(40), dp(40));
         menuParams.leftMargin = dp(8);
         topBar.addView(menuBtn, menuParams);
 
         outer.addView(topBar);
 
-        // 2. Tạo khối Hero Studio Card (Mở ảnh Thư viện / Tệp tin / Ảnh mẫu Studio 1 chạm)
         LinearLayout heroCard = buildExpressiveHeroCard();
-
-        // 3. Tạo khối Bento 2×2 & Dải Film Simulation tương tác
         LinearLayout bentoAndFilmsCol = buildBentoAndFilmShowcaseColumn();
 
         if (wideLayoutActive) {
-            // BỐ CỤC 2 CỘT CHUẨN MÁY TÍNH BẢNG & KHỔ NGANG (Google Material 3 Canonical Dual-Pane)
             LinearLayout dualPane = row();
             dualPane.setGravity(Gravity.TOP);
 
@@ -559,107 +524,74 @@ public class MainActivity extends Activity {
             dualPane.addView(leftCol, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.46f));
 
             View gap = new View(this);
-            dualPane.addView(gap, new LinearLayout.LayoutParams(dp(18), 1));
+            dualPane.addView(gap, new LinearLayout.LayoutParams(dp(16), 1));
 
             dualPane.addView(bentoAndFilmsCol, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 0.54f));
             outer.addView(dualPane, new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT));
-
-            MotionStudio.animateCascade(leftCol, 30, 55);
-            MotionStudio.animateCascade(bentoAndFilmsCol, 70, 45);
         } else {
-            // BỐ CỤC 1 CỘT TRÊN ĐIỆN THOẠI DỌC
             outer.addView(heroCard);
             LinearLayout.LayoutParams bentoLp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             bentoLp.topMargin = dp(14);
             outer.addView(bentoAndFilmsCol, bentoLp);
-            MotionStudio.animateCascade(outer, 20, 45);
         }
 
         return scroll;
     }
 
     /**
-     * Thẻ Hero chính kiểu Google Material 3 Expressive RGB:
-     * Có dải băng 4 chấm màu Google RGB (Red, Yellow, Green, Blue), nút mở Thư viện ảnh, Tệp tin và Ảnh mẫu 1 chạm.
+     * Thẻ Hero tối giản: Mở Thư viện ảnh, Tệp tin hoặc Ảnh mẫu 1 chạm.
      */
     private LinearLayout buildExpressiveHeroCard() {
         LinearLayout heroCard = column();
         heroCard.setPadding(dp(20), dp(20), dp(20), dp(20));
-        heroCard.setBackground(StudioStyle.liquidGlassCard(dp(28)));
+        heroCard.setBackground(StudioStyle.liquidGlassCard(dp(22)));
 
-        // Dải băng 4 hạt màu Google RGB (Red - Yellow - Green - Blue) + Huy hiệu quang phổ RGB
-        LinearLayout bannerRow = row();
-        int[] swatchColors = {
-                StudioStyle.GOOGLE_RED,
-                StudioStyle.GOOGLE_YELLOW,
-                StudioStyle.GOOGLE_GREEN,
-                StudioStyle.GOOGLE_BLUE
-        };
-        for (int i = 0; i < swatchColors.length; i++) {
-            View dot = new View(this);
-            dot.setBackground(StudioStyle.shape(swatchColors[i], 0x44ffffff, dp(10)));
-            LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(dp(20), dp(20));
-            if (i > 0) dotLp.leftMargin = dp(6);
-            bannerRow.addView(dot, dotLp);
-        }
-        View bannerSpacer = new View(this);
-        bannerRow.addView(bannerSpacer, new LinearLayout.LayoutParams(0, 1, 1f));
-
-        TextView engineTag = text("RGB Spectrum · Linear 3D LUT", 11, StudioStyle.GOOGLE_BLUE);
-        engineTag.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        engineTag.setPadding(dp(10), dp(4), dp(10), dp(4));
-        engineTag.setBackground(StudioStyle.rgbBorderPill(Color.WHITE, dp(12)));
-        bannerRow.addView(engineTag);
-        heroCard.addView(bannerRow);
-
-        // Tiêu đề lớn & mô tả
-        TextView heroTitle = text("Phòng tối Quang Phổ RGB & 3D LUT", wideLayoutActive ? 20f : 17f, StudioStyle.INK);
+        TextView heroTitle = text("Chọn ảnh để chỉnh sửa", wideLayoutActive ? 19f : 17f, StudioStyle.INK);
         heroTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        heroTitle.setPadding(0, dp(14), 0, dp(4));
+        heroTitle.setPadding(0, 0, 0, dp(4));
         heroCard.addView(heroTitle);
 
         TextView heroSub = text(
-                "Biểu đồ sóng RGB thời gian thực, 16 thông số phân tách theo kênh Đỏ · Lục · Lam · Sáng, cân bằng AI và 30 khung EXIF.",
+                "392 công thức màu phim · Đường cong & HSL · 30 mẫu khung EXIF.",
                 12.5f, StudioStyle.MUTED);
         heroSub.setLineSpacing(dp(2), 1.0f);
         heroCard.addView(heroSub);
 
-        // Hàng nút CTA chính: Thư viện ảnh & Tệp tin
         LinearLayout primaryRow = row();
-        primaryRow.setPadding(0, dp(18), 0, 0);
+        primaryRow.setPadding(0, dp(16), 0, 0);
 
         LinearLayout galleryBtn = row();
         galleryBtn.setGravity(Gravity.CENTER);
-        galleryBtn.setPadding(dp(18), dp(13), dp(18), dp(13));
-        galleryBtn.setBackground(StudioStyle.warmAmberPill(dp(24)));
+        galleryBtn.setPadding(dp(16), dp(12), dp(16), dp(12));
+        galleryBtn.setBackground(StudioStyle.warmAmberPill(dp(18)));
         ImageView galIcon = new ImageView(this);
-        galIcon.setImageDrawable(new StudioStyle.Icon("photo", Color.WHITE, dp(17)));
-        galleryBtn.addView(galIcon, new LinearLayout.LayoutParams(dp(17), dp(17)));
-        TextView galText = text("Thư viện ảnh", 13.5f, Color.WHITE);
+        galIcon.setImageDrawable(new StudioStyle.Icon("photo", Color.WHITE, dp(16)));
+        galleryBtn.addView(galIcon, new LinearLayout.LayoutParams(dp(16), dp(16)));
+        TextView galText = text("Thư viện ảnh", 13f, Color.WHITE);
         galText.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         galText.setPadding(dp(8), 0, 0, 0);
         galleryBtn.addView(galText);
         galleryBtn.setOnClickListener(v -> choose(OPEN_PHOTO, "image/*"));
-        MotionStudio.attachExpressiveTouch(galleryBtn, 0.95f);
+        MotionStudio.attachExpressiveTouch(galleryBtn, 0.96f);
         primaryRow.addView(galleryBtn, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         LinearLayout fileBtn = row();
         fileBtn.setGravity(Gravity.CENTER);
-        fileBtn.setPadding(dp(18), dp(13), dp(18), dp(13));
-        fileBtn.setBackground(StudioStyle.liquidGlassPill(dp(24)));
+        fileBtn.setPadding(dp(16), dp(12), dp(16), dp(12));
+        fileBtn.setBackground(StudioStyle.liquidGlassPill(dp(18)));
         ImageView folderIcon = new ImageView(this);
         folderIcon.setImageDrawable(new StudioStyle.Icon("folder", StudioStyle.INK, dp(16)));
         fileBtn.addView(folderIcon, new LinearLayout.LayoutParams(dp(16), dp(16)));
-        TextView fileText = text("Tệp tin", 13.5f, StudioStyle.INK);
+        TextView fileText = text("Tệp tin", 13f, StudioStyle.INK);
         fileText.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         fileText.setPadding(dp(8), 0, 0, 0);
         fileBtn.addView(fileText);
         fileBtn.setOnClickListener(v -> chooseDocumentOnly(OPEN_PHOTO, "image/*"));
-        MotionStudio.attachExpressiveTouch(fileBtn, 0.95f);
+        MotionStudio.attachExpressiveTouch(fileBtn, 0.96f);
         LinearLayout.LayoutParams fileLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -668,15 +600,14 @@ public class MainActivity extends Activity {
 
         heroCard.addView(primaryRow);
 
-        // Nút tạo & mở Ảnh mẫu Studio 1 chạm với viền cầu vồng Google RGB
         LinearLayout sampleBtn = row();
         sampleBtn.setGravity(Gravity.CENTER);
-        sampleBtn.setPadding(dp(14), dp(11), dp(14), dp(11));
-        sampleBtn.setBackground(StudioStyle.rgbBorderPill(Color.WHITE, dp(20)));
+        sampleBtn.setPadding(dp(14), dp(10), dp(14), dp(10));
+        sampleBtn.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(16)));
         ImageView wandIcon = new ImageView(this);
-        wandIcon.setImageDrawable(new StudioStyle.Icon("wand", StudioStyle.GOOGLE_BLUE, dp(16)));
-        sampleBtn.addView(wandIcon, new LinearLayout.LayoutParams(dp(16), dp(16)));
-        TextView sampleText = text("Mở ảnh mẫu Studio Fujifilm X-T5 (Thử ngay RGB 1 chạm)", 12.5f, StudioStyle.GOOGLE_BLUE);
+        wandIcon.setImageDrawable(new StudioStyle.Icon("wand", StudioStyle.INK, dp(15)));
+        sampleBtn.addView(wandIcon, new LinearLayout.LayoutParams(dp(15), dp(15)));
+        TextView sampleText = text("Mở ảnh mẫu thử nhanh", 12.5f, StudioStyle.INK);
         sampleText.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         sampleText.setPadding(dp(8), 0, 0, 0);
         sampleBtn.addView(sampleText);
@@ -684,7 +615,7 @@ public class MainActivity extends Activity {
             v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
             loadStudioSamplePhoto(null);
         });
-        MotionStudio.attachExpressiveTouch(sampleBtn, 0.96f);
+        MotionStudio.attachExpressiveTouch(sampleBtn, 0.97f);
         LinearLayout.LayoutParams sampleLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -695,57 +626,54 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Cột bên phải trên Máy tính bảng / Khổ ngang: Lưới Bento 2×2 mang 4 sắc thái Google RGB (Đỏ, Vàng, Lục, Lam).
+     * Lưới 2×2 & Dải chọn nhanh màu phim theo phong cách tối giản.
      */
     private LinearLayout buildBentoAndFilmShowcaseColumn() {
         LinearLayout col = column();
 
-        // Tiêu đề phần Bento
         LinearLayout sectionHeader = row();
         sectionHeader.setPadding(dp(4), 0, dp(4), dp(8));
-        TextView albumTitle = text("Bộ công cụ Quang phổ RGB & Kho màu phim", 14.5f, StudioStyle.INK);
+        TextView albumTitle = text("Bộ sưu tập & Công cụ", 14f, StudioStyle.INK);
         albumTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         sectionHeader.addView(albumTitle, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
-        TextView openQuickBtn = text("Xem tất cả 392 ›", 12.5f, StudioStyle.GOOGLE_BLUE);
+        TextView openQuickBtn = text("Tất cả 392 ›", 12f, StudioStyle.MUTED);
         openQuickBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         openQuickBtn.setOnClickListener(v -> showLibrary());
         sectionHeader.addView(openQuickBtn);
         col.addView(sectionHeader);
 
-        // Lưới 2×2 Bento Cards với 4 màu chủ đạo Google (Red, Yellow, Green, Blue)
         LinearLayout gridRow1 = row();
-        gridRow1.addView(buildAlbumCard("Fuji Chrome", "392 công thức X-Trans", "film", StudioStyle.GOOGLE_RED, this::showLibrary),
+        gridRow1.addView(buildAlbumCard("Fuji Chrome", "392 công thức phim", "film", StudioStyle.INK, this::showLibrary),
                 new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         View spacer1 = new View(this);
-        gridRow1.addView(spacer1, new LinearLayout.LayoutParams(dp(12), 1));
-        gridRow1.addView(buildAlbumCard("Kodak Portra", "Thử ngay màu nắng ấm", "sparkles", StudioStyle.GOOGLE_YELLOW, () -> loadStudioSamplePhoto("Classic Chrome")),
+        gridRow1.addView(spacer1, new LinearLayout.LayoutParams(dp(10), 1));
+        gridRow1.addView(buildAlbumCard("Kodak Portra", "Tông màu ấm cổ điển", "sparkles", StudioStyle.INK, () -> loadStudioSamplePhoto("Classic Chrome")),
                 new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         col.addView(gridRow1);
 
         LinearLayout gridRow2 = row();
-        gridRow2.setPadding(0, dp(12), 0, 0);
-        gridRow2.addView(buildAlbumCard("Fujicolor & B&W", "Velvia, Eterna & Acros", "compare", StudioStyle.GOOGLE_GREEN, () -> loadStudioSamplePhoto("Velvia")),
+        gridRow2.setPadding(0, dp(10), 0, 0);
+        gridRow2.addView(buildAlbumCard("Fujicolor & B&W", "Velvia, Eterna & Acros", "compare", StudioStyle.INK, () -> loadStudioSamplePhoto("Velvia")),
                 new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         View spacer2 = new View(this);
-        gridRow2.addView(spacer2, new LinearLayout.LayoutParams(dp(12), 1));
-        gridRow2.addView(buildAlbumCard("Khung & EXIF", "30 mẫu viền nghệ thuật", "frame", StudioStyle.GOOGLE_BLUE, () -> {
+        gridRow2.addView(spacer2, new LinearLayout.LayoutParams(dp(10), 1));
+        gridRow2.addView(buildAlbumCard("Khung & EXIF", "30 mẫu viền tối giản", "frame", StudioStyle.INK, () -> {
             selectedTab = EditorToolTab.FRAME;
             frameStyle = 1;
             loadStudioSamplePhoto(null);
         }), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         col.addView(gridRow2);
 
-        // Thẻ chọn nhanh Film Simulation (Chạm vào chip để mở ngay ảnh mẫu với giả lập màu đó)
         LinearLayout filmShowcase = column();
         filmShowcase.setPadding(dp(14), dp(12), dp(14), dp(12));
-        filmShowcase.setBackground(StudioStyle.surface(Color.WHITE, StudioStyle.LINE, dp(22)));
+        filmShowcase.setBackground(StudioStyle.surface(Color.WHITE, StudioStyle.LINE, dp(18)));
         LinearLayout.LayoutParams showcaseLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        showcaseLp.topMargin = dp(12);
+        showcaseLp.topMargin = dp(10);
 
-        TextView chipHeader = text("Chạm thử nhanh Giả lập Màu Phim (Film Simulation)", 12, StudioStyle.MUTED);
+        TextView chipHeader = text("Giả lập màu phim (Film Simulation)", 11.5f, StudioStyle.MUTED);
         chipHeader.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         chipHeader.setPadding(0, 0, 0, dp(8));
         filmShowcase.addView(chipHeader);
@@ -757,36 +685,27 @@ public class MainActivity extends Activity {
                 "Classic Chrome", "Velvia", "Classic Negative", "Astia",
                 "Nostalgic Neg.", "Acros+G", "Eterna", "Reala Ace"
         };
-        int[] dotPalette = {
-                StudioStyle.GOOGLE_RED, StudioStyle.GOOGLE_YELLOW,
-                StudioStyle.GOOGLE_GREEN, StudioStyle.GOOGLE_BLUE
-        };
         for (int i = 0; i < sampleFilms.length; i++) {
             final String filmName = sampleFilms[i];
             LinearLayout pill = row();
-            pill.setPadding(dp(12), dp(7), dp(12), dp(7));
-            pill.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(18)));
-
-            View colorDot = new View(this);
-            colorDot.setBackground(StudioStyle.shape(dotPalette[i % dotPalette.length], 0, dp(4)));
-            pill.addView(colorDot, new LinearLayout.LayoutParams(dp(6), dp(6)));
+            pill.setPadding(dp(12), dp(6), dp(12), dp(6));
+            pill.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(14)));
 
             TextView label = text(filmName, 11.5f, StudioStyle.INK);
             label.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-            label.setPadding(dp(6), 0, 0, 0);
             pill.addView(label);
 
             pill.setOnClickListener(v -> {
                 v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
                 loadStudioSamplePhoto(filmName);
             });
-            MotionStudio.attachExpressiveTouch(pill, 0.94f);
+            MotionStudio.attachExpressiveTouch(pill, 0.95f);
 
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             if (i > 0) {
-                lp.leftMargin = dp(8);
+                lp.leftMargin = dp(6);
             }
             filmRow.addView(pill, lp);
         }
@@ -800,26 +719,25 @@ public class MainActivity extends Activity {
     private View buildAlbumCard(String title, String subtitle, String iconName, int accentColor, Runnable action) {
         LinearLayout card = column();
         card.setPadding(dp(14), dp(12), dp(14), dp(12));
-        card.setMinimumHeight(dp(90));
-        card.setBackground(StudioStyle.surface(Color.WHITE, StudioStyle.LINE, dp(22)));
+        card.setMinimumHeight(dp(86));
+        card.setBackground(StudioStyle.surface(Color.WHITE, StudioStyle.LINE, dp(18)));
 
         FrameLayout circle = new FrameLayout(this);
-        int bgAlphaColor = (accentColor & 0x00ffffff) | 0x20000000;
-        circle.setBackground(StudioStyle.shape(bgAlphaColor, 0, dp(16)));
+        circle.setBackground(StudioStyle.shape(StudioStyle.SURFACE, 0, dp(14)));
         ImageView icon = new ImageView(this);
-        icon.setImageDrawable(new StudioStyle.Icon(iconName, accentColor, dp(16)));
+        icon.setImageDrawable(new StudioStyle.Icon(iconName, StudioStyle.INK, dp(16)));
         circle.addView(icon, new FrameLayout.LayoutParams(dp(16), dp(16), Gravity.CENTER));
-        card.addView(circle, new LinearLayout.LayoutParams(dp(34), dp(34)));
+        card.addView(circle, new LinearLayout.LayoutParams(dp(32), dp(32)));
 
         View spacer = new View(this);
-        card.addView(spacer, new LinearLayout.LayoutParams(1, dp(10)));
+        card.addView(spacer, new LinearLayout.LayoutParams(1, dp(8)));
 
-        TextView titleView = text(title, 13.5f, StudioStyle.INK);
+        TextView titleView = text(title, 13f, StudioStyle.INK);
         titleView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         titleView.setSingleLine(true);
         card.addView(titleView);
 
-        TextView subView = text(subtitle, 11.5f, StudioStyle.MUTED);
+        TextView subView = text(subtitle, 11f, StudioStyle.MUTED);
         subView.setSingleLine(true);
         card.addView(subView);
 
@@ -827,7 +745,7 @@ public class MainActivity extends Activity {
             v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
             action.run();
         });
-        MotionStudio.attachExpressiveTouch(card, 0.96f);
+        MotionStudio.attachExpressiveTouch(card, 0.97f);
         return card;
     }
 
@@ -1514,36 +1432,36 @@ public class MainActivity extends Activity {
     private View buildLightCraftSection() {
         LinearLayout section = column();
 
-        // 1. Tiêu đề phân hệ LightCraft Darkroom
+        // 1. Tiêu đề phân hệ LightCraft tối giản
         LinearLayout topRow = row();
         topRow.setPadding(dp(2), 0, dp(2), dp(6));
 
         ImageView lcIcon = new ImageView(this);
-        lcIcon.setImageDrawable(new StudioStyle.Icon("lightcraft", StudioStyle.GOOGLE_BLUE, dp(16)));
-        topRow.addView(lcIcon, new LinearLayout.LayoutParams(dp(16), dp(16)));
+        lcIcon.setImageDrawable(new StudioStyle.Icon("lightcraft", StudioStyle.INK, dp(15)));
+        topRow.addView(lcIcon, new LinearLayout.LayoutParams(dp(15), dp(15)));
 
-        TextView lcTitle = text("LightCraft · Tone Curve & OkLab Grading", 13f, StudioStyle.INK);
+        TextView lcTitle = text("Phòng tối LightCraft", 13f, StudioStyle.INK);
         lcTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         lcTitle.setPadding(dp(6), 0, dp(6), 0);
         lcTitle.setSingleLine(true);
         lcTitle.setEllipsize(TextUtils.TruncateAt.END);
         topRow.addView(lcTitle, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
-        TextView resetLcBtn = text("Đặt lại LightCraft", 11f, StudioStyle.GOOGLE_RED);
+        TextView resetLcBtn = text("Đặt lại", 11f, StudioStyle.MUTED);
         resetLcBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         resetLcBtn.setPadding(dp(9), dp(4), dp(9), dp(4));
-        resetLcBtn.setBackground(StudioStyle.shape(StudioStyle.RED_TONAL, 0x44ea4335, dp(12)));
+        resetLcBtn.setBackground(StudioStyle.shape(StudioStyle.SURFACE, StudioStyle.LINE, dp(12)));
         resetLcBtn.setOnClickListener(v -> {
             v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
             lightCraftState.resetAll();
             syncLightCraftSection();
             showImage();
-            message("Đã đặt lại toàn bộ thông số LightCraft về mặc định");
+            message("Đã đặt lại thông số LightCraft");
         });
         topRow.addView(resetLcBtn);
         section.addView(topRow);
 
-        // 2. Dải 4 tab con của LightCraft (Đường cong | 3-Way Grading | 8-Kênh HSL | Mask & Preset)
+        // 2. Dải 4 tab con của LightCraft (Đường cong | Pha màu | HSL 8 kênh | Mặt nạ & Preset)
         HorizontalScrollView subTabScroll = new HorizontalScrollView(this);
         subTabScroll.setHorizontalScrollBarEnabled(false);
         subTabScroll.setPadding(0, 0, 0, dp(6));
@@ -1559,7 +1477,7 @@ public class MainActivity extends Activity {
         curveLp.bottomMargin = dp(6);
         section.addView(toneCurveGraphView, curveLp);
 
-        // 4. Cụm 3 Bánh xe màu OkLab/OkLCh 3-Way Color Grading (hiển thị khi chọn tab con 1: 3-Way Grading)
+        // 4. Cụm 3 Bánh xe màu OkLab/OkLCh 3-Way Color Grading (hiển thị khi chọn tab con 1: Pha màu)
         gradingWheelsView = new LightCraftView.GradingWheelsView(this, lightCraftState, this::showImage);
         LinearLayout.LayoutParams wheelsLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -1611,7 +1529,7 @@ public class MainActivity extends Activity {
     }
 
     // =========================================================================
-    // ĐỒNG BỘ TRẠNG THÁI GIAO DIỆN & CHUYỂN ĐỘNG MATERIAL 3 EXPRESSIVE
+    // ĐỒNG BỘ TRẠNG THÁI GIAO DIỆN
     // =========================================================================
 
     private void updateWorkspaceVisibility() {
@@ -1661,13 +1579,12 @@ public class MainActivity extends Activity {
             label.setTypeface(Typeface.create("sans-serif-medium", active ? Typeface.BOLD : Typeface.NORMAL));
 
             if (wideLayoutActive) {
-                // Cập nhật trạng thái Navigation Rail chuẩn Material 3 trên Tablet / Khổ ngang
-                label.setTextColor(active ? StudioStyle.WARM_AMBER : StudioStyle.MUTED);
+                label.setTextColor(active ? StudioStyle.INK : StudioStyle.MUTED);
                 FrameLayout pill = railPillIndicators.get(tab);
                 ImageView icon = railPillIcons.get(tab);
                 if (pill != null) {
                     pill.setBackground(active
-                            ? (tab == EditorToolTab.LIGHTCRAFT ? StudioStyle.rgbSpectrumPill(dp(16)) : StudioStyle.shape(StudioStyle.WARM_AMBER, 0, dp(16)))
+                            ? StudioStyle.shape(StudioStyle.INK, 0, dp(16))
                             : StudioStyle.shape(0x00000000, 0, dp(16)));
                     if (active) {
                         MotionStudio.popBadge(pill);
@@ -1680,7 +1597,6 @@ public class MainActivity extends Activity {
                             dp(19)));
                 }
             } else {
-                // Cập nhật thanh Mode Pill trên Điện thoại dọc
                 label.setTextColor(active ? StudioStyle.INK : StudioStyle.MUTED);
                 label.setBackground(active ? StudioStyle.shape(Color.WHITE, StudioStyle.LINE, dp(18)) : null);
             }
@@ -1701,26 +1617,24 @@ public class MainActivity extends Activity {
 
     private void syncAdjustHeaderOnly() {
         if (activeParamIconView == null) return;
-        int chColor = selectedAdjust.channelColor();
-        int chTonal = StudioStyle.tonalForChannel(chColor);
-        activeParamIconView.setImageDrawable(new StudioStyle.Icon(selectedAdjust.icon, chColor, dp(16)));
+        activeParamIconView.setImageDrawable(new StudioStyle.Icon(selectedAdjust.icon, StudioStyle.INK, dp(16)));
         activeParamTitleView.setText(selectedAdjust.label);
 
         boolean modified = selectedAdjust.isModified(settings);
         activeParamValueBadge.setText(selectedAdjust.formatValue(settings));
-        activeParamValueBadge.setTextColor(modified ? chColor : StudioStyle.MUTED);
+        activeParamValueBadge.setTextColor(modified ? StudioStyle.INK : StudioStyle.MUTED);
         activeParamValueBadge.setBackground(StudioStyle.shape(
-                modified ? chTonal : 0xccffffff,
-                modified ? ((chColor & 0x00ffffff) | 0x55000000) : StudioStyle.LINE,
+                modified ? StudioStyle.WARM_AMBER_LIGHT : StudioStyle.SURFACE,
+                StudioStyle.LINE,
                 dp(12)));
 
         activeParamResetBtn.setVisibility(modified ? View.VISIBLE : View.GONE);
 
         drBadgeButton.setText("DR" + settings.dr);
-        drBadgeButton.setTextColor(settings.dr != 100 ? StudioStyle.GOOGLE_YELLOW : StudioStyle.MUTED);
+        drBadgeButton.setTextColor(settings.dr != 100 ? StudioStyle.INK : StudioStyle.MUTED);
         drBadgeButton.setBackground(StudioStyle.shape(
-                settings.dr != 100 ? StudioStyle.YELLOW_TONAL : 0xccffffff,
-                settings.dr != 100 ? 0x55f29900 : StudioStyle.LINE,
+                settings.dr != 100 ? StudioStyle.WARM_AMBER_LIGHT : StudioStyle.SURFACE,
+                StudioStyle.LINE,
                 dp(12)));
     }
 
@@ -1729,7 +1643,7 @@ public class MainActivity extends Activity {
             return;
         }
         syncAdjustHeaderOnly();
-        tickRulerView.setAccentColor(selectedAdjust.channelColor());
+        tickRulerView.setAccentColor(StudioStyle.INK);
         tickRulerView.configure(
                 selectedAdjust.read(settings),
                 selectedAdjust.min,
@@ -1738,31 +1652,31 @@ public class MainActivity extends Activity {
 
         if (railAutoBalanceCircle != null) {
             railAutoBalanceCircle.setBackground(isAutoBalanced
-                    ? StudioStyle.rgbSpectrumPill(dp(21))
+                    ? StudioStyle.warmAmberPill(dp(21))
                     : StudioStyle.liquidGlassCircle());
         }
 
         adjustStripContainer.removeAllViews();
 
         if (wideLayoutActive) {
-            // TRÊN TABLET & KHỔ NGANG: Hiển thị nút Tự động cân bằng quang phổ RGB + Lưới 2 cột thông số trực quan
             LinearLayout autoBanner = row();
-            autoBanner.setPadding(dp(12), dp(10), dp(12), dp(10));
-            autoBanner.setBackground(isAutoBalanced
-                    ? StudioStyle.rgbSpectrumPill(dp(18))
-                    : StudioStyle.rgbBorderPill(Color.WHITE, dp(18)));
+            autoBanner.setPadding(dp(12), dp(9), dp(12), dp(9));
+            autoBanner.setBackground(StudioStyle.surface(
+                    isAutoBalanced ? StudioStyle.INK : StudioStyle.SURFACE,
+                    isAutoBalanced ? 0 : StudioStyle.LINE,
+                    dp(14)));
             ImageView wand = new ImageView(this);
-            wand.setImageDrawable(new StudioStyle.Icon("wand", isAutoBalanced ? Color.WHITE : StudioStyle.GOOGLE_BLUE, dp(16)));
-            autoBanner.addView(wand, new LinearLayout.LayoutParams(dp(16), dp(16)));
+            wand.setImageDrawable(new StudioStyle.Icon("wand", isAutoBalanced ? Color.WHITE : StudioStyle.INK, dp(15)));
+            autoBanner.addView(wand, new LinearLayout.LayoutParams(dp(15), dp(15)));
             TextView autoTitle = text(
-                    isAutoBalanced ? "Đã bật Tự động cân bằng AI (RGB)" : "Tự động cân bằng quang phổ RGB",
-                    12.5f,
+                    isAutoBalanced ? "Đã bật tự động cân bằng" : "Tự động cân bằng ảnh",
+                    12f,
                     isAutoBalanced ? Color.WHITE : StudioStyle.INK);
             autoTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
             autoTitle.setPadding(dp(8), 0, 0, 0);
             autoBanner.addView(autoTitle, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
             autoBanner.setOnClickListener(v -> performAutoBalance());
-            MotionStudio.attachExpressiveTouch(autoBanner, 0.96f);
+            MotionStudio.attachExpressiveTouch(autoBanner, 0.97f);
             LinearLayout.LayoutParams autoBannerLp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -1772,7 +1686,7 @@ public class MainActivity extends Activity {
             AdjustParam[] allParams = AdjustParam.values();
             for (int i = 0; i < allParams.length; i += 2) {
                 LinearLayout pairRow = row();
-                pairRow.setPadding(0, dp(4), 0, dp(4));
+                pairRow.setPadding(0, dp(3), 0, dp(3));
 
                 View leftCard = buildWideAdjustParamCard(allParams[i]);
                 pairRow.addView(leftCard, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -1790,14 +1704,13 @@ public class MainActivity extends Activity {
                 adjustStripContainer.addView(pairRow);
             }
         } else {
-            // TRÊN ĐIỆN THOẠI DỌC: Dải nút tròn cuộn ngang
             adjustStripContainer.addView(buildCircularToolItem(
                     "Tự động",
                     "wand",
                     null,
                     isAutoBalanced,
                     false,
-                    StudioStyle.GOOGLE_BLUE,
+                    StudioStyle.INK,
                     this::performAutoBalance));
 
             for (AdjustParam param : AdjustParam.values()) {
@@ -1811,7 +1724,7 @@ public class MainActivity extends Activity {
                         valueInsideCircle,
                         isSelected,
                         modified,
-                        param.channelColor(),
+                        StudioStyle.INK,
                         () -> {
                             selectedAdjust = param;
                             syncAdjustSection();
@@ -1826,23 +1739,19 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Thẻ thông số dạng viên thuốc ngang (Material 3 RGB Tonal Chip Card) dùng cho lưới 2 cột trên Tablet & Khổ ngang.
-     * Tự động đổi màu theo kênh RGB của từng thông số ({@link AdjustParam#channelColor()}).
+     * Thẻ thông số dạng viên thuốc ngang tối giản dùng cho lưới 2 cột trên Tablet & Khổ ngang.
      */
     private View buildWideAdjustParamCard(final AdjustParam param) {
         boolean isSelected = (selectedAdjust == param);
         boolean modified = param.isModified(settings);
-        int chColor = param.channelColor();
-        int chTonal = StudioStyle.tonalForChannel(chColor);
 
         LinearLayout card = row();
-        card.setPadding(dp(10), dp(10), dp(10), dp(10));
-        int bgColor = isSelected ? chColor : (modified ? chTonal : Color.WHITE);
-        int borderColor = isSelected ? 0
-                : (modified ? ((chColor & 0x00ffffff) | 0x55000000) : StudioStyle.LINE);
-        card.setBackground(StudioStyle.surface(bgColor, borderColor, dp(16)));
+        card.setPadding(dp(10), dp(9), dp(10), dp(9));
+        int bgColor = isSelected ? StudioStyle.INK : (modified ? StudioStyle.WARM_AMBER_LIGHT : Color.WHITE);
+        int borderColor = isSelected ? 0 : StudioStyle.LINE;
+        card.setBackground(StudioStyle.surface(bgColor, borderColor, dp(14)));
 
-        int iconColor = isSelected ? Color.WHITE : chColor;
+        int iconColor = isSelected ? Color.WHITE : StudioStyle.INK;
         ImageView icon = new ImageView(this);
         icon.setImageDrawable(new StudioStyle.Icon(param.icon, iconColor, dp(15)));
         card.addView(icon, new LinearLayout.LayoutParams(dp(15), dp(15)));
@@ -1855,7 +1764,7 @@ public class MainActivity extends Activity {
         card.addView(label, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView val = text(param.formatValue(settings), 11f,
-                isSelected ? Color.WHITE : (modified ? chColor : StudioStyle.MUTED));
+                isSelected ? Color.WHITE : (modified ? StudioStyle.INK : StudioStyle.MUTED));
         val.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         card.addView(val);
 
@@ -1865,7 +1774,7 @@ public class MainActivity extends Activity {
             syncAdjustSection();
             MotionStudio.popBadge(activeParamValueBadge);
         });
-        MotionStudio.attachExpressiveTouch(card, 0.95f);
+        MotionStudio.attachExpressiveTouch(card, 0.96f);
         return card;
     }
 
@@ -1875,7 +1784,7 @@ public class MainActivity extends Activity {
                                        boolean isSelected,
                                        boolean isModified,
                                        Runnable onClick) {
-        return buildCircularToolItem(label, iconName, overrideCenterText, isSelected, isModified, StudioStyle.GOOGLE_BLUE, onClick);
+        return buildCircularToolItem(label, iconName, overrideCenterText, isSelected, isModified, StudioStyle.INK, onClick);
     }
 
     private View buildCircularToolItem(String label,
@@ -2192,15 +2101,9 @@ public class MainActivity extends Activity {
             stageMaskOverlayView.invalidate();
         }
 
-        // 1. Xây dựng hàng 4 viên thuốc chuyển phân hệ con của LightCraft
+        // 1. Xây dựng hàng 4 viên thuốc chuyển phân hệ con của LightCraft theo phong cách tối giản
         lightCraftSubTabRow.removeAllViews();
-        final String[] subNames = {"📈 Đường cong", "🎡 3-Way Grading", "🌈 8-Kênh HSL", "🎯 Mask & Preset"};
-        final int[] subColors = {
-                StudioStyle.GOOGLE_BLUE,
-                StudioStyle.GOOGLE_RED,
-                StudioStyle.GOOGLE_GREEN,
-                StudioStyle.WARM_AMBER
-        };
+        final String[] subNames = {"Đường cong", "Pha màu", "HSL 8 kênh", "Mặt nạ & Preset"};
         for (int i = 0; i < subNames.length; i++) {
             final int tabIdx = i;
             boolean active = (lightCraftSubTab == i);
@@ -2208,7 +2111,7 @@ public class MainActivity extends Activity {
             pill.setTypeface(Typeface.create("sans-serif-medium", active ? Typeface.BOLD : Typeface.NORMAL));
             pill.setPadding(dp(12), dp(6), dp(12), dp(6));
             pill.setBackground(StudioStyle.surface(
-                    active ? subColors[i] : StudioStyle.SURFACE,
+                    active ? StudioStyle.INK : StudioStyle.SURFACE,
                     active ? 0 : StudioStyle.LINE,
                     dp(999)));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -2221,7 +2124,7 @@ public class MainActivity extends Activity {
                 lightCraftSubTab = tabIdx;
                 syncLightCraftSection();
             });
-            MotionStudio.attachExpressiveTouch(pill, 0.94f);
+            MotionStudio.attachExpressiveTouch(pill, 0.96f);
             lightCraftSubTabRow.addView(pill);
         }
 
@@ -2249,7 +2152,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Phân hệ con 0 của LightCraft: Chọn kênh Đường cong ({@code Tham số 4 vùng / RGB / R / G / B})
+     * Phân hệ con 0 của LightCraft: Chọn kênh Đường cong ({@code Tham số / RGB / Đỏ / Lục / Lam})
      * và 4 thanh trượt vùng sáng tối ({@code Shadows, Darks, Lights, Highlights}).
      */
     private void buildToneCurveSubPanel(LinearLayout container) {
@@ -2265,11 +2168,7 @@ public class MainActivity extends Activity {
 
         for (final LightCraftView.ToneCurveGraphView.Channel ch : LightCraftView.ToneCurveGraphView.Channel.values()) {
             boolean active = (currentCh == ch);
-            int badgeBg = active
-                    ? (ch == LightCraftView.ToneCurveGraphView.Channel.MASTER
-                            || ch == LightCraftView.ToneCurveGraphView.Channel.PARAMETRIC
-                            ? StudioStyle.INK : ch.color)
-                    : StudioStyle.SURFACE;
+            int badgeBg = active ? StudioStyle.INK : StudioStyle.SURFACE;
             TextView chip = text(ch.label, 11f, active ? Color.WHITE : StudioStyle.INK);
             chip.setTypeface(Typeface.create("sans-serif-medium", active ? Typeface.BOLD : Typeface.NORMAL));
             chip.setPadding(dp(11), dp(5), dp(11), dp(5));
@@ -2320,30 +2219,29 @@ public class MainActivity extends Activity {
         chScroll.addView(chRow);
         container.addView(chScroll);
 
-        // 4 thanh trượt Parametric Curve (Shadows / Darks / Lights / Highlights) từ finish.rs
         container.addView(buildLightCraftSliderRow(
-                "Vùng tối sâu (Shadows)", lightCraftState.paramShadows, -100f, 100f, StudioStyle.GOOGLE_BLUE,
+                "Tối sâu (Shadows)", lightCraftState.paramShadows, -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.paramShadows = val;
                     if (toneCurveGraphView != null) toneCurveGraphView.invalidate();
                     showImage();
                 }));
         container.addView(buildLightCraftSliderRow(
-                "Vùng tối (Darks)", lightCraftState.paramDarks, -100f, 100f, StudioStyle.GOOGLE_BLUE,
+                "Vùng tối (Darks)", lightCraftState.paramDarks, -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.paramDarks = val;
                     if (toneCurveGraphView != null) toneCurveGraphView.invalidate();
                     showImage();
                 }));
         container.addView(buildLightCraftSliderRow(
-                "Vùng sáng (Lights)", lightCraftState.paramLights, -100f, 100f, StudioStyle.GOOGLE_YELLOW,
+                "Vùng sáng (Lights)", lightCraftState.paramLights, -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.paramLights = val;
                     if (toneCurveGraphView != null) toneCurveGraphView.invalidate();
                     showImage();
                 }));
         container.addView(buildLightCraftSliderRow(
-                "Đỉnh sáng (Highlights)", lightCraftState.paramHighlights, -100f, 100f, StudioStyle.GOOGLE_RED,
+                "Đỉnh sáng (Highlights)", lightCraftState.paramHighlights, -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.paramHighlights = val;
                     if (toneCurveGraphView != null) toneCurveGraphView.invalidate();
@@ -2356,31 +2254,31 @@ public class MainActivity extends Activity {
      */
     private void buildGradingSubPanel(LinearLayout container) {
         container.addView(buildLightCraftSliderRow(
-                "Độ sáng Vùng tối (Shadow Lum)", lightCraftState.shadowsWheel.lum, -100f, 100f, StudioStyle.GOOGLE_BLUE,
+                "Sáng vùng tối (Shadows)", lightCraftState.shadowsWheel.lum, -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.shadowsWheel.lum = val;
                     showImage();
                 }));
         container.addView(buildLightCraftSliderRow(
-                "Độ sáng Trung gian (Mid Lum)", lightCraftState.midtonesWheel.lum, -100f, 100f, StudioStyle.GOOGLE_GREEN,
+                "Sáng trung gian (Mid)", lightCraftState.midtonesWheel.lum, -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.midtonesWheel.lum = val;
                     showImage();
                 }));
         container.addView(buildLightCraftSliderRow(
-                "Độ sáng Vùng sáng (High Lum)", lightCraftState.highlightsWheel.lum, -100f, 100f, StudioStyle.GOOGLE_YELLOW,
+                "Sáng vùng cao (High)", lightCraftState.highlightsWheel.lum, -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.highlightsWheel.lum = val;
                     showImage();
                 }));
         container.addView(buildLightCraftSliderRow(
-                "Hòa trộn vùng (Blending)", lightCraftState.gradingBlending, 0f, 100f, StudioStyle.WARM_AMBER,
+                "Hòa trộn (Blending)", lightCraftState.gradingBlending, 0f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.gradingBlending = val;
                     showImage();
                 }));
         container.addView(buildLightCraftSliderRow(
-                "Cân bằng Sáng/Tối (Balance)", lightCraftState.gradingBalance, -100f, 100f, StudioStyle.GOOGLE_RED,
+                "Cân bằng (Balance)", lightCraftState.gradingBalance, -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.gradingBalance = val;
                     showImage();
@@ -2388,7 +2286,7 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Phân hệ con 2 của LightCraft: Bộ trộn 8 dải màu HSL (Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta).
+     * Phân hệ con 2 của LightCraft: Bộ trộn 8 dải màu HSL.
      */
     private void buildColorMixerSubPanel(LinearLayout container) {
         HorizontalScrollView bandScroll = new HorizontalScrollView(this);
@@ -2400,7 +2298,6 @@ public class MainActivity extends Activity {
         for (int b = 0; b < 8; b++) {
             final int bandIdx = b;
             boolean active = (selectedMixerBand == b);
-            int bandColor = LightCraftEngine.MIXER_BAND_COLORS[b];
             boolean modified = Math.abs(lightCraftState.mixerHue[b]) > 0.5f
                     || Math.abs(lightCraftState.mixerSat[b]) > 0.5f
                     || Math.abs(lightCraftState.mixerLum[b]) > 0.5f;
@@ -2412,8 +2309,8 @@ public class MainActivity extends Activity {
             chip.setTypeface(Typeface.create("sans-serif-medium", active ? Typeface.BOLD : Typeface.NORMAL));
             chip.setPadding(dp(12), dp(6), dp(12), dp(6));
             chip.setBackground(StudioStyle.surface(
-                    active ? bandColor : StudioStyle.SURFACE,
-                    active ? 0 : bandColor,
+                    active ? StudioStyle.INK : StudioStyle.SURFACE,
+                    active ? 0 : StudioStyle.LINE,
                     dp(999)));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -2431,23 +2328,22 @@ public class MainActivity extends Activity {
         container.addView(bandScroll);
 
         final int b = selectedMixerBand;
-        int accent = LightCraftEngine.MIXER_BAND_COLORS[b];
         String bandTitle = LightCraftEngine.MIXER_BAND_NAMES[b];
 
         container.addView(buildLightCraftSliderRow(
-                "Đổi sắc " + bandTitle + " (Hue)", lightCraftState.mixerHue[b], -100f, 100f, accent,
+                "Sắc độ " + bandTitle + " (Hue)", lightCraftState.mixerHue[b], -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.mixerHue[b] = val;
                     showImage();
                 }));
         container.addView(buildLightCraftSliderRow(
-                "Độ bão hòa " + bandTitle + " (Sat)", lightCraftState.mixerSat[b], -100f, 100f, accent,
+                "Bão hòa " + bandTitle + " (Sat)", lightCraftState.mixerSat[b], -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.mixerSat[b] = val;
                     showImage();
                 }));
         container.addView(buildLightCraftSliderRow(
-                "Độ sáng " + bandTitle + " (Lum)", lightCraftState.mixerLum[b], -100f, 100f, accent,
+                "Độ sáng " + bandTitle + " (Lum)", lightCraftState.mixerLum[b], -100f, 100f, StudioStyle.INK,
                 val -> {
                     lightCraftState.mixerLum[b] = val;
                     showImage();
@@ -2455,13 +2351,11 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Phân hệ con 3 của LightCraft: 12 Preset phòng tối chuẩn LightCraft + Mặt nạ cục bộ (Radial, Linear, Sky, Subject).
+     * Phân hệ con 3 của LightCraft: 12 Preset phòng tối + Mặt nạ cục bộ.
      */
     private void buildMaskAndPresetsSubPanel(LinearLayout container) {
-        // 1. Dải 12 Preset màu phòng tối tích hợp sẵn từ crates/engine/src/presets.rs
-        TextView presetHdr = text("12 PRESET PHÒNG TỐI LIGHTCRAFT (CHẠM ĐỂ ÁP DỤNG)", 10.5f, StudioStyle.MUTED);
+        TextView presetHdr = text("Preset màu phòng tối", 11f, StudioStyle.MUTED);
         presetHdr.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        presetHdr.setLetterSpacing(0.05f);
         presetHdr.setPadding(0, 0, 0, dp(4));
         container.addView(presetHdr);
 
@@ -2475,15 +2369,15 @@ public class MainActivity extends Activity {
             LinearLayout card = column();
             card.setPadding(dp(11), dp(6), dp(11), dp(6));
             card.setBackground(StudioStyle.surface(
-                    activePreset ? StudioStyle.WARM_AMBER_LIGHT : Color.WHITE,
-                    activePreset ? preset.badgeColor : StudioStyle.LINE,
-                    dp(14)));
+                    activePreset ? StudioStyle.INK : Color.WHITE,
+                    activePreset ? 0 : StudioStyle.LINE,
+                    dp(12)));
 
-            TextView pName = text(preset.name, 11.5f, StudioStyle.INK);
+            TextView pName = text(preset.name, 11.5f, activePreset ? Color.WHITE : StudioStyle.INK);
             pName.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
             card.addView(pName);
 
-            TextView pCat = text(preset.group + " · " + preset.subtitle, 10f, preset.badgeColor);
+            TextView pCat = text(preset.group, 10f, activePreset ? 0xccffffff : StudioStyle.MUTED);
             card.addView(pCat);
 
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -2497,18 +2391,16 @@ public class MainActivity extends Activity {
                 syncAdjustSection();
                 syncLightCraftSection();
                 requestRenderImmediate();
-                message("Đã áp dụng LightCraft Preset: " + preset.name);
+                message("Đã áp dụng Preset: " + preset.name);
             });
-            MotionStudio.attachExpressiveTouch(card, 0.95f);
+            MotionStudio.attachExpressiveTouch(card, 0.96f);
             presetRow.addView(card);
         }
         presetScroll.addView(presetRow);
         container.addView(presetScroll);
 
-        // 2. Chọn chế độ Mặt nạ cục bộ (Local Masking từ crates/pipeline/src/masks.rs)
-        TextView maskHdr = text("MẶT NẠ CỤC BỘ (LOCAL MASKING · KÉO GHIM TRÊN ẢNH)", 10.5f, StudioStyle.MUTED);
+        TextView maskHdr = text("Mặt nạ cục bộ (Kéo ghim trên ảnh)", 11f, StudioStyle.MUTED);
         maskHdr.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        maskHdr.setLetterSpacing(0.05f);
         maskHdr.setPadding(0, dp(2), 0, dp(4));
         container.addView(maskHdr);
 
@@ -2523,7 +2415,7 @@ public class MainActivity extends Activity {
             chip.setTypeface(Typeface.create("sans-serif-medium", active ? Typeface.BOLD : Typeface.NORMAL));
             chip.setPadding(dp(11), dp(5), dp(11), dp(5));
             chip.setBackground(StudioStyle.surface(
-                    active ? StudioStyle.GOOGLE_BLUE : StudioStyle.SURFACE,
+                    active ? StudioStyle.INK : StudioStyle.SURFACE,
                     active ? 0 : StudioStyle.LINE,
                     dp(999)));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
@@ -2540,13 +2432,12 @@ public class MainActivity extends Activity {
             maskRow.addView(chip);
         }
 
-        // Nút Đảo ngược vùng Mask (Invert) & Hiện lớp phủ Đỏ (Overlay)
         if (lightCraftState.maskMode != LightCraftEngine.MaskMode.NONE) {
-            TextView invChip = text("⇄ Đảo vùng", 11f, lightCraftState.maskInvert ? Color.WHITE : StudioStyle.INK);
+            TextView invChip = text("Đảo vùng", 11f, lightCraftState.maskInvert ? Color.WHITE : StudioStyle.INK);
             invChip.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
             invChip.setPadding(dp(10), dp(5), dp(10), dp(5));
             invChip.setBackground(StudioStyle.surface(
-                    lightCraftState.maskInvert ? StudioStyle.WARM_AMBER : StudioStyle.SURFACE,
+                    lightCraftState.maskInvert ? StudioStyle.INK : StudioStyle.SURFACE,
                     lightCraftState.maskInvert ? 0 : StudioStyle.LINE,
                     dp(999)));
             LinearLayout.LayoutParams invLp = new LinearLayout.LayoutParams(
@@ -2561,12 +2452,12 @@ public class MainActivity extends Activity {
             });
             maskRow.addView(invChip);
 
-            TextView ovlChip = text("🔴 Vùng đỏ", 11f, lightCraftState.showMaskOverlay ? Color.WHITE : StudioStyle.GOOGLE_RED);
+            TextView ovlChip = text("Hiện vùng chọn", 11f, lightCraftState.showMaskOverlay ? Color.WHITE : StudioStyle.INK);
             ovlChip.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
             ovlChip.setPadding(dp(10), dp(5), dp(10), dp(5));
             ovlChip.setBackground(StudioStyle.surface(
-                    lightCraftState.showMaskOverlay ? StudioStyle.GOOGLE_RED : StudioStyle.RED_TONAL,
-                    0,
+                    lightCraftState.showMaskOverlay ? StudioStyle.INK : StudioStyle.SURFACE,
+                    lightCraftState.showMaskOverlay ? 0 : StudioStyle.LINE,
                     dp(999)));
             ovlChip.setOnClickListener(v -> {
                 lightCraftState.showMaskOverlay = !lightCraftState.showMaskOverlay;
@@ -2581,25 +2472,25 @@ public class MainActivity extends Activity {
 
         if (lightCraftState.maskMode != LightCraftEngine.MaskMode.NONE) {
             container.addView(buildLightCraftSliderRow(
-                    "Phơi sáng vùng Mask (EV)", lightCraftState.maskExposure * 50f, -100f, 100f, StudioStyle.GOOGLE_YELLOW,
+                    "Phơi sáng vùng chọn", lightCraftState.maskExposure * 50f, -100f, 100f, StudioStyle.INK,
                     val -> {
                         lightCraftState.maskExposure = val / 50f;
                         showImage();
                     }));
             container.addView(buildLightCraftSliderRow(
-                    "Nhiệt độ vùng Mask", lightCraftState.maskTemp, -100f, 100f, StudioStyle.WARM_AMBER,
+                    "Nhiệt độ vùng chọn", lightCraftState.maskTemp, -100f, 100f, StudioStyle.INK,
                     val -> {
                         lightCraftState.maskTemp = val;
                         showImage();
                     }));
             container.addView(buildLightCraftSliderRow(
-                    "Độ trong vùng Mask (Clarity)", lightCraftState.maskClarity, -100f, 100f, StudioStyle.GOOGLE_GREEN,
+                    "Độ trong vùng chọn", lightCraftState.maskClarity, -100f, 100f, StudioStyle.INK,
                     val -> {
                         lightCraftState.maskClarity = val;
                         showImage();
                     }));
             container.addView(buildLightCraftSliderRow(
-                    "Bão hòa vùng Mask (Sat)", lightCraftState.maskSaturation, -100f, 100f, StudioStyle.GOOGLE_RED,
+                    "Bão hòa vùng chọn", lightCraftState.maskSaturation, -100f, 100f, StudioStyle.INK,
                     val -> {
                         lightCraftState.maskSaturation = val;
                         showImage();

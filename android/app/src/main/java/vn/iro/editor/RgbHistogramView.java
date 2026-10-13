@@ -208,18 +208,21 @@ public final class RgbHistogramView extends View {
         }
         float density = getResources().getDisplayMetrics().density;
 
-        // 1. Nền hộp biểu đồ RGB tối sang trọng kiểu Google Photos / Pixel Camera Pro
+        // 1. Nền hộp biểu đồ phẳng tối giản (#EFF1F5) + viền mảnh
         chipRect.set(0, 0, w, h);
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(0xff141820);
-        canvas.drawRoundRect(chipRect, 16f * density, 16f * density, paint);
+        paint.setColor(StudioStyle.SURFACE);
+        canvas.drawRoundRect(chipRect, 12f * density, 12f * density, paint);
 
-        // Lưới chia 4 phần dọc & ngang mờ
         paint.setStyle(Paint.Style.STROKE);
         paint.setStrokeWidth(1f * density);
-        paint.setColor(0x1affffff);
-        float graphTop = 26f * density;
-        float graphBottom = h - 8f * density;
+        paint.setColor(StudioStyle.LINE);
+        canvas.drawRoundRect(chipRect, 12f * density, 12f * density, paint);
+
+        // Lưới chia 4 phần dọc mờ
+        paint.setColor(0x14181a1f);
+        float graphTop = 22f * density;
+        float graphBottom = h - 6f * density;
         float graphLeft = 10f * density;
         float graphRight = w - 10f * density;
         float graphW = graphRight - graphLeft;
@@ -230,55 +233,32 @@ public final class RgbHistogramView extends View {
             canvas.drawLine(gx, graphTop, gx, graphBottom, paint);
         }
 
-        // 2. Vẽ 3 đường cong kênh màu Google RGB (Red #EA4335, Green #34A853, Blue #4285F4)
+        // 2. Vẽ đường cong tần suất dịu mắt
         if (displayMode == MODE_ALL_RGB || displayMode == MODE_BLUE) {
             drawChannelCurve(canvas, curB, graphLeft, graphTop, graphW, graphH,
-                    StudioStyle.GOOGLE_BLUE, 0x664285f4, density);
+                    0xaa2563eb, 0x222563eb, density);
         }
         if (displayMode == MODE_ALL_RGB || displayMode == MODE_GREEN) {
             drawChannelCurve(canvas, curG, graphLeft, graphTop, graphW, graphH,
-                    StudioStyle.GOOGLE_GREEN, 0x6634a853, density);
+                    0xaa2e9b52, 0x222e9b52, density);
         }
         if (displayMode == MODE_ALL_RGB || displayMode == MODE_RED) {
             drawChannelCurve(canvas, curR, graphLeft, graphTop, graphW, graphH,
-                    StudioStyle.GOOGLE_RED, 0x66ea4335, density);
+                    0xaad9483b, 0x22d9483b, density);
         }
 
-        // 3. Thanh thông số trung bình R / G / B ở góc trên trái
-        textPaint.setTextSize(10f * density);
-        float textY = 17f * density;
-
-        textPaint.setColor(0xffff6b5e);
-        String rStr = String.format(Locale.ROOT, "R %d", avgR);
-        canvas.drawText(rStr, 12f * density, textY, textPaint);
-
-        float gX = 12f * density + textPaint.measureText(rStr) + 10f * density;
-        textPaint.setColor(0xff5cd679);
-        String gStr = String.format(Locale.ROOT, "G %d", avgG);
-        canvas.drawText(gStr, gX, textY, textPaint);
-
-        float bX = gX + textPaint.measureText(gStr) + 10f * density;
-        textPaint.setColor(0xff7bacff);
-        String bStr = String.format(Locale.ROOT, "B %d", avgB);
-        canvas.drawText(bStr, bX, textY, textPaint);
-
-        // 4. Huy hiệu chế độ kênh ở góc trên phải ("RGB · Chạm đổi kênh")
-        String modeLabel = (displayMode == MODE_ALL_RGB) ? "RGB"
-                : (displayMode == MODE_RED ? "KÊNH R (ĐỎ)"
-                : (displayMode == MODE_GREEN ? "KÊNH G (LỤC)" : "KÊNH B (LAM)"));
-        int modeColor = (displayMode == MODE_ALL_RGB) ? 0xffffffff
-                : (displayMode == MODE_RED ? StudioStyle.GOOGLE_RED
-                : (displayMode == MODE_GREEN ? StudioStyle.GOOGLE_GREEN : StudioStyle.GOOGLE_BLUE));
-
+        // 3. Nhãn tối giản góc trên trái & góc trên phải
         textPaint.setTextSize(9.5f * density);
-        float badgeW = textPaint.measureText(modeLabel) + 14f * density;
-        chipRect.set(w - badgeW - 8f * density, 5f * density, w - 8f * density, 21f * density);
-        paint.setStyle(Paint.Style.FILL);
-        paint.setColor(0x28ffffff);
-        canvas.drawRoundRect(chipRect, 8f * density, 8f * density, paint);
+        textPaint.setColor(StudioStyle.MUTED);
+        String avgLabel = String.format(Locale.ROOT, "Histogram · R %d  G %d  B %d", avgR, avgG, avgB);
+        canvas.drawText(avgLabel, 10f * density, 15f * density, textPaint);
 
-        textPaint.setColor(modeColor);
-        canvas.drawText(modeLabel, chipRect.left + 7f * density, 16.2f * density, textPaint);
+        String modeLabel = (displayMode == MODE_ALL_RGB) ? "RGB"
+                : (displayMode == MODE_RED ? "Kênh R"
+                : (displayMode == MODE_GREEN ? "Kênh G" : "Kênh B"));
+        textPaint.setColor(StudioStyle.INK);
+        float badgeW = textPaint.measureText(modeLabel);
+        canvas.drawText(modeLabel, w - badgeW - 10f * density, 15f * density, textPaint);
     }
 
     private void drawChannelCurve(Canvas canvas,

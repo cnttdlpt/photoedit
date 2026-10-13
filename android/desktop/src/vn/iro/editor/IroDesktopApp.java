@@ -4,6 +4,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -11,11 +12,9 @@ import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.GridLayout;
-import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.dnd.DnDConstants;
@@ -36,7 +35,6 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -50,24 +48,21 @@ import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
-import javax.swing.JSlider;
-import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
@@ -82,39 +77,13 @@ import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 /**
- * Ứng dụng máy tính <b>IRO Studio · Windows Desktop Edition</b>.
- *
- * <p>Sử dụng trực tiếp 100% lõi xử lý màu từ dự án Android:
- * <ul>
- *     <li>{@link ColorEngine}: Tuyến tính hóa sRGB, EV, WB Shift, 3D LUT {@link CubeLut}, Highlight/Shadow/DR,
- *         Color Chrome, Chrome FX Blue, Film Grain, NR, Sharpness & Clarity.</li>
- *     <li>{@link LightCraftEngine}: Đường cong bậc ba đơn điệu Fritsch–Carlson ({@link LightCraftEngine.MonotoneCurve}),
- *         3-Way OkLab Color Grading Wheels, 8-Band Color Mixer (HSL) và Local Masking (Radial, Linear, Sky, Subject).</li>
- *     <li>{@link AutoBalancer}: Phân tích phân vị độ chói p5/median/p95 và tự động cân bằng ảnh.</li>
- *     <li>{@link Recipe}: Kho 392 công thức màu phim Fuji X Weekly kèm 52 ảnh mẫu offline và tải ảnh mẫu trực tuyến.</li>
- *     <li>{@link OnlineLuts}: Duyệt và tải LUT {@code .cube} có kiểm tra SHA-1 từ GitHub.</li>
- * </ul>
+ * Ứng dụng máy tính <b>IRO Studio CC 2025 · Windows Desktop Edition</b>.
+ * Thiết kế UX/UI theo chuẩn <b>Adobe Photoshop CC 2025 / Camera Raw 17 (Adobe Spectrum Dark UI)</b>.
  */
 public final class IroDesktopApp extends JFrame {
 
-    private static final String[] SAMPLE_ASSETS = {
-            "fujixweekly/fxw_029_kodachrome-64.jpg",
-            "fujixweekly/fxw_001_fujicolor-pro-400h.jpg",
-            "fujixweekly/fxw_040_pacific-blues.jpg",
-            "fujixweekly/fxw_031_kodak-portra-400-v2.jpg",
-            "fujixweekly/fxw_043_reggies-portra.jpg",
-            "fujixweekly/fxw_051_vintage-kodachrome.jpg",
-            "fujixweekly/fxw_011_kodak-gold-200.jpg",
-            "fujixweekly/fxw_024_cinestill-800t.jpg",
-            "fujixweekly/fxw_047_vibrant-arizona.jpg",
-            "fujixweekly/fxw_003_nostalgic-negative.jpg",
-            "fujixweekly/fxw_006_eterna.jpg",
-            "fujixweekly/fxw_108_reala-ace.jpg",
-            "fujixweekly/fxw_013_kodak-tri-x-400.jpg"
-    };
-
     private static final String[] FILM_FILTERS = {
-            "Tất cả hệ Film (392)",
+            "Tất cả (392)",
             "Classic Chrome",
             "Classic Negative",
             "Velvia",
@@ -131,31 +100,29 @@ public final class IroDesktopApp extends JFrame {
             "Eterna Bleach Bypass"
     };
 
-    // Dữ liệu công thức & trạng thái chỉnh sửa
     private final List<Recipe> allRecipes = new ArrayList<>();
     private final DefaultListModel<Recipe> recipeListModel = new DefaultListModel<>();
     private JList<Recipe> recipeList;
     private JTextField searchField;
-    private JComboBox<String> filmFilterCombo;
+    private int activeFilmFilterIndex = 0;
+    private JButton filmFilterTriggerBtn;
     private JLabel statusLabel;
+    private JLabel zoomStatusLabel;
 
     private Settings settings = new Settings();
     private final LightCraftEngine.State lightCraft = new LightCraftEngine.State();
     private CubeLut activeLut = null;
-    private String activeRecipeName = "Kodachrome 64";
+    private String activeRecipeName = "Golden Negative";
     private int currentSampleIndex = 0;
 
-    // Lịch sử Undo / Redo
     private final List<Settings> undoStack = new ArrayList<>();
     private final List<Settings> redoStack = new ArrayList<>();
 
-    // Ảnh gốc (full-res) & ảnh preview (tối ưu tốc độ kéo thanh trượt)
     private BufferedImage fullSourceImage;
     private BufferedImage previewSourceImage;
     private int[] previewSourcePixels;
-    private BufferedImage currentRenderedPreview;
 
-    // Thành phần giao diện chính
+    private DesktopWidgets.PhotoshopToolStrip toolStrip;
     private DesktopWidgets.ImageCanvasPanel canvasPanel;
     private DesktopWidgets.HistogramPanel histogramPanel;
     private DesktopWidgets.ToneCurveWidget toneCurveWidget;
@@ -163,16 +130,20 @@ public final class IroDesktopApp extends JFrame {
     private DesktopWidgets.ColorWheelWidget midtonesWheelWidget;
     private DesktopWidgets.ColorWheelWidget highlightsWheelWidget;
 
-    // Map đồng bộ ngược từ Settings -> Slider UI
-    private final Map<String, SliderControl> settingSliders = new HashMap<>();
-    private final AtomicBoolean syncingSliders = new AtomicBoolean(false);
-    private JComboBox<String> drCombo;
-    private int selectedMixerBand = 0;
-    private SliderControl mixerHueSlider;
-    private SliderControl mixerSatSlider;
-    private SliderControl mixerLumSlider;
+    private CardLayout inspectorCards;
+    private JPanel inspectorCardHost;
+    private final DesktopWidgets.SpectrumButton[] inspectorTabBtns = new DesktopWidgets.SpectrumButton[4];
 
-    // Luồng xử lý hậu kỳ bất đồng bộ
+    private final Map<String, DesktopWidgets.SpectrumSlider> settingSliders = new HashMap<>();
+    private final DesktopWidgets.SpectrumButton[] drButtons = new DesktopWidgets.SpectrumButton[3];
+    private final AtomicBoolean syncingSliders = new AtomicBoolean(false);
+
+    private int selectedMixerBand = 0;
+    private final DesktopWidgets.SpectrumButton[] mixerBandBtns = new DesktopWidgets.SpectrumButton[8];
+    private DesktopWidgets.SpectrumSlider mixerHueSlider;
+    private DesktopWidgets.SpectrumSlider mixerSatSlider;
+    private DesktopWidgets.SpectrumSlider mixerLumSlider;
+
     private final ExecutorService renderExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "IRO-Desktop-Render");
         t.setDaemon(true);
@@ -180,48 +151,27 @@ public final class IroDesktopApp extends JFrame {
     });
     private Future<?> activeRenderTask;
 
-    private static final class SliderControl {
-        final JSlider slider;
-        final JLabel valueLabel;
-        final double scale;
-        final String format;
-
-        SliderControl(JSlider slider, JLabel valueLabel, double scale, String format) {
-            this.slider = slider;
-            this.valueLabel = valueLabel;
-            this.scale = scale;
-            this.format = format;
-        }
-
-        void setValue(double v) {
-            int raw = (int) Math.round(v * scale);
-            slider.setValue(Math.max(slider.getMinimum(), Math.min(slider.getMaximum(), raw)));
-            valueLabel.setText(String.format(Locale.ROOT, format, v));
-        }
-    }
-
     public IroDesktopApp() {
-        super("IRO Studio · Fujifilm & LightCraft Photo Editor (Windows Desktop)");
+        super("Adobe Camera Raw / IRO Studio CC 2025 · Fujifilm & LightCraft Photo Editor");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1460, 880);
-        setMinimumSize(new Dimension(1120, 700));
+        setSize(1480, 900);
+        setMinimumSize(new Dimension(1160, 720));
         setLocationRelativeTo(null);
-        getContentPane().setBackground(DesktopWidgets.BG_DARK);
+        getContentPane().setBackground(DesktopWidgets.PS_DARKEST);
         setLayout(new BorderLayout(0, 0));
 
         setWindowIcon();
         loadRecipesCatalog();
 
-        add(buildTopToolbar(), BorderLayout.NORTH);
-        add(buildLeftRecipeSidebar(), BorderLayout.WEST);
-        add(buildCenterWorkspace(), BorderLayout.CENTER);
-        add(buildRightInspector(), BorderLayout.EAST);
-        add(buildBottomStatusBar(), BorderLayout.SOUTH);
+        add(buildPhotoshopTopChrome(), BorderLayout.NORTH);
+        add(buildLeftDockArea(), BorderLayout.WEST);
+        add(buildCenterArtboardArea(), BorderLayout.CENTER);
+        add(buildRightCameraRawDock(), BorderLayout.EAST);
+        add(buildPhotoshopStatusBar(), BorderLayout.SOUTH);
 
         setupKeyboardShortcuts();
         setupDragAndDrop();
 
-        // Mở sẵn ảnh mẫu Fuji X Weekly đóng gói sẵn cùng công thức tương ứng
         loadBundledSamplePhoto(0);
     }
 
@@ -229,21 +179,17 @@ public final class IroDesktopApp extends JFrame {
         BufferedImage icon = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = icon.createGraphics();
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(new Color(0x18, 0x1B, 0x20));
-        g2.fillRoundRect(2, 2, 60, 60, 16, 16);
-        g2.setColor(DesktopWidgets.ACCENT_BLUE);
-        g2.fillOval(12, 12, 26, 26);
-        g2.setColor(new Color(0xEA, 0x43, 0x35));
-        g2.fillOval(26, 14, 24, 24);
-        g2.setColor(DesktopWidgets.ACCENT_GREEN);
-        g2.fillOval(19, 25, 25, 25);
+        g2.setColor(DesktopWidgets.PS_LOGO_BG);
+        g2.fillRoundRect(2, 2, 60, 60, 14, 14);
+        g2.setColor(DesktopWidgets.PS_LOGO_FG);
+        g2.setStroke(new java.awt.BasicStroke(2.5f));
+        g2.drawRoundRect(2, 2, 59, 59, 14, 14);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 30));
+        g2.drawString("Ir", 16, 43);
         g2.dispose();
         setIconImage(icon);
     }
 
-    // =========================================================================
-    // NẠP KHO 392 CÔNG THỨC FUJI X WEEKLY TỪ ASSETS/RECIPES.JSON
-    // =========================================================================
     private void loadRecipesCatalog() {
         allRecipes.clear();
         try {
@@ -283,149 +229,263 @@ public final class IroDesktopApp extends JFrame {
     }
 
     // =========================================================================
-    // THANH CÔNG CỤ TRÊN CÙNG (TOP STUDIO TOOLBAR)
+    // 1. THANH MENU & OPTIONS BAR 2 TẦNG CHUẨN PHOTOSHOP CC 2025
     // =========================================================================
-    private JComponent buildTopToolbar() {
-        JPanel bar = new JPanel(new BorderLayout(12, 0));
-        bar.setBackground(DesktopWidgets.BG_PANEL);
-        bar.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, DesktopWidgets.BORDER_COLOR),
-                BorderFactory.createEmptyBorder(8, 14, 8, 14)));
+    private JComponent buildPhotoshopTopChrome() {
+        JPanel chrome = new JPanel();
+        chrome.setLayout(new BoxLayout(chrome, BoxLayout.Y_AXIS));
+        chrome.setBackground(DesktopWidgets.PS_HEADER);
 
-        // Cụm trái: Logo + Mở ảnh + Ảnh mẫu Fuji
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        left.setOpaque(false);
+        // TẦNG 1: Application Menu Bar + Workspace Switcher (Photoshop CC 2025 Header)
+        JPanel menuRow = new JPanel(new BorderLayout(10, 0));
+        menuRow.setBackground(new Color(0x1F, 0x1F, 0x1F));
+        menuRow.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, DesktopWidgets.PS_DIVIDER),
+                BorderFactory.createEmptyBorder(4, 10, 4, 10)));
 
-        JLabel brand = new JLabel("IRO STUDIO");
-        brand.setFont(new Font("Segoe UI", Font.BOLD, 16));
-        brand.setForeground(DesktopWidgets.ACCENT_BLUE);
-        brand.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 10));
-        left.add(brand);
+        JPanel menuLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        menuLeft.setOpaque(false);
 
-        JButton openBtn = DesktopWidgets.createStudioButton("Mở ảnh... (Ctrl+O)", true);
-        openBtn.addActionListener(e -> chooseAndOpenImage());
-        left.add(openBtn);
+        // Logo vuông [Ir] kiểu [Ps] Photoshop CC 2025
+        JLabel irLogo = new JLabel("Ir", SwingConstants.CENTER) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(DesktopWidgets.PS_LOGO_BG);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
+                g2.setColor(DesktopWidgets.PS_LOGO_FG);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 6, 6);
+                super.paintComponent(g2);
+                g2.dispose();
+            }
+        };
+        irLogo.setPreferredSize(new Dimension(26, 24));
+        irLogo.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        irLogo.setForeground(DesktopWidgets.PS_LOGO_FG);
+        menuLeft.add(irLogo);
 
-        JButton sampleBtn = DesktopWidgets.createStudioButton("Đổi ảnh mẫu Fuji", false);
-        sampleBtn.addActionListener(e -> {
+        addTopMenuLabel(menuLeft, "Tệp (File)", this::chooseAndOpenImage);
+        addTopMenuLabel(menuLeft, "Chỉnh sửa (Edit)", this::performUndo);
+        addTopMenuLabel(menuLeft, "Hình ảnh (Auto AI)", this::runAutoBalance);
+        addTopMenuLabel(menuLeft, "Lớp & Mask", () -> switchInspectorTab(3));
+        addTopMenuLabel(menuLeft, "Bộ lọc (3D LUT)", this::chooseAndLoadCubeLut);
+        addTopMenuLabel(menuLeft, "Chế độ xem (Split)", () -> canvasPanel.setSplitView(!canvasPanel.isSplitView()));
+
+        JPanel menuRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        menuRight.setOpaque(false);
+
+        JLabel wsTag = new JLabel("Workspace:");
+        wsTag.setFont(DesktopWidgets.FONT_SMALL);
+        wsTag.setForeground(DesktopWidgets.TEXT_MUTED);
+        menuRight.add(wsTag);
+
+        DesktopWidgets.SpectrumButton wsRaw = new DesktopWidgets.SpectrumButton("Camera Raw 17", false, true);
+        wsRaw.setActiveState(true);
+        wsRaw.addActionListener(e -> switchInspectorTab(0));
+        menuRight.add(wsRaw);
+
+        DesktopWidgets.SpectrumButton wsGrading = new DesktopWidgets.SpectrumButton("Color Grading", false, true);
+        wsGrading.addActionListener(e -> switchInspectorTab(2));
+        menuRight.add(wsGrading);
+
+        JButton exportTopBtn = DesktopWidgets.createCompactButton("Xuất bản (Ctrl+S)", true);
+        exportTopBtn.addActionListener(e -> exportFullResolutionImage());
+        menuRight.add(exportTopBtn);
+
+        menuRow.add(menuLeft, BorderLayout.WEST);
+        menuRow.add(menuRight, BorderLayout.EAST);
+
+        // TẦNG 2: Photoshop Tool Options Bar (#2C2C2C)
+        JPanel optionsRow = new JPanel(new BorderLayout(8, 0));
+        optionsRow.setBackground(DesktopWidgets.PS_HEADER);
+        optionsRow.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, DesktopWidgets.PS_DIVIDER),
+                BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+
+        JPanel optLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        optLeft.setOpaque(false);
+
+        optLeft.add(createOptionBarButton("Mở ảnh (Ctrl+O)", false, this::chooseAndOpenImage));
+        optLeft.add(createOptionBarButton("Đổi ảnh mẫu Fuji", false, () -> {
             currentSampleIndex++;
             loadBundledSamplePhoto(currentSampleIndex);
-        });
-        left.add(sampleBtn);
+        }));
+        optLeft.add(createDividerLabel());
+        optLeft.add(createOptionBarButton("Auto-Balance AI (Ctrl+B)", false, this::runAutoBalance));
+        optLeft.add(createOptionBarButton("< Hoàn tác", false, this::performUndo));
+        optLeft.add(createOptionBarButton("Làm lại >", false, this::performRedo));
+        optLeft.add(createDividerLabel());
 
-        // Cụm giữa: Auto-Balance, Undo, Redo, Chia đôi Trước/Sau, Đặt lại
-        JPanel center = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
-        center.setOpaque(false);
-
-        JButton autoBtn = DesktopWidgets.createStudioButton("Auto-Balance AI (Ctrl+B)", false);
-        autoBtn.setForeground(DesktopWidgets.ACCENT_AMBER);
-        autoBtn.addActionListener(e -> runAutoBalance());
-        center.add(autoBtn);
-
-        JButton undoBtn = DesktopWidgets.createStudioButton("< Hoàn tác", false);
-        undoBtn.addActionListener(e -> performUndo());
-        center.add(undoBtn);
-
-        JButton redoBtn = DesktopWidgets.createStudioButton("Làm lại >", false);
-        redoBtn.addActionListener(e -> performRedo());
-        center.add(redoBtn);
-
-        JButton splitBtn = DesktopWidgets.createStudioButton("Chia đôi Trước / Sau", false);
-        splitBtn.addActionListener(e -> {
+        DesktopWidgets.SpectrumButton splitToggle = new DesktopWidgets.SpectrumButton("Chia đôi Trước / Sau (Y)", false, true);
+        splitToggle.addActionListener(e -> {
             boolean next = !canvasPanel.isSplitView();
             canvasPanel.setSplitView(next);
-            splitBtn.setForeground(next ? DesktopWidgets.ACCENT_GREEN : DesktopWidgets.TEXT_PRIMARY);
+            splitToggle.setActiveState(next);
         });
-        center.add(splitBtn);
+        optLeft.add(splitToggle);
 
-        JButton holdOrigBtn = DesktopWidgets.createStudioButton("Giữ xem Gốc (Space)", false);
+        JButton holdOrigBtn = DesktopWidgets.createCompactButton("Giữ xem Gốc (Space)", false);
         holdOrigBtn.getModel().addChangeListener(e ->
                 canvasPanel.setShowOriginalOnly(holdOrigBtn.getModel().isPressed()));
-        center.add(holdOrigBtn);
+        optLeft.add(holdOrigBtn);
 
-        JButton resetBtn = DesktopWidgets.createStudioButton("Đặt lại gốc", false);
-        resetBtn.addActionListener(e -> resetAllAdjustments());
-        center.add(resetBtn);
+        optLeft.add(createOptionBarButton("Đặt lại toàn bộ", false, this::resetAllAdjustments));
 
-        // Cụm phải: Nạp LUT .cube, Kho LUT GitHub, Xuất ảnh
-        JPanel right = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
-        right.setOpaque(false);
+        JPanel optRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        optRight.setOpaque(false);
+        optRight.add(createOptionBarButton("Nạp LUT .cube", false, this::chooseAndLoadCubeLut));
+        optRight.add(createOptionBarButton("Kho LUT GitHub", false, this::showOnlineLutDialog));
+        optRight.add(createOptionBarButton("Nhập JSON", false, this::importSettingsJson));
+        optRight.add(createOptionBarButton("Xuất JSON", false, this::exportSettingsJson));
 
-        JButton lutBtn = DesktopWidgets.createStudioButton("Nạp LUT .cube", false);
-        lutBtn.addActionListener(e -> chooseAndLoadCubeLut());
-        right.add(lutBtn);
+        optionsRow.add(optLeft, BorderLayout.WEST);
+        optionsRow.add(optRight, BorderLayout.EAST);
 
-        JButton onlineLutBtn = DesktopWidgets.createStudioButton("Kho LUT GitHub", false);
-        onlineLutBtn.addActionListener(e -> showOnlineLutDialog());
-        right.add(onlineLutBtn);
+        chrome.add(menuRow);
+        chrome.add(optionsRow);
+        return chrome;
+    }
 
-        JButton exportBtn = DesktopWidgets.createStudioButton("Xuất ảnh (Ctrl+S)", true);
-        exportBtn.addActionListener(e -> exportFullResolutionImage());
-        right.add(exportBtn);
+    private void addTopMenuLabel(JPanel parent, String text, Runnable action) {
+        JLabel lbl = new JLabel(text);
+        lbl.setFont(DesktopWidgets.FONT_UI);
+        lbl.setForeground(DesktopWidgets.TEXT_SECONDARY);
+        lbl.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
+        lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        lbl.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                lbl.setForeground( Color.WHITE);
+            }
 
-        bar.add(left, BorderLayout.WEST);
-        bar.add(center, BorderLayout.CENTER);
-        bar.add(right, BorderLayout.EAST);
-        return bar;
+            @Override
+            public void mouseExited(MouseEvent e) {
+                lbl.setForeground(DesktopWidgets.TEXT_SECONDARY);
+            }
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                action.run();
+            }
+        });
+        parent.add(lbl);
+    }
+
+    private static JButton createOptionBarButton(String text, boolean blue, Runnable r) {
+        JButton b = DesktopWidgets.createCompactButton(text, blue);
+        b.addActionListener(e -> r.run());
+        return b;
+    }
+
+    private static JLabel createDividerLabel() {
+        JLabel l = new JLabel("|");
+        l.setForeground(new Color(0x45, 0x45, 0x45));
+        l.setBorder(BorderFactory.createEmptyBorder(0, 3, 0, 3));
+        return l;
     }
 
     // =========================================================================
-    // CỘT TRÁI: KHO 392 CÔNG THỨC FUJI X WEEKLY & ẢNH MẪU MÔ PHỎNG
+    // 2. CỘT TRÁI: PHOTOSHOP TOOL STRIP (42px) + PRESETS / FUJI X WEEKLY DOCK (300px)
     // =========================================================================
-    private JComponent buildLeftRecipeSidebar() {
-        JPanel sidebar = new JPanel(new BorderLayout(0, 8));
-        sidebar.setPreferredSize(new Dimension(335, 600));
-        sidebar.setBackground(DesktopWidgets.BG_PANEL);
-        sidebar.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 0, 1, DesktopWidgets.BORDER_COLOR),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+    private JComponent buildLeftDockArea() {
+        JPanel leftWrap = new JPanel(new BorderLayout(0, 0));
+        leftWrap.setBackground(DesktopWidgets.PS_PANEL);
 
-        // Đầu mục + ô tìm kiếm + lọc hệ Film
-        JPanel header = new JPanel();
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-        header.setOpaque(false);
+        toolStrip = new DesktopWidgets.PhotoshopToolStrip(idx -> {
+            switch (idx) {
+                case 0: // Move / Pan
+                    canvasPanel.setSplitView(false);
+                    break;
+                case 1: // Zoom 150% / 100%
+                    canvasPanel.setZoom(canvasPanel.getZoom() < 1.4 ? 1.5 : 1.0);
+                    break;
+                case 2: // Split View
+                    canvasPanel.setSplitView(!canvasPanel.isSplitView());
+                    break;
+                case 3: // Auto-Balance AI
+                    runAutoBalance();
+                    break;
+                case 4: // Radial Mask
+                    lightCraft.maskMode = LightCraftEngine.MaskMode.RADIAL;
+                    switchInspectorTab(3);
+                    scheduleRender();
+                    break;
+                case 5: // Linear Mask
+                    lightCraft.maskMode = LightCraftEngine.MaskMode.LINEAR;
+                    switchInspectorTab(3);
+                    scheduleRender();
+                    break;
+                case 6: // AI Sky Mask
+                    lightCraft.maskMode = LightCraftEngine.MaskMode.SKY;
+                    switchInspectorTab(3);
+                    scheduleRender();
+                    break;
+                case 7: // Frame Tool
+                    int nextFrame = (canvasPanel.getFrameMode() + 1) % 4;
+                    canvasPanel.setFrameMode(nextFrame);
+                    switchInspectorTab(3);
+                    break;
+                default:
+                    break;
+            }
+        });
+        leftWrap.add(toolStrip, BorderLayout.WEST);
 
-        JLabel title = new JLabel("KHO 392 CÔNG THỨC FUJI X WEEKLY");
-        title.setFont(DesktopWidgets.FONT_BOLD);
-        title.setForeground(DesktopWidgets.ACCENT_BLUE);
-        title.setAlignmentX(Component.LEFT_ALIGNMENT);
-        header.add(title);
-        header.add(Box.createVerticalStrut(6));
+        // Panel Presets & Fuji X Weekly
+        JPanel presetDock = new JPanel(new BorderLayout(0, 6));
+        presetDock.setPreferredSize(new Dimension(305, 600));
+        presetDock.setBackground(DesktopWidgets.PS_PANEL);
+        presetDock.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, DesktopWidgets.PS_DIVIDER));
 
+        JPanel dockHeader = new JPanel();
+        dockHeader.setLayout(new BoxLayout(dockHeader, BoxLayout.Y_AXIS));
+        dockHeader.setBackground(DesktopWidgets.PS_PANEL);
+        dockHeader.setBorder(BorderFactory.createEmptyBorder(8, 10, 6, 10));
+
+        // Tab Header kiểu Photoshop Panel
+        JLabel tabTitle = new JLabel("•  PRESETS · FUJI X WEEKLY (392)");
+        tabTitle.setFont(DesktopWidgets.FONT_SECTION);
+        tabTitle.setForeground(DesktopWidgets.TEXT_PRIMARY);
+        tabTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        dockHeader.add(tabTitle);
+        dockHeader.add(Box.createVerticalStrut(8));
+
+        // Ô tìm kiếm tối chuẩn Spectrum
         searchField = new JTextField();
         searchField.setFont(DesktopWidgets.FONT_UI);
         searchField.setBackground(DesktopWidgets.BG_INPUT);
         searchField.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        searchField.setCaretColor(DesktopWidgets.TEXT_PRIMARY);
-        searchField.setToolTipText("Tìm theo tên công thức (Kodachrome, Portra...) hoặc cảm biến (X-Trans IV, V...)");
+        searchField.setCaretColor(DesktopWidgets.PS_BLUE_LIGHT);
+        searchField.setToolTipText("Tìm kiếm trong 392 công thức Fuji X Weekly (tên màu, cảm biến X-Trans...)");
         searchField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(DesktopWidgets.BORDER_COLOR, 1),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+                BorderFactory.createLineBorder(DesktopWidgets.PS_BORDER, 1),
+                BorderFactory.createEmptyBorder(5, 8, 5, 8)));
         searchField.setAlignmentX(Component.LEFT_ALIGNMENT);
+        searchField.setMaximumSize(new Dimension(300, 28));
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override public void insertUpdate(DocumentEvent e) { filterRecipeList(); }
             @Override public void removeUpdate(DocumentEvent e) { filterRecipeList(); }
             @Override public void changedUpdate(DocumentEvent e) { filterRecipeList(); }
         });
-        header.add(searchField);
-        header.add(Box.createVerticalStrut(6));
+        dockHeader.add(searchField);
+        dockHeader.add(Box.createVerticalStrut(6));
 
-        filmFilterCombo = new JComboBox<>(FILM_FILTERS);
-        filmFilterCombo.setFont(DesktopWidgets.FONT_UI);
-        filmFilterCombo.setBackground(DesktopWidgets.BG_CARD);
-        filmFilterCombo.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        filmFilterCombo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        filmFilterCombo.addActionListener(e -> filterRecipeList());
-        header.add(filmFilterCombo);
+        // Nút chọn hệ Film bằng Popup Menu tối (thay thế hoàn toàn JComboBox viền trắng của Swing)
+        filmFilterTriggerBtn = DesktopWidgets.createCompactButton("Hệ Film: Tất cả (392)  •", false);
+        filmFilterTriggerBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        filmFilterTriggerBtn.setMaximumSize(new Dimension(300, 26));
+        filmFilterTriggerBtn.addActionListener(e -> showDarkFilmFilterMenu());
+        dockHeader.add(filmFilterTriggerBtn);
 
-        sidebar.add(header, BorderLayout.NORTH);
+        presetDock.add(dockHeader, BorderLayout.NORTH);
 
-        // Danh sách công thức kèm ảnh mẫu Fuji X Weekly
+        // Danh sách công thức Fuji X Weekly
         recipeList = new JList<>(recipeListModel);
-        recipeList.setBackground(DesktopWidgets.BG_DARK);
+        recipeList.setBackground(DesktopWidgets.PS_DARKEST);
         recipeList.setForeground(DesktopWidgets.TEXT_PRIMARY);
         recipeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        recipeList.setFixedCellHeight(72);
+        recipeList.setFixedCellHeight(68);
         recipeList.setCellRenderer(new RecipeCardRenderer());
         recipeList.addMouseListener(new MouseAdapter() {
             @Override
@@ -440,43 +500,59 @@ public final class IroDesktopApp extends JFrame {
             }
         });
 
-        JScrollPane scroll = new JScrollPane(recipeList);
-        scroll.setBorder(BorderFactory.createLineBorder(DesktopWidgets.BORDER_COLOR, 1));
-        scroll.getVerticalScrollBar().setUnitIncrement(18);
-        sidebar.add(scroll, BorderLayout.CENTER);
+        JScrollPane scroll = DesktopWidgets.createDarkScrollPane(recipeList);
+        scroll.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 0, DesktopWidgets.PS_BORDER));
+        presetDock.add(scroll, BorderLayout.CENTER);
 
-        // Nút thao tác dưới danh sách
-        JPanel footer = new JPanel(new GridLayout(2, 1, 0, 6));
-        footer.setOpaque(false);
+        // Nút thao tác dưới đáy Presets Dock
+        JPanel footer = new JPanel(new GridLayout(2, 1, 0, 5));
+        footer.setBackground(DesktopWidgets.PS_PANEL);
+        footer.setBorder(BorderFactory.createEmptyBorder(6, 10, 8, 10));
 
-        JButton openSampleBtn = DesktopWidgets.createStudioButton("Mở ảnh mẫu Fuji của công thức này", true);
+        JButton openSampleBtn = DesktopWidgets.createStudioButton("Mở ảnh mẫu FujiXWeekly của công thức này", true);
         openSampleBtn.addActionListener(e -> {
             Recipe selected = recipeList.getSelectedValue();
-            if (selected != null) {
-                applyRecipe(selected, true);
-            }
+            if (selected != null) applyRecipe(selected, true);
         });
         footer.add(openSampleBtn);
 
-        JButton detailBtn = DesktopWidgets.createStudioButton("Xem thông số gốc & bài viết FujiXWeekly", false);
+        JButton detailBtn = DesktopWidgets.createStudioButton("Thông số gốc & bài viết fujixweekly.com", false);
         detailBtn.addActionListener(e -> {
             Recipe selected = recipeList.getSelectedValue();
-            if (selected != null) {
-                showRecipeDetailDialog(selected);
-            }
+            if (selected != null) showRecipeDetailDialog(selected);
         });
         footer.add(detailBtn);
 
-        sidebar.add(footer, BorderLayout.SOUTH);
+        presetDock.add(footer, BorderLayout.SOUTH);
+        leftWrap.add(presetDock, BorderLayout.CENTER);
 
         filterRecipeList();
-        return sidebar;
+        return leftWrap;
+    }
+
+    private void showDarkFilmFilterMenu() {
+        JPopupMenu menu = new JPopupMenu();
+        menu.setBackground(DesktopWidgets.PS_SURFACE);
+        menu.setBorder(BorderFactory.createLineBorder(DesktopWidgets.PS_BORDER, 1));
+        for (int i = 0; i < FILM_FILTERS.length; i++) {
+            final int idx = i;
+            JMenuItem item = new JMenuItem(FILM_FILTERS[i]);
+            item.setFont(DesktopWidgets.FONT_UI);
+            item.setBackground(idx == activeFilmFilterIndex ? DesktopWidgets.PS_BLUE : DesktopWidgets.PS_SURFACE);
+            item.setForeground(DesktopWidgets.TEXT_PRIMARY);
+            item.addActionListener(e -> {
+                activeFilmFilterIndex = idx;
+                filmFilterTriggerBtn.setText("Hệ Film: " + FILM_FILTERS[idx] + "  •");
+                filterRecipeList();
+            });
+            menu.add(item);
+        }
+        menu.show(filmFilterTriggerBtn, 0, filmFilterTriggerBtn.getHeight());
     }
 
     private void filterRecipeList() {
         String q = searchField != null ? searchField.getText().trim().toLowerCase(Locale.ROOT) : "";
-        int filmIdx = filmFilterCombo != null ? filmFilterCombo.getSelectedIndex() : 0;
-        String filmFilter = filmIdx > 0 ? FILM_FILTERS[filmIdx].toLowerCase(Locale.ROOT) : "";
+        String filmFilter = activeFilmFilterIndex > 0 ? FILM_FILTERS[activeFilmFilterIndex].toLowerCase(Locale.ROOT) : "";
 
         recipeListModel.clear();
         for (Recipe r : allRecipes) {
@@ -493,24 +569,22 @@ public final class IroDesktopApp extends JFrame {
         }
     }
 
-    /** Renderer hiển thị thẻ công thức kèm ảnh mẫu từ Fuji X Weekly. */
     private final class RecipeCardRenderer extends JPanel implements ListCellRenderer<Recipe> {
         private final JLabel thumbLabel = new JLabel();
         private final JLabel nameLabel = new JLabel();
         private final JLabel metaLabel = new JLabel();
         private final JLabel sensorLabel = new JLabel();
+        private boolean selectedCell = false;
 
         RecipeCardRenderer() {
             setLayout(new BorderLayout(10, 0));
-            setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, DesktopWidgets.BORDER_COLOR),
-                    BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+            setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
 
-            thumbLabel.setPreferredSize(new Dimension(78, 56));
+            thumbLabel.setPreferredSize(new Dimension(74, 52));
             thumbLabel.setHorizontalAlignment(SwingConstants.CENTER);
             thumbLabel.setOpaque(true);
-            thumbLabel.setBackground(DesktopWidgets.BG_CARD);
-            thumbLabel.setBorder(BorderFactory.createLineBorder(DesktopWidgets.BORDER_COLOR, 1));
+            thumbLabel.setBackground(DesktopWidgets.PS_SURFACE);
+            thumbLabel.setBorder(BorderFactory.createLineBorder(DesktopWidgets.PS_BORDER, 1));
             add(thumbLabel, BorderLayout.WEST);
 
             JPanel textPanel = new JPanel();
@@ -520,9 +594,9 @@ public final class IroDesktopApp extends JFrame {
             nameLabel.setFont(DesktopWidgets.FONT_BOLD);
             nameLabel.setForeground(DesktopWidgets.TEXT_PRIMARY);
             metaLabel.setFont(DesktopWidgets.FONT_SMALL);
-            metaLabel.setForeground(DesktopWidgets.ACCENT_BLUE);
+            metaLabel.setForeground(DesktopWidgets.PS_BLUE_LIGHT);
             sensorLabel.setFont(DesktopWidgets.FONT_SMALL);
-            sensorLabel.setForeground(DesktopWidgets.TEXT_SECONDARY);
+            sensorLabel.setForeground(DesktopWidgets.TEXT_MUTED);
 
             textPanel.add(nameLabel);
             textPanel.add(Box.createVerticalStrut(2));
@@ -533,22 +607,34 @@ public final class IroDesktopApp extends JFrame {
         }
 
         @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            g.setColor(new Color(0x28, 0x28, 0x28));
+            g.drawLine(0, getHeight() - 1, getWidth(), getHeight() - 1);
+            if (selectedCell) {
+                g.setColor(DesktopWidgets.PS_BLUE_LIGHT);
+                g.fillRect(0, 0, 3, getHeight());
+            }
+        }
+
+        @Override
         public Component getListCellRendererComponent(
                 JList<? extends Recipe> list, Recipe value, int index, boolean isSelected, boolean cellHasFocus) {
-            setBackground(isSelected ? new Color(0x24, 0x34, 0x4D) : DesktopWidgets.BG_DARK);
+            this.selectedCell = isSelected;
+            setBackground(isSelected ? new Color(0x2B, 0x35, 0x42) : DesktopWidgets.PS_DARKEST);
             nameLabel.setText(value.name);
-            metaLabel.setText("Film: " + value.film);
+            metaLabel.setText(value.film);
             sensorLabel.setText(value.sensors.isEmpty() ? "Fuji X Weekly" : value.sensors);
 
             BufferedImage thumb = DesktopWidgets.DesktopFujiSampleLoader.getCachedForRecipe(value);
             if (thumb != null) {
-                thumbLabel.setIcon(new ImageIcon(scaleThumbnail(thumb, 76, 54)));
+                thumbLabel.setIcon(new ImageIcon(scaleThumbnail(thumb, 72, 50)));
                 thumbLabel.setText("");
             } else {
                 thumbLabel.setIcon(null);
-                thumbLabel.setForeground(DesktopWidgets.TEXT_SECONDARY);
+                thumbLabel.setForeground(DesktopWidgets.TEXT_MUTED);
                 thumbLabel.setFont(DesktopWidgets.FONT_SMALL);
-                thumbLabel.setText("Fuji");
+                thumbLabel.setText("RAW");
                 DesktopWidgets.DesktopFujiSampleLoader.loadRecipeSampleAsync(value, img -> list.repaint());
             }
             return this;
@@ -573,22 +659,46 @@ public final class IroDesktopApp extends JFrame {
     }
 
     // =========================================================================
-    // KHUNG GIỮA: BÀN DỰNG ẢNH + DẢI FILM SIMULATION NHANH
+    // 3. KHUNG GIỮA: ARTBOARD PHOTOSHOP CC 2025 + CONTEXTUAL TASK BAR NỔI
     // =========================================================================
-    private JComponent buildCenterWorkspace() {
+    private JComponent buildCenterArtboardArea() {
         JPanel workspace = new JPanel(new BorderLayout(0, 0));
-        workspace.setBackground(DesktopWidgets.BG_DARK);
+        workspace.setBackground(DesktopWidgets.PS_CANVAS_BG);
 
         canvasPanel = new DesktopWidgets.ImageCanvasPanel();
+        canvasPanel.setOnZoomChanged(() -> {
+            if (zoomStatusLabel != null) {
+                zoomStatusLabel.setText(String.format(Locale.ROOT, " %.0f%% ", canvasPanel.getZoom() * 100.0));
+            }
+        });
         workspace.add(canvasPanel, BorderLayout.CENTER);
 
-        // Dải chọn nhanh Film Simulation ở đáy bàn dựng
-        JPanel filmStrip = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
-        filmStrip.setBackground(DesktopWidgets.BG_PANEL);
-        filmStrip.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, DesktopWidgets.BORDER_COLOR));
+        // Thanh Contextual Task Bar đặc trưng của Photoshop CC 2025 ở đáy vùng Canvas
+        JPanel bottomBarWrap = new JPanel(new BorderLayout(0, 0));
+        bottomBarWrap.setBackground(DesktopWidgets.PS_CANVAS_BG);
+        bottomBarWrap.setBorder(BorderFactory.createEmptyBorder(6, 14, 10, 14));
+
+        JPanel contextualBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 5)) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(new Color(0x25, 0x25, 0x25));
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.setColor(new Color(0x3E, 0x3E, 0x3E));
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
+                g2.dispose();
+            }
+        };
+        contextualBar.setOpaque(false);
+
+        JLabel ctxTitle = new JLabel("Contextual Task Bar:");
+        ctxTitle.setFont(DesktopWidgets.FONT_BOLD);
+        ctxTitle.setForeground(DesktopWidgets.TEXT_SECONDARY);
+        contextualBar.add(ctxTitle);
 
         String[][] quickFilms = {
-                {"Original", "Gốc (Original)"},
+                {"Original", "Gốc"},
                 {"Classic Chrome", "Classic Chrome"},
                 {"Classic Negative", "Classic Neg."},
                 {"Velvia", "Velvia"},
@@ -597,106 +707,136 @@ public final class IroDesktopApp extends JFrame {
                 {"Nostalgic Neg.", "Nostalgic Neg."},
                 {"Eterna", "Eterna"},
                 {"Reala Ace", "Reala Ace"},
-                {"Acros", "Acros B&W"},
-                {"Sepia", "Sepia"}
+                {"Acros", "Acros B&W"}
         };
         for (String[] pair : quickFilms) {
-            String filmKey = pair[0];
-            JButton b = DesktopWidgets.createStudioButton(pair[1], false);
-            b.setFont(DesktopWidgets.FONT_SMALL);
+            final String filmKey = pair[0];
+            JButton b = DesktopWidgets.createCompactButton(pair[1], false);
             b.addActionListener(e -> applyQuickFilmSimulation(filmKey));
-            filmStrip.add(b);
+            contextualBar.add(b);
         }
 
-        workspace.add(filmStrip, BorderLayout.SOUTH);
+        contextualBar.add(createDividerLabel());
+        JButton fitBtn = DesktopWidgets.createCompactButton("Fit 100%", false);
+        fitBtn.addActionListener(e -> canvasPanel.resetView());
+        contextualBar.add(fitBtn);
+
+        bottomBarWrap.add(contextualBar, BorderLayout.CENTER);
+        workspace.add(bottomBarWrap, BorderLayout.SOUTH);
         return workspace;
     }
 
     // =========================================================================
-    // CỘT PHẢI: BIỂU ĐỒ RGB HISTOGRAM & 4 TAB CHỈNH MÀU CHUYÊN SÂU
+    // 4. CỘT PHẢI: CAMERA RAW 17 INSPECTOR DOCK (HISTOGRAM + 4 TAB TỐI SPECTRUM)
     // =========================================================================
-    private JComponent buildRightInspector() {
-        JPanel dock = new JPanel(new BorderLayout(0, 8));
-        dock.setPreferredSize(new Dimension(380, 600));
-        dock.setBackground(DesktopWidgets.BG_PANEL);
-        dock.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 1, 0, 0, DesktopWidgets.BORDER_COLOR),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+    private JComponent buildRightCameraRawDock() {
+        JPanel dock = new JPanel(new BorderLayout(0, 0));
+        dock.setPreferredSize(new Dimension(368, 600));
+        dock.setBackground(DesktopWidgets.PS_PANEL);
+        dock.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, DesktopWidgets.PS_DIVIDER));
 
+        // 1. Khung Histogram + EXIF Telemetry trên đỉnh
+        JPanel topStack = new JPanel(new BorderLayout(0, 0));
+        topStack.setBackground(DesktopWidgets.PS_PANEL);
         histogramPanel = new DesktopWidgets.HistogramPanel();
-        dock.add(histogramPanel, BorderLayout.NORTH);
+        topStack.add(histogramPanel, BorderLayout.NORTH);
 
-        JTabbedPane tabs = new JTabbedPane();
-        tabs.setFont(DesktopWidgets.FONT_BOLD);
-        tabs.setBackground(DesktopWidgets.BG_PANEL);
-        tabs.setForeground(DesktopWidgets.TEXT_PRIMARY);
+        // 2. Thanh Tab tùy chỉnh kiểu Adobe Spectrum (thay thế hoàn toàn JTabbedPane viền trắng của Swing)
+        JPanel tabStrip = new JPanel(new GridLayout(1, 4, 4, 0));
+        tabStrip.setBackground(DesktopWidgets.PS_HEADER);
+        tabStrip.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, DesktopWidgets.PS_BORDER),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
-        tabs.addTab("Màu Fuji", createScrollTab(buildFujiAdjustTab()));
-        tabs.addTab("LightCraft Curve", createScrollTab(buildLightCraftCurveTab()));
-        tabs.addTab("OkLab & HSL", createScrollTab(buildLightCraftGradingTab()));
-        tabs.addTab("Mask & Khung", createScrollTab(buildMaskAndFrameTab()));
+        String[] tabNames = {"Cơ bản", "Curve", "Color Wheel", "Mask & FX"};
+        for (int i = 0; i < 4; i++) {
+            final int idx = i;
+            inspectorTabBtns[i] = new DesktopWidgets.SpectrumButton(tabNames[i], false, true);
+            inspectorTabBtns[i].addActionListener(e -> switchInspectorTab(idx));
+            tabStrip.add(inspectorTabBtns[i]);
+        }
+        inspectorTabBtns[0].setActiveState(true);
+        topStack.add(tabStrip, BorderLayout.SOUTH);
 
-        dock.add(tabs, BorderLayout.CENTER);
+        dock.add(topStack, BorderLayout.NORTH);
+
+        // 3. Nội dung 4 Tab trong CardLayout
+        inspectorCards = new CardLayout();
+        inspectorCardHost = new JPanel(inspectorCards);
+        inspectorCardHost.setBackground(DesktopWidgets.PS_PANEL);
+
+        inspectorCardHost.add(DesktopWidgets.createDarkScrollPane(buildFujiAdjustTab()), "tab0");
+        inspectorCardHost.add(DesktopWidgets.createDarkScrollPane(buildLightCraftCurveTab()), "tab1");
+        inspectorCardHost.add(DesktopWidgets.createDarkScrollPane(buildLightCraftGradingTab()), "tab2");
+        inspectorCardHost.add(DesktopWidgets.createDarkScrollPane(buildMaskAndFrameTab()), "tab3");
+
+        dock.add(inspectorCardHost, BorderLayout.CENTER);
         return dock;
     }
 
-    private JScrollPane createScrollTab(JPanel content) {
-        JScrollPane sp = new JScrollPane(content);
-        sp.setBorder(BorderFactory.createEmptyBorder());
-        sp.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        sp.getVerticalScrollBar().setUnitIncrement(18);
-        sp.getViewport().setBackground(DesktopWidgets.BG_PANEL);
-        return sp;
+    private void switchInspectorTab(int index) {
+        if (inspectorCards == null || inspectorCardHost == null) return;
+        for (int i = 0; i < inspectorTabBtns.length; i++) {
+            if (inspectorTabBtns[i] != null) {
+                inspectorTabBtns[i].setActiveState(i == index);
+            }
+        }
+        inspectorCards.show(inspectorCardHost, "tab" + index);
     }
 
     private JPanel buildFujiAdjustTab() {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(DesktopWidgets.BG_PANEL);
-        p.setBorder(BorderFactory.createEmptyBorder(8, 8, 12, 12));
+        p.setBackground(DesktopWidgets.PS_PANEL);
+        p.setBorder(BorderFactory.createEmptyBorder(8, 12, 14, 12));
 
-        addSectionHeader(p, "ÁNH SÁNG & TƯƠNG PHẢN FUJIFILM");
-        addSettingSlider(p, "exposure", "Phơi sáng (EV)", -3.0, 3.0, 100.0, "%+.2f EV", v -> settings.exposure = v);
-        addSettingSlider(p, "highlight", "Vùng sáng (Highlight)", -2.0, 4.0, 10.0, "%+.1f", v -> settings.highlight = v);
-        addSettingSlider(p, "shadow", "Vùng tối (Shadow)", -2.0, 4.0, 10.0, "%+.1f", v -> settings.shadow = v);
+        addAccordionHeader(p, "•  ÁNH SÁNG (LIGHT & DYNAMIC RANGE)");
+        addSettingSlider(p, "exposure", "Exposure (Phơi sáng)", -3.0, 3.0, 0.0, "%+.2f EV", v -> settings.exposure = v);
+        addSettingSlider(p, "highlight", "Highlights (Vùng sáng)", -2.0, 4.0, 0.0, "%+.1f", v -> settings.highlight = v);
+        addSettingSlider(p, "shadow", "Shadows (Vùng tối)", -2.0, 4.0, 0.0, "%+.1f", v -> settings.shadow = v);
 
-        // Dynamic Range DR100 / DR200 / DR400
-        JPanel drRow = new JPanel(new BorderLayout(8, 0));
+        // Bộ chọn Dynamic Range bằng 3 nút phẳng (thay cho JComboBox trắng)
+        JPanel drRow = new JPanel(new GridLayout(1, 3, 6, 0));
         drRow.setOpaque(false);
         drRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        drRow.setMaximumSize(new Dimension(330, 32));
-        JLabel drLbl = new JLabel("Dynamic Range (DR)");
-        drLbl.setFont(DesktopWidgets.FONT_UI);
-        drLbl.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        drCombo = new JComboBox<>(new String[]{"DR100 (Chuẩn)", "DR200 (Nén sáng)", "DR400 (Cứu cháy sáng)"});
-        drCombo.setBackground(DesktopWidgets.BG_CARD);
-        drCombo.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        drCombo.addActionListener(e -> {
-            if (syncingSliders.get()) return;
-            int idx = drCombo.getSelectedIndex();
-            settings.dr = idx == 2 ? 400 : (idx == 1 ? 200 : 100);
-            scheduleRender();
-        });
-        drRow.add(drLbl, BorderLayout.WEST);
-        drRow.add(drCombo, BorderLayout.EAST);
+        drRow.setMaximumSize(new Dimension(330, 26));
+        String[] drLabels = {"DR100", "DR200", "DR400"};
+        int[] drValues = {100, 200, 400};
+        for (int i = 0; i < 3; i++) {
+            final int idx = i;
+            drButtons[i] = new DesktopWidgets.SpectrumButton(drLabels[i], false, true);
+            if (i == 0) drButtons[i].setActiveState(true);
+            drButtons[i].addActionListener(e -> {
+                settings.dr = drValues[idx];
+                for (int k = 0; k < 3; k++) drButtons[k].setActiveState(k == idx);
+                scheduleRender();
+            });
+            drRow.add(drButtons[i]);
+        }
+        p.add(Box.createVerticalStrut(4));
         p.add(drRow);
         p.add(Box.createVerticalStrut(10));
 
-        addSectionHeader(p, "MÀU SẮC & CÂN BẰNG TRẮNG (WB SHIFT)");
-        addSettingSlider(p, "color", "Độ đậm màu (Color)", -4.0, 4.0, 10.0, "%+.1f", v -> settings.color = v);
-        addSettingSlider(p, "temperature", "Nhiệt độ màu (Temp)", -100.0, 100.0, 1.0, "%+.0f", v -> settings.temperature = v);
-        addSettingSlider(p, "red", "Dịch WB Đỏ (Red Shift)", -9.0, 9.0, 10.0, "%+.1f", v -> settings.red = v);
-        addSettingSlider(p, "blue", "Dịch WB Xanh (Blue Shift)", -9.0, 9.0, 10.0, "%+.1f", v -> settings.blue = v);
-        addSettingSlider(p, "colorChrome", "Color Chrome Effect", 0.0, 2.0, 10.0, "%.1f", v -> settings.colorChrome = v);
-        addSettingSlider(p, "chromeBlue", "Color Chrome FX Blue", 0.0, 2.0, 10.0, "%.1f", v -> settings.chromeBlue = v);
+        addAccordionHeader(p, "•  MÀU SẮC & CÂN BẰNG TRẮNG (COLOR & WB)");
+        addSettingSlider(p, "temperature", "Temp (Nhiệt độ màu)", -100.0, 100.0, 0.0, "%+.0f", v -> settings.temperature = v)
+                .withGradient(new Color(0x28, 0x68, 0xC8), new Color(0xD8, 0x8A, 0x28));
+        addSettingSlider(p, "red", "WB Red Shift", -9.0, 9.0, 0.0, "%+.1f", v -> settings.red = v)
+                .withGradient(new Color(0x24, 0x8A, 0x8A), new Color(0xC8, 0x3E, 0x3E));
+        addSettingSlider(p, "blue", "WB Blue Shift", -9.0, 9.0, 0.0, "%+.1f", v -> settings.blue = v)
+                .withGradient(new Color(0xB8, 0x98, 0x28), new Color(0x32, 0x68, 0xD8));
+        addSettingSlider(p, "color", "Color (Độ đậm màu Fuji)", -4.0, 4.0, 0.0, "%+.1f", v -> settings.color = v)
+                .withGradient(new Color(0x55, 0x55, 0x55), new Color(0xE0, 0x48, 0x78));
+        addSettingSlider(p, "colorChrome", "Color Chrome Effect", 0.0, 2.0, 0.0, "%.1f", v -> settings.colorChrome = v);
+        addSettingSlider(p, "chromeBlue", "Color Chrome FX Blue", 0.0, 2.0, 0.0, "%.1f", v -> settings.chromeBlue = v);
 
-        addSectionHeader(p, "CHI TIẾT, HẠT PHIM & LUT 3D");
-        addSettingSlider(p, "sharpness", "Độ sắc nét (Sharpness)", -4.0, 4.0, 10.0, "%+.1f", v -> settings.sharpness = v);
-        addSettingSlider(p, "clarity", "Độ trong (Clarity)", -5.0, 5.0, 10.0, "%+.1f", v -> settings.clarity = v);
-        addSettingSlider(p, "nr", "Khử nhiễu (High ISO NR)", -4.0, 4.0, 10.0, "%+.1f", v -> settings.nr = v);
-        addSettingSlider(p, "grain", "Cường độ hạt phim (Grain)", 0.0, 30.0, 1.0, "%.0f", v -> settings.grain = v);
-        addSettingSlider(p, "grainSize", "Kích thước hạt (Size)", 1.0, 2.0, 10.0, "%.1f", v -> settings.grainSize = v);
-        addSettingSlider(p, "lutAmount", "Cường độ LUT 3D (%)", 0.0, 100.0, 1.0, "%.0f%%", v -> settings.lutAmount = v);
+        p.add(Box.createVerticalStrut(8));
+        addAccordionHeader(p, "•  CHI TIẾT, HẠT PHIM & 3D LUT (DETAIL & FX)");
+        addSettingSlider(p, "clarity", "Clarity (Độ trong cục bộ)", -5.0, 5.0, 0.0, "%+.1f", v -> settings.clarity = v);
+        addSettingSlider(p, "sharpness", "Sharpness (Độ sắc nét)", -4.0, 4.0, 0.0, "%+.1f", v -> settings.sharpness = v);
+        addSettingSlider(p, "nr", "Noise Reduction (Khử nhiễu)", -4.0, 4.0, -4.0, "%+.1f", v -> settings.nr = v);
+        addSettingSlider(p, "grain", "Grain Amount (Hạt phim)", 0.0, 30.0, 0.0, "%.0f", v -> settings.grain = v);
+        addSettingSlider(p, "grainSize", "Grain Size (Cỡ hạt)", 1.0, 2.0, 1.0, "%.1f", v -> settings.grainSize = v);
+        addSettingSlider(p, "lutAmount", "3D LUT Intensity (%)", 0.0, 100.0, 100.0, "%.0f%%", v -> settings.lutAmount = v);
 
         return p;
     }
@@ -704,15 +844,64 @@ public final class IroDesktopApp extends JFrame {
     private JPanel buildLightCraftCurveTab() {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(DesktopWidgets.BG_PANEL);
-        p.setBorder(BorderFactory.createEmptyBorder(8, 6, 12, 6));
+        p.setBackground(DesktopWidgets.PS_PANEL);
+        p.setBorder(BorderFactory.createEmptyBorder(8, 12, 14, 12));
 
-        addSectionHeader(p, "12 PRESET PHÒNG TỐI LIGHTCRAFT");
-        JPanel presetGrid = new JPanel(new GridLayout(0, 2, 6, 6));
+        addAccordionHeader(p, "•  ĐƯỜNG CONG TONE CURVE (PARAMETRIC & POINT)");
+
+        JPanel chRow = new JPanel(new GridLayout(1, 4, 4, 0));
+        chRow.setOpaque(false);
+        chRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        chRow.setMaximumSize(new Dimension(330, 26));
+        String[] chNames = {"RGB", "Red", "Green", "Blue"};
+        DesktopWidgets.SpectrumButton[] chBtns = new DesktopWidgets.SpectrumButton[4];
+        for (int i = 0; i < 4; i++) {
+            final int chIdx = i;
+            chBtns[i] = new DesktopWidgets.SpectrumButton(chNames[i], false, true);
+            if (i == 0) chBtns[i].setActiveState(true);
+            chBtns[i].addActionListener(e -> {
+                for (int k = 0; k < 4; k++) chBtns[k].setActiveState(k == chIdx);
+                toneCurveWidget.setActiveChannel(chIdx);
+            });
+            chRow.add(chBtns[i]);
+        }
+        p.add(chRow);
+        p.add(Box.createVerticalStrut(6));
+
+        toneCurveWidget = new DesktopWidgets.ToneCurveWidget(lightCraft, this::scheduleRender);
+        p.add(toneCurveWidget);
+        p.add(Box.createVerticalStrut(8));
+
+        addAccordionHeader(p, "•  PARAMETRIC REGION SLIDERS");
+        p.add(new DesktopWidgets.SpectrumSlider("Highlights (Đỉnh sáng)", -100, 100, 0, "%+.0f", v -> {
+            lightCraft.paramHighlights = (float) v;
+            toneCurveWidget.repaint();
+            scheduleRender();
+        }));
+        p.add(new DesktopWidgets.SpectrumSlider("Lights (Vùng sáng vừa)", -100, 100, 0, "%+.0f", v -> {
+            lightCraft.paramLights = (float) v;
+            toneCurveWidget.repaint();
+            scheduleRender();
+        }));
+        p.add(new DesktopWidgets.SpectrumSlider("Darks (Vùng trầm)", -100, 100, 0, "%+.0f", v -> {
+            lightCraft.paramDarks = (float) v;
+            toneCurveWidget.repaint();
+            scheduleRender();
+        }));
+        p.add(new DesktopWidgets.SpectrumSlider("Shadows (Vùng tối sâu)", -100, 100, 0, "%+.0f", v -> {
+            lightCraft.paramShadows = (float) v;
+            toneCurveWidget.repaint();
+            scheduleRender();
+        }));
+
+        p.add(Box.createVerticalStrut(8));
+        addAccordionHeader(p, "•  12 PRESET PHÒNG TỐI LIGHTCRAFT");
+        JPanel presetGrid = new JPanel(new GridLayout(0, 2, 5, 5));
         presetGrid.setOpaque(false);
+        presetGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        presetGrid.setMaximumSize(new Dimension(330, 190));
         for (LightCraftEngine.BuiltinPreset preset : LightCraftEngine.PRESETS) {
-            JButton btn = DesktopWidgets.createStudioButton(preset.name, false);
-            btn.setFont(DesktopWidgets.FONT_SMALL);
+            JButton btn = DesktopWidgets.createCompactButton(preset.name, false);
             btn.setToolTipText(preset.subtitle);
             btn.addActionListener(e -> {
                 pushUndoState();
@@ -730,71 +919,20 @@ public final class IroDesktopApp extends JFrame {
             presetGrid.add(btn);
         }
         p.add(presetGrid);
-        p.add(Box.createVerticalStrut(12));
-
-        addSectionHeader(p, "ĐƯỜNG CONG TONE CURVE (MONOTONE SPLINE)");
-        JPanel chRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        chRow.setOpaque(false);
-        ButtonGroup bg = new ButtonGroup();
-        String[] chNames = {"RGB", "Đỏ (R)", "Lục (G)", "Lam (B)"};
-        for (int i = 0; i < chNames.length; i++) {
-            final int chIdx = i;
-            JRadioButton rb = new JRadioButton(chNames[i], i == 0);
-            rb.setOpaque(false);
-            rb.setForeground(DesktopWidgets.TEXT_PRIMARY);
-            rb.setFont(DesktopWidgets.FONT_SMALL);
-            rb.addActionListener(e -> toneCurveWidget.setActiveChannel(chIdx));
-            bg.add(rb);
-            chRow.add(rb);
-        }
-        p.add(chRow);
-        p.add(Box.createVerticalStrut(6));
-
-        toneCurveWidget = new DesktopWidgets.ToneCurveWidget(lightCraft, this::scheduleRender);
-        p.add(toneCurveWidget);
-        p.add(Box.createVerticalStrut(10));
-
-        addSectionHeader(p, "ĐƯỜNG CONG THAM SỐ 4 VÙNG (PARAMETRIC)");
-        addRawSlider(p, "Shadows (Vùng tối sâu)", -100, 100, 0, "%+d", v -> {
-            lightCraft.paramShadows = v;
-            toneCurveWidget.repaint();
-            scheduleRender();
-        });
-        addRawSlider(p, "Darks (Vùng trầm)", -100, 100, 0, "%+d", v -> {
-            lightCraft.paramDarks = v;
-            toneCurveWidget.repaint();
-            scheduleRender();
-        });
-        addRawSlider(p, "Lights (Vùng sáng vừa)", -100, 100, 0, "%+d", v -> {
-            lightCraft.paramLights = v;
-            toneCurveWidget.repaint();
-            scheduleRender();
-        });
-        addRawSlider(p, "Highlights (Đỉnh sáng)", -100, 100, 0, "%+d", v -> {
-            lightCraft.paramHighlights = v;
-            toneCurveWidget.repaint();
-            scheduleRender();
-        });
-
-        JButton resetCurveBtn = DesktopWidgets.createStudioButton("Đặt lại Tone Curve", false);
-        resetCurveBtn.addActionListener(e -> {
-            lightCraft.resetCurves();
-            toneCurveWidget.repaint();
-            scheduleRender();
-        });
-        p.add(resetCurveBtn);
         return p;
     }
 
     private JPanel buildLightCraftGradingTab() {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(DesktopWidgets.BG_PANEL);
-        p.setBorder(BorderFactory.createEmptyBorder(8, 6, 12, 6));
+        p.setBackground(DesktopWidgets.PS_PANEL);
+        p.setBorder(BorderFactory.createEmptyBorder(8, 12, 14, 12));
 
-        addSectionHeader(p, "BÁNH XE MÀU 3-WAY COLOR GRADING (OKLAB)");
-        JPanel wheelsRow = new JPanel(new GridLayout(1, 3, 6, 0));
+        addAccordionHeader(p, "•  3-WAY COLOR GRADING WHEELS (OKLAB)");
+        JPanel wheelsRow = new JPanel(new GridLayout(1, 3, 4, 0));
         wheelsRow.setOpaque(false);
+        wheelsRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        wheelsRow.setMaximumSize(new Dimension(330, 122));
         shadowsWheelWidget = new DesktopWidgets.ColorWheelWidget("Shadows", lightCraft.shadowsWheel, this::scheduleRender);
         midtonesWheelWidget = new DesktopWidgets.ColorWheelWidget("Midtones", lightCraft.midtonesWheel, this::scheduleRender);
         highlightsWheelWidget = new DesktopWidgets.ColorWheelWidget("Highlights", lightCraft.highlightsWheel, this::scheduleRender);
@@ -802,67 +940,79 @@ public final class IroDesktopApp extends JFrame {
         wheelsRow.add(midtonesWheelWidget);
         wheelsRow.add(highlightsWheelWidget);
         p.add(wheelsRow);
+        p.add(Box.createVerticalStrut(6));
+
+        p.add(new DesktopWidgets.SpectrumSlider("Shadows Luminance", -100, 100, 0, "%+.0f", v -> {
+            lightCraft.shadowsWheel.lum = (float) v;
+            scheduleRender();
+        }));
+        p.add(new DesktopWidgets.SpectrumSlider("Midtones Luminance", -100, 100, 0, "%+.0f", v -> {
+            lightCraft.midtonesWheel.lum = (float) v;
+            scheduleRender();
+        }));
+        p.add(new DesktopWidgets.SpectrumSlider("Highlights Luminance", -100, 100, 0, "%+.0f", v -> {
+            lightCraft.highlightsWheel.lum = (float) v;
+            scheduleRender();
+        }));
+        p.add(new DesktopWidgets.SpectrumSlider("Blending (Độ hòa trộn)", 0, 100, 50, "%.0f%%", v -> {
+            lightCraft.gradingBlending = (float) v;
+            scheduleRender();
+        }));
+        p.add(new DesktopWidgets.SpectrumSlider("Balance (Cân bằng vùng)", -100, 100, 0, "%+.0f", v -> {
+            lightCraft.gradingBalance = (float) v;
+            scheduleRender();
+        }));
+
         p.add(Box.createVerticalStrut(8));
-
-        addRawSlider(p, "Shadows Luminance", -100, 100, 0, "%+d", v -> {
-            lightCraft.shadowsWheel.lum = v;
-            scheduleRender();
-        });
-        addRawSlider(p, "Midtones Luminance", -100, 100, 0, "%+d", v -> {
-            lightCraft.midtonesWheel.lum = v;
-            scheduleRender();
-        });
-        addRawSlider(p, "Highlights Luminance", -100, 100, 0, "%+d", v -> {
-            lightCraft.highlightsWheel.lum = v;
-            scheduleRender();
-        });
-        addRawSlider(p, "Grading Blending", 0, 100, 50, "%d%%", v -> {
-            lightCraft.gradingBlending = v;
-            scheduleRender();
-        });
-        addRawSlider(p, "Grading Balance", -100, 100, 0, "%+d", v -> {
-            lightCraft.gradingBalance = v;
-            scheduleRender();
-        });
-
-        p.add(Box.createVerticalStrut(10));
-        addSectionHeader(p, "BỘ TRỘN MÀU 8 KÊNH (8-BAND OKLCH MIXER)");
+        addAccordionHeader(p, "•  COLOR MIXER 8 KÊNH (8-BAND OKLCH HSL)");
 
         JPanel bandButtons = new JPanel(new GridLayout(2, 4, 4, 4));
         bandButtons.setOpaque(false);
+        bandButtons.setAlignmentX(Component.LEFT_ALIGNMENT);
+        bandButtons.setMaximumSize(new Dimension(330, 56));
         for (int i = 0; i < 8; i++) {
             final int bandIdx = i;
-            JButton b = DesktopWidgets.createStudioButton(LightCraftEngine.MIXER_BAND_NAMES[i], false);
-            b.setFont(DesktopWidgets.FONT_SMALL);
-            b.setForeground(new Color(LightCraftEngine.MIXER_BAND_COLORS[i]));
-            b.addActionListener(e -> {
+            mixerBandBtns[i] = new DesktopWidgets.SpectrumButton(LightCraftEngine.MIXER_BAND_NAMES[i], false, true);
+            mixerBandBtns[i].setForeground(new Color(LightCraftEngine.MIXER_BAND_COLORS[i]));
+            if (i == 0) mixerBandBtns[i].setActiveState(true);
+            mixerBandBtns[i].addActionListener(e -> {
                 selectedMixerBand = bandIdx;
+                for (int k = 0; k < 8; k++) mixerBandBtns[k].setActiveState(k == bandIdx);
                 syncingSliders.set(true);
                 try {
-                    mixerHueSlider.setValue(lightCraft.mixerHue[selectedMixerBand]);
-                    mixerSatSlider.setValue(lightCraft.mixerSat[selectedMixerBand]);
-                    mixerLumSlider.setValue(lightCraft.mixerLum[selectedMixerBand]);
+                    mixerHueSlider.setValue(lightCraft.mixerHue[selectedMixerBand], false);
+                    mixerSatSlider.setValue(lightCraft.mixerSat[selectedMixerBand], false);
+                    mixerLumSlider.setValue(lightCraft.mixerLum[selectedMixerBand], false);
                 } finally {
                     syncingSliders.set(false);
                 }
             });
-            bandButtons.add(b);
+            bandButtons.add(mixerBandBtns[i]);
         }
         p.add(bandButtons);
         p.add(Box.createVerticalStrut(6));
 
-        mixerHueSlider = createSliderControl(p, "Hue (Đổi sắc độ dải màu)", -100, 100, 1.0, "%+.0f", v -> {
-            lightCraft.mixerHue[selectedMixerBand] = (float) v;
-            scheduleRender();
+        mixerHueSlider = new DesktopWidgets.SpectrumSlider("Hue Shift (Đổi sắc độ)", -100, 100, 0, "%+.0f", v -> {
+            if (!syncingSliders.get()) {
+                lightCraft.mixerHue[selectedMixerBand] = (float) v;
+                scheduleRender();
+            }
         });
-        mixerSatSlider = createSliderControl(p, "Saturation (Độ bão hòa dải màu)", -100, 100, 1.0, "%+.0f", v -> {
-            lightCraft.mixerSat[selectedMixerBand] = (float) v;
-            scheduleRender();
+        mixerSatSlider = new DesktopWidgets.SpectrumSlider("Saturation (Độ bão hòa)", -100, 100, 0, "%+.0f", v -> {
+            if (!syncingSliders.get()) {
+                lightCraft.mixerSat[selectedMixerBand] = (float) v;
+                scheduleRender();
+            }
         });
-        mixerLumSlider = createSliderControl(p, "Luminance (Độ sáng dải màu)", -100, 100, 1.0, "%+.0f", v -> {
-            lightCraft.mixerLum[selectedMixerBand] = (float) v;
-            scheduleRender();
+        mixerLumSlider = new DesktopWidgets.SpectrumSlider("Luminance (Độ sáng kênh)", -100, 100, 0, "%+.0f", v -> {
+            if (!syncingSliders.get()) {
+                lightCraft.mixerLum[selectedMixerBand] = (float) v;
+                scheduleRender();
+            }
         });
+        p.add(mixerHueSlider);
+        p.add(mixerSatSlider);
+        p.add(mixerLumSlider);
 
         return p;
     }
@@ -870,40 +1020,47 @@ public final class IroDesktopApp extends JFrame {
     private JPanel buildMaskAndFrameTab() {
         JPanel p = new JPanel();
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(DesktopWidgets.BG_PANEL);
-        p.setBorder(BorderFactory.createEmptyBorder(8, 6, 12, 6));
+        p.setBackground(DesktopWidgets.PS_PANEL);
+        p.setBorder(BorderFactory.createEmptyBorder(8, 12, 14, 12));
 
-        addSectionHeader(p, "MẶT NẠ CỤC BỘ (LOCAL MASKING AI)");
-        JComboBox<String> maskCombo = new JComboBox<>(new String[]{
-                "Tắt Mask",
-                "Radial Gradient (Elip chủ thể)",
-                "Linear Gradient (Chuyển sắc)",
-                "AI Bầu trời (Sky Heuristic)",
-                "AI Chủ thể trung tâm (Subject)"
-        });
-        maskCombo.setBackground(DesktopWidgets.BG_CARD);
-        maskCombo.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        maskCombo.setMaximumSize(new Dimension(400, 32));
-        maskCombo.addActionListener(e -> {
-            int idx = maskCombo.getSelectedIndex();
-            lightCraft.maskMode = LightCraftEngine.MaskMode.values()[Math.max(0, Math.min(4, idx))];
-            scheduleRender();
-        });
-        p.add(maskCombo);
+        addAccordionHeader(p, "•  MẶT NẠ CỤC BỘ AI (LOCAL MASKING)");
+        JPanel maskGrid = new JPanel(new GridLayout(0, 2, 5, 5));
+        maskGrid.setOpaque(false);
+        maskGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        maskGrid.setMaximumSize(new Dimension(330, 88));
+
+        LightCraftEngine.MaskMode[] modes = LightCraftEngine.MaskMode.values();
+        DesktopWidgets.SpectrumButton[] maskBtns = new DesktopWidgets.SpectrumButton[modes.length];
+        for (int i = 0; i < modes.length; i++) {
+            final int idx = i;
+            maskBtns[i] = new DesktopWidgets.SpectrumButton(modes[i].label, false, true);
+            if (i == 0) maskBtns[i].setActiveState(true);
+            maskBtns[i].addActionListener(e -> {
+                for (int k = 0; k < modes.length; k++) maskBtns[k].setActiveState(k == idx);
+                lightCraft.maskMode = modes[idx];
+                scheduleRender();
+            });
+            maskGrid.add(maskBtns[i]);
+        }
+        p.add(maskGrid);
         p.add(Box.createVerticalStrut(6));
 
-        JCheckBox showOverlayCb = new JCheckBox("Hiển thị vùng phủ Mask màu đỏ");
+        JCheckBox showOverlayCb = new JCheckBox("Hiển thị lớp phủ Mask màu đỏ (Overlay)");
         showOverlayCb.setOpaque(false);
+        showOverlayCb.setFont(DesktopWidgets.FONT_UI);
         showOverlayCb.setForeground(DesktopWidgets.TEXT_PRIMARY);
+        showOverlayCb.setAlignmentX(Component.LEFT_ALIGNMENT);
         showOverlayCb.addActionListener(e -> {
             lightCraft.showMaskOverlay = showOverlayCb.isSelected();
             scheduleRender();
         });
         p.add(showOverlayCb);
 
-        JCheckBox invertMaskCb = new JCheckBox("Đảo ngược vùng Mask (Invert)");
+        JCheckBox invertMaskCb = new JCheckBox("Đảo ngược vùng chọn Mask (Invert)");
         invertMaskCb.setOpaque(false);
+        invertMaskCb.setFont(DesktopWidgets.FONT_UI);
         invertMaskCb.setForeground(DesktopWidgets.TEXT_PRIMARY);
+        invertMaskCb.setAlignmentX(Component.LEFT_ALIGNMENT);
         invertMaskCb.addActionListener(e -> {
             lightCraft.maskInvert = invertMaskCb.isSelected();
             scheduleRender();
@@ -911,134 +1068,109 @@ public final class IroDesktopApp extends JFrame {
         p.add(invertMaskCb);
         p.add(Box.createVerticalStrut(6));
 
-        createSliderControl(p, "Mask Phơi sáng (EV)", -2.0, 2.0, 100.0, "%+.2f EV", v -> {
+        p.add(new DesktopWidgets.SpectrumSlider("Mask Exposure (EV)", -2.0, 2.0, 0.0, "%+.2f EV", v -> {
             lightCraft.maskExposure = (float) v;
             scheduleRender();
-        });
-        createSliderControl(p, "Mask Nhiệt độ màu", -100.0, 100.0, 1.0, "%+.0f", v -> {
+        }));
+        p.add(new DesktopWidgets.SpectrumSlider("Mask Temperature", -100.0, 100.0, 0.0, "%+.0f", v -> {
             lightCraft.maskTemp = (float) v;
             scheduleRender();
-        });
-        createSliderControl(p, "Mask Độ tương phản (Clarity)", -100.0, 100.0, 1.0, "%+.0f", v -> {
+        }));
+        p.add(new DesktopWidgets.SpectrumSlider("Mask Clarity", -100.0, 100.0, 0.0, "%+.0f", v -> {
             lightCraft.maskClarity = (float) v;
             scheduleRender();
-        });
-        createSliderControl(p, "Mask Độ bão hòa (Saturation)", -100.0, 100.0, 1.0, "%+.0f", v -> {
+        }));
+        p.add(new DesktopWidgets.SpectrumSlider("Mask Saturation", -100.0, 100.0, 0.0, "%+.0f", v -> {
             lightCraft.maskSaturation = (float) v;
             scheduleRender();
-        });
+        }));
 
-        p.add(Box.createVerticalStrut(14));
-        addSectionHeader(p, "KHUNG VIỀN TRIỂN LÃM FUJIFILM EXIF");
-        JComboBox<String> frameCombo = new JComboBox<>(new String[]{
-                "Không khung viền",
-                "Khung Trắng Gallery + Chữ ký Fujifilm",
-                "Khung Đen Cinema + Chữ ký Fujifilm",
-                "Khung Polaroid Cổ điển"
-        });
-        frameCombo.setBackground(DesktopWidgets.BG_CARD);
-        frameCombo.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        frameCombo.setMaximumSize(new Dimension(400, 32));
-        frameCombo.addActionListener(e -> canvasPanel.setFrameMode(frameCombo.getSelectedIndex()));
-        p.add(frameCombo);
-
-        p.add(Box.createVerticalStrut(14));
-        addSectionHeader(p, "ĐỒNG BỘ JSON CÔNG THỨC (ANDROID / iOS / PC)");
-        JPanel jsonBtns = new JPanel(new GridLayout(1, 2, 6, 0));
-        jsonBtns.setOpaque(false);
-        JButton importJsonBtn = DesktopWidgets.createStudioButton("Nhập JSON...", false);
-        importJsonBtn.addActionListener(e -> importSettingsJson());
-        JButton exportJsonBtn = DesktopWidgets.createStudioButton("Xuất JSON...", false);
-        exportJsonBtn.addActionListener(e -> exportSettingsJson());
-        jsonBtns.add(importJsonBtn);
-        jsonBtns.add(exportJsonBtn);
-        p.add(jsonBtns);
-
+        p.add(Box.createVerticalStrut(10));
+        addAccordionHeader(p, "•  KHUNG TRIỂN LÃM FUJIFILM EXIF (FRAME)");
+        String[] frameNames = {"Không khung", "Khung Trắng EXIF", "Khung Đen Cinema", "Polaroid Cổ điển"};
+        JPanel frameGrid = new JPanel(new GridLayout(2, 2, 5, 5));
+        frameGrid.setOpaque(false);
+        frameGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        frameGrid.setMaximumSize(new Dimension(330, 58));
+        DesktopWidgets.SpectrumButton[] frameBtns = new DesktopWidgets.SpectrumButton[4];
+        for (int i = 0; i < 4; i++) {
+            final int fIdx = i;
+            frameBtns[i] = new DesktopWidgets.SpectrumButton(frameNames[i], false, true);
+            if (i == 0) frameBtns[i].setActiveState(true);
+            frameBtns[i].addActionListener(e -> {
+                for (int k = 0; k < 4; k++) frameBtns[k].setActiveState(k == fIdx);
+                canvasPanel.setFrameMode(fIdx);
+            });
+            frameGrid.add(frameBtns[i]);
+        }
+        p.add(frameGrid);
         return p;
     }
 
-    private void addSectionHeader(JPanel parent, String text) {
+    private void addAccordionHeader(JPanel parent, String text) {
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(new Color(0x2C, 0x2C, 0x2C));
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 1, 0, DesktopWidgets.PS_BORDER),
+                BorderFactory.createEmptyBorder(4, 6, 4, 6)));
+        header.setAlignmentX(Component.LEFT_ALIGNMENT);
+        header.setMaximumSize(new Dimension(340, 24));
+
         JLabel lbl = new JLabel(text);
-        lbl.setFont(DesktopWidgets.FONT_BOLD);
-        lbl.setForeground(DesktopWidgets.ACCENT_BLUE);
-        lbl.setBorder(BorderFactory.createEmptyBorder(6, 0, 6, 0));
-        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
-        parent.add(lbl);
+        lbl.setFont(DesktopWidgets.FONT_SECTION);
+        lbl.setForeground(DesktopWidgets.TEXT_PRIMARY);
+        header.add(lbl, BorderLayout.WEST);
+
+        parent.add(header);
+        parent.add(Box.createVerticalStrut(4));
     }
 
-    private interface DoubleConsumer {
-        void accept(double value);
-    }
-
-    private interface IntConsumer {
-        void accept(int value);
-    }
-
-    private void addSettingSlider(JPanel parent, String key, String label, double min, double max, double scale, String fmt, DoubleConsumer consumer) {
-        SliderControl ctrl = createSliderControl(parent, label, min, max, scale, fmt, v -> {
-            consumer.accept(v);
-            scheduleRender();
-        });
-        settingSliders.put(key, ctrl);
-    }
-
-    private SliderControl createSliderControl(JPanel parent, String label, double min, double max, double scale, String fmt, DoubleConsumer consumer) {
-        JPanel wrap = new JPanel(new BorderLayout(4, 2));
-        wrap.setOpaque(false);
-        wrap.setBorder(BorderFactory.createEmptyBorder(2, 0, 6, 0));
-        wrap.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JPanel top = new JPanel(new BorderLayout());
-        top.setOpaque(false);
-        JLabel nameLbl = new JLabel(label);
-        nameLbl.setFont(DesktopWidgets.FONT_UI);
-        nameLbl.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        JLabel valLbl = new JLabel(String.format(Locale.ROOT, fmt, 0.0));
-        valLbl.setFont(DesktopWidgets.FONT_MONO);
-        valLbl.setForeground(DesktopWidgets.ACCENT_BLUE);
-        top.add(nameLbl, BorderLayout.WEST);
-        top.add(valLbl, BorderLayout.EAST);
-
-        int iMin = (int) Math.round(min * scale);
-        int iMax = (int) Math.round(max * scale);
-        int iInit = Math.max(iMin, Math.min(iMax, 0));
-        JSlider slider = new JSlider(iMin, iMax, iInit);
-        slider.setOpaque(false);
-        slider.addChangeListener(e -> {
-            double v = slider.getValue() / scale;
-            valLbl.setText(String.format(Locale.ROOT, fmt, v));
+    private DesktopWidgets.SpectrumSlider addSettingSlider(
+            JPanel parent, String key, String label, double min, double max, double defVal, String fmt,
+            DesktopWidgets.SpectrumSlider.ValueListener consumer) {
+        DesktopWidgets.SpectrumSlider slider = new DesktopWidgets.SpectrumSlider(label, min, max, defVal, fmt, v -> {
             if (!syncingSliders.get()) {
-                consumer.accept(v);
+                consumer.onValueChanged(v);
+                scheduleRender();
             }
         });
-
-        wrap.add(top, BorderLayout.NORTH);
-        wrap.add(slider, BorderLayout.CENTER);
-        parent.add(wrap);
-        return new SliderControl(slider, valLbl, scale, fmt);
+        parent.add(slider);
+        settingSliders.put(key, slider);
+        return slider;
     }
 
-    private void addRawSlider(JPanel parent, String label, int min, int max, int init, String fmt, IntConsumer consumer) {
-        createSliderControl(parent, label, min, max, 1.0, fmt.replace("%+d", "%+.0f").replace("%d", "%.0f"),
-                v -> consumer.accept((int) Math.round(v))).setValue(init);
-    }
-
-    private JComponent buildBottomStatusBar() {
-        JPanel status = new JPanel(new BorderLayout());
-        status.setBackground(DesktopWidgets.BG_PANEL);
+    // =========================================================================
+    // 5. THANH TRẠNG THÁI DƯỚI CÙNG CHUẨN PHOTOSHOP CC 2025
+    // =========================================================================
+    private JComponent buildPhotoshopStatusBar() {
+        JPanel status = new JPanel(new BorderLayout(10, 0));
+        status.setBackground(new Color(0x1F, 0x1F, 0x1F));
         status.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, DesktopWidgets.BORDER_COLOR),
-                BorderFactory.createEmptyBorder(5, 14, 5, 14)));
+                BorderFactory.createMatteBorder(1, 0, 0, 0, DesktopWidgets.PS_DIVIDER),
+                BorderFactory.createEmptyBorder(3, 10, 3, 10)));
 
-        statusLabel = new JLabel("Sẵn sàng · Kho 392 công thức Fuji X Weekly & Lõi xử lý LightCraft đã kích hoạt.");
+        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        left.setOpaque(false);
+
+        zoomStatusLabel = new JLabel(" 100% ");
+        zoomStatusLabel.setFont(DesktopWidgets.FONT_MONO);
+        zoomStatusLabel.setForeground(DesktopWidgets.TEXT_PRIMARY);
+        zoomStatusLabel.setOpaque(true);
+        zoomStatusLabel.setBackground(new Color(0x14, 0x14, 0x14));
+        zoomStatusLabel.setBorder(BorderFactory.createLineBorder(DesktopWidgets.PS_BORDER, 1));
+        left.add(zoomStatusLabel);
+
+        statusLabel = new JLabel("Doc: sRGB IEC61966-2.1 (8-bit)  ·  392 Fuji X Weekly Recipes  ·  LightCraft OkLab Pipeline");
         statusLabel.setFont(DesktopWidgets.FONT_SMALL);
         statusLabel.setForeground(DesktopWidgets.TEXT_SECONDARY);
-        status.add(statusLabel, BorderLayout.WEST);
+        left.add(statusLabel);
 
-        JLabel shortcutHint = new JLabel("Phím tắt: Ctrl+O Mở ảnh · Ctrl+S Xuất ảnh · Ctrl+B Auto-Balance · Ctrl+Z/Y Undo/Redo · Cuộn chuột Zoom");
-        shortcutHint.setFont(DesktopWidgets.FONT_SMALL);
-        shortcutHint.setForeground(DesktopWidgets.TEXT_SECONDARY);
-        status.add(shortcutHint, BorderLayout.EAST);
+        JLabel right = new JLabel("Nháy đúp vào thanh trượt bất kỳ để Reset về 0  ·  Cuộn chuột: Zoom  ·  Kéo-thả ảnh/LUT trực tiếp");
+        right.setFont(DesktopWidgets.FONT_SMALL);
+        right.setForeground(DesktopWidgets.TEXT_MUTED);
+
+        status.add(left, BorderLayout.WEST);
+        status.add(right, BorderLayout.EAST);
         return status;
     }
 
@@ -1049,7 +1181,7 @@ public final class IroDesktopApp extends JFrame {
     }
 
     // =========================================================================
-    // NẠP ẢNH, ÁP DỤNG CÔNG THỨC & KẾT XUẤT HẬU KỲ ĐA LUỒNG
+    // NẠP ẢNH, ÁP DỤNG CÔNG THỨC & KẾT XUẤT ĐA LUỒNG
     // =========================================================================
     private void loadBundledSamplePhoto(int index) {
         List<Recipe> bundled = new ArrayList<>();
@@ -1062,13 +1194,14 @@ public final class IroDesktopApp extends JFrame {
             Recipe chosen = bundled.get(Math.abs(index) % bundled.size());
             BufferedImage img = DesktopWidgets.DesktopFujiSampleLoader.loadResource("/" + chosen.sampleAsset);
             if (img != null) {
+                canvasPanel.setDocumentName(chosen.name.replace(' ', '_') + ".RAF");
                 setSourceImage(img, "Ảnh mẫu FujiXWeekly · " + chosen.name);
                 applyRecipe(chosen, false);
                 return;
             }
         }
         BufferedImage fallback = createFallbackTestChart(1280, 854);
-        setSourceImage(fallback, "Ảnh mẫu Studio");
+        setSourceImage(fallback, "Studio_Sample.RAF");
     }
 
     private static BufferedImage createFallbackTestChart(int w, int h) {
@@ -1095,7 +1228,7 @@ public final class IroDesktopApp extends JFrame {
                 0, 0, previewSourceImage.getWidth(), previewSourceImage.getHeight(),
                 null, 0, previewSourceImage.getWidth());
         canvasPanel.resetView();
-        setStatus("Đã nạp: " + label + " (" + fullSourceImage.getWidth() + "x" + fullSourceImage.getHeight() + " px)");
+        setStatus("Đang mở: " + label + " (" + fullSourceImage.getWidth() + "x" + fullSourceImage.getHeight() + " px · 8-bit sRGB)");
         scheduleRender();
     }
 
@@ -1132,16 +1265,16 @@ public final class IroDesktopApp extends JFrame {
         if (alsoLoadSamplePhoto) {
             DesktopWidgets.DesktopFujiSampleLoader.loadRecipeSampleAsync(r, sampleImg -> {
                 if (sampleImg != null) {
+                    canvasPanel.setDocumentName(r.name.replace(' ', '_') + ".RAF");
                     setSourceImage(sampleImg, "Ảnh mẫu FujiXWeekly · " + r.name);
                 }
             });
         } else {
             scheduleRender();
-            setStatus("Đã áp dụng công thức: " + r.name + " [" + r.film + "] · Nhấn đúp để mở ảnh mẫu FujiXWeekly.");
+            setStatus("Preset: " + r.name + "  ·  Film Simulation: " + r.film + "  ·  Cảm biến: " + r.sensors);
         }
     }
 
-    /** Bổ sung sắc thái đặc trưng cho hệ Film Simulation khi chưa gắn LUT .cube ngoài. */
     private void applyFilmCharacterBias(Settings s, String film) {
         if (film == null) return;
         String f = film.toLowerCase(Locale.ROOT);
@@ -1172,29 +1305,31 @@ public final class IroDesktopApp extends JFrame {
         this.activeRecipeName = filmName;
         syncSlidersFromState();
         scheduleRender();
-        setStatus("Đã chuyển hệ Film Simulation: " + filmName);
+        setStatus("Film Simulation: " + filmName);
     }
 
     private void syncSlidersFromState() {
         syncingSliders.set(true);
         try {
-            if (settingSliders.containsKey("exposure")) settingSliders.get("exposure").setValue(settings.exposure);
-            if (settingSliders.containsKey("highlight")) settingSliders.get("highlight").setValue(settings.highlight);
-            if (settingSliders.containsKey("shadow")) settingSliders.get("shadow").setValue(settings.shadow);
-            if (settingSliders.containsKey("color")) settingSliders.get("color").setValue(settings.color);
-            if (settingSliders.containsKey("temperature")) settingSliders.get("temperature").setValue(settings.temperature);
-            if (settingSliders.containsKey("red")) settingSliders.get("red").setValue(settings.red);
-            if (settingSliders.containsKey("blue")) settingSliders.get("blue").setValue(settings.blue);
-            if (settingSliders.containsKey("colorChrome")) settingSliders.get("colorChrome").setValue(settings.colorChrome);
-            if (settingSliders.containsKey("chromeBlue")) settingSliders.get("chromeBlue").setValue(settings.chromeBlue);
-            if (settingSliders.containsKey("sharpness")) settingSliders.get("sharpness").setValue(settings.sharpness);
-            if (settingSliders.containsKey("clarity")) settingSliders.get("clarity").setValue(settings.clarity);
-            if (settingSliders.containsKey("nr")) settingSliders.get("nr").setValue(settings.nr);
-            if (settingSliders.containsKey("grain")) settingSliders.get("grain").setValue(settings.grain);
-            if (settingSliders.containsKey("grainSize")) settingSliders.get("grainSize").setValue(settings.grainSize);
-            if (settingSliders.containsKey("lutAmount")) settingSliders.get("lutAmount").setValue(settings.lutAmount);
-            if (drCombo != null) {
-                drCombo.setSelectedIndex(settings.dr == 400 ? 2 : (settings.dr == 200 ? 1 : 0));
+            if (settingSliders.containsKey("exposure")) settingSliders.get("exposure").setValue(settings.exposure, false);
+            if (settingSliders.containsKey("highlight")) settingSliders.get("highlight").setValue(settings.highlight, false);
+            if (settingSliders.containsKey("shadow")) settingSliders.get("shadow").setValue(settings.shadow, false);
+            if (settingSliders.containsKey("color")) settingSliders.get("color").setValue(settings.color, false);
+            if (settingSliders.containsKey("temperature")) settingSliders.get("temperature").setValue(settings.temperature, false);
+            if (settingSliders.containsKey("red")) settingSliders.get("red").setValue(settings.red, false);
+            if (settingSliders.containsKey("blue")) settingSliders.get("blue").setValue(settings.blue, false);
+            if (settingSliders.containsKey("colorChrome")) settingSliders.get("colorChrome").setValue(settings.colorChrome, false);
+            if (settingSliders.containsKey("chromeBlue")) settingSliders.get("chromeBlue").setValue(settings.chromeBlue, false);
+            if (settingSliders.containsKey("sharpness")) settingSliders.get("sharpness").setValue(settings.sharpness, false);
+            if (settingSliders.containsKey("clarity")) settingSliders.get("clarity").setValue(settings.clarity, false);
+            if (settingSliders.containsKey("nr")) settingSliders.get("nr").setValue(settings.nr, false);
+            if (settingSliders.containsKey("grain")) settingSliders.get("grain").setValue(settings.grain, false);
+            if (settingSliders.containsKey("grainSize")) settingSliders.get("grainSize").setValue(settings.grainSize, false);
+            if (settingSliders.containsKey("lutAmount")) settingSliders.get("lutAmount").setValue(settings.lutAmount, false);
+
+            int drIdx = settings.dr == 400 ? 2 : (settings.dr == 200 ? 1 : 0);
+            for (int k = 0; k < 3; k++) {
+                if (drButtons[k] != null) drButtons[k].setActiveState(k == drIdx);
             }
         } finally {
             syncingSliders.set(false);
@@ -1219,8 +1354,12 @@ public final class IroDesktopApp extends JFrame {
                 BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
                 out.setRGB(0, 0, w, h, step2, 0, w);
                 SwingUtilities.invokeLater(() -> {
-                    currentRenderedPreview = out;
                     canvasPanel.setImages(previewSourceImage, out, snapSettings.film, activeRecipeName);
+                    histogramPanel.setMetaSummary(String.format(Locale.ROOT,
+                            "DR%d  ·  EV %+.1f  ·  %s  ·  %dx%d",
+                            snapSettings.dr, snapSettings.exposure, snapSettings.film,
+                            fullSourceImage != null ? fullSourceImage.getWidth() : w,
+                            fullSourceImage != null ? fullSourceImage.getHeight() : h));
                     histogramPanel.updateFromPixels(step2, w, h);
                 });
             } catch (Exception ignored) {
@@ -1228,9 +1367,6 @@ public final class IroDesktopApp extends JFrame {
         });
     }
 
-    // =========================================================================
-    // CÁC TÍNH NĂNG TRÊN THANH CÔNG CỤ (AUTO-BALANCE, UNDO/REDO, LUT, EXPORT)
-    // =========================================================================
     private void runAutoBalance() {
         if (previewSourcePixels == null || previewSourceImage == null) return;
         pushUndoState();
@@ -1256,7 +1392,7 @@ public final class IroDesktopApp extends JFrame {
 
     private void performUndo() {
         if (undoStack.isEmpty()) {
-            setStatus("Không còn bước Hoàn tác.");
+            setStatus("Không còn bước Hoàn tác (Undo).");
             return;
         }
         redoStack.add(settings.copy());
@@ -1268,7 +1404,7 @@ public final class IroDesktopApp extends JFrame {
 
     private void performRedo() {
         if (redoStack.isEmpty()) {
-            setStatus("Không còn bước Làm lại.");
+            setStatus("Không còn bước Làm lại (Redo).");
             return;
         }
         undoStack.add(settings.copy());
@@ -1292,13 +1428,13 @@ public final class IroDesktopApp extends JFrame {
             highlightsWheelWidget.repaint();
         }
         scheduleRender();
-        setStatus("Đã đặt lại toàn bộ thông số chỉnh sửa về ảnh gốc.");
+        setStatus("Đã đặt lại toàn bộ thông số chỉnh sửa về nguyên bản.");
     }
 
     private void chooseAndOpenImage() {
         JFileChooser fc = new JFileChooser();
-        fc.setDialogTitle("Chọn bức ảnh để chỉnh sửa");
-        fc.setFileFilter(new FileNameExtensionFilter("Tệp hình ảnh (JPG, PNG, BMP, WEBP)", "jpg", "jpeg", "png", "bmp", "webp"));
+        fc.setDialogTitle("Mở tệp hình ảnh vào bàn dựng");
+        fc.setFileFilter(new FileNameExtensionFilter("Hình ảnh (JPG, PNG, BMP, WEBP)", "jpg", "jpeg", "png", "bmp", "webp"));
         if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             openImageFile(fc.getSelectedFile());
         }
@@ -1311,6 +1447,7 @@ public final class IroDesktopApp extends JFrame {
                 JOptionPane.showMessageDialog(this, "Không đọc được định dạng ảnh này.", "Lỗi mở ảnh", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+            canvasPanel.setDocumentName(file.getName());
             setSourceImage(img, file.getName());
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Lỗi khi đọc ảnh: " + ex.getMessage(), "Lỗi mở ảnh", JOptionPane.ERROR_MESSAGE);
@@ -1439,32 +1576,32 @@ public final class IroDesktopApp extends JFrame {
         JDialog dlg = new JDialog(this, r.name + " · Fuji X Weekly Recipe", true);
         dlg.setSize(620, 520);
         dlg.setLocationRelativeTo(this);
-        dlg.getContentPane().setBackground(DesktopWidgets.BG_PANEL);
+        dlg.getContentPane().setBackground(DesktopWidgets.PS_PANEL);
         dlg.setLayout(new BorderLayout(12, 12));
 
         JPanel top = new JPanel(new BorderLayout(12, 0));
-        top.setBackground(DesktopWidgets.BG_PANEL);
+        top.setBackground(DesktopWidgets.PS_PANEL);
         top.setBorder(BorderFactory.createEmptyBorder(12, 12, 0, 12));
 
         BufferedImage sample = DesktopWidgets.DesktopFujiSampleLoader.getCachedForRecipe(r);
         if (sample != null) {
             JLabel imgLbl = new JLabel(new ImageIcon(scaleThumbnail(sample, 240, 165)));
-            imgLbl.setBorder(BorderFactory.createLineBorder(DesktopWidgets.BORDER_COLOR, 1));
+            imgLbl.setBorder(BorderFactory.createLineBorder(DesktopWidgets.PS_BORDER, 1));
             top.add(imgLbl, BorderLayout.WEST);
         }
 
         JTextArea area = new JTextArea(r.description());
         area.setEditable(false);
         area.setFont(DesktopWidgets.FONT_MONO);
-        area.setBackground(DesktopWidgets.BG_CARD);
+        area.setBackground(DesktopWidgets.PS_DARKEST);
         area.setForeground(DesktopWidgets.TEXT_PRIMARY);
         area.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        JScrollPane sp = new JScrollPane(area);
+        JScrollPane sp = DesktopWidgets.createDarkScrollPane(area);
         sp.setBorder(BorderFactory.createEmptyBorder(12, 12, 0, 12));
 
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
-        bottom.setBackground(DesktopWidgets.BG_PANEL);
+        bottom.setBackground(DesktopWidgets.PS_PANEL);
 
         if (r.sourceUrl != null && !r.sourceUrl.isEmpty()) {
             JButton webBtn = DesktopWidgets.createStudioButton("Mở bài gốc trên fujixweekly.com", false);
@@ -1530,9 +1667,6 @@ public final class IroDesktopApp extends JFrame {
         }
     }
 
-    // =========================================================================
-    // PHÍM TẮT & KÉO-THẢ TỆP TRỰC TIẾP TỪ WINDOWS EXPLORER
-    // =========================================================================
     private void setupKeyboardShortcuts() {
         JComponent root = getRootPane();
         bindKey(root, KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK), "open", this::chooseAndOpenImage);
@@ -1578,9 +1712,6 @@ public final class IroDesktopApp extends JFrame {
         }, true));
     }
 
-    // =========================================================================
-    // ĐIỂM KHỞI CHẠY CHÍNH TRÊN WINDOWS DESKTOP
-    // =========================================================================
     public static void main(String[] args) {
         System.setProperty("awt.useSystemAAFontSettings", "on");
         System.setProperty("swing.aatext", "true");
@@ -1590,18 +1721,25 @@ public final class IroDesktopApp extends JFrame {
         }
 
         String screenshotOut = null;
-        for (int i = 0; i < args.length - 1; i++) {
-            if ("--screenshot".equals(args[i])) {
-                screenshotOut = args[i + 1];
+        int initialTab = 0;
+        for (int i = 0; i < args.length; i++) {
+            if ("--screenshot".equals(args[i]) && i + 1 < args.length) {
+                screenshotOut = args[++i];
+            } else if ("--tab".equals(args[i]) && i + 1 < args.length) {
+                initialTab = Integer.parseInt(args[++i]);
             }
         }
         final String snapTarget = screenshotOut;
+        final int tabToShow = initialTab;
 
         SwingUtilities.invokeLater(() -> {
             IroDesktopApp app = new IroDesktopApp();
             app.setVisible(true);
             if (!app.recipeListModel.isEmpty()) {
                 app.recipeList.setSelectedIndex(0);
+            }
+            if (tabToShow > 0) {
+                app.switchInspectorTab(tabToShow);
             }
 
             if (snapTarget != null) {

@@ -743,6 +743,24 @@ public final class LightCraftEngine {
 
         int[] pixels = new int[w * h];
         src.getPixels(pixels, 0, w, 0, 0, w, h);
+        int[] outPixels = processPixels(pixels, w, h, lc);
+        Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        out.setPixels(outPixels, 0, w, 0, 0, w, h);
+        return out;
+    }
+
+    /**
+     * Áp dụng toàn bộ pipeline LightCraft trực tiếp trên mảng điểm ảnh {@code ARGB_8888}
+     * (dùng chung cho cả Android {@link Bitmap} và phiên bản máy tính Windows Desktop).
+     */
+    public static int[] processPixels(int[] srcPixels, int w, int h, State lc) {
+        if (srcPixels == null || w <= 0 || h <= 0 || srcPixels.length < w * h) {
+            return srcPixels;
+        }
+        int[] pixels = srcPixels.clone();
+        if (lc == null || lc.isIdentity()) {
+            return pixels;
+        }
 
         boolean hasCurves = lc.hasCurveEdits();
         boolean hasGrading = lc.hasGradingEdits();
@@ -954,9 +972,7 @@ public final class LightCraftEngine {
             }
         }
 
-        Bitmap out = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        out.setPixels(pixels, 0, w, 0, 0, w, h);
-        return out;
+        return pixels;
     }
 
     private static float evalLut256(float[] lut, float x) {

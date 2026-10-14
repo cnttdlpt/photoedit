@@ -101,7 +101,7 @@ try {
         throw "jar creation failed"
     }
 
-    $distDir = Join-Path $projectRoot "dist"
+    $distDir = Join-Path $projectRoot "desktop\dist"
     New-Item -ItemType Directory -Path $distDir -Force | Out-Null
     Copy-Item -LiteralPath $jarFile -Destination (Join-Path $distDir "IROStudio.jar") -Force
 
@@ -503,7 +503,10 @@ class IroLauncher {
     [STAThread]
     static void Main(string[] args) {
         string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        string portableExe = Path.Combine(baseDir, "dist", "IROStudio", "IROStudio.exe");
+        string portableExe = Path.Combine(baseDir, "desktop", "dist", "IROStudio", "IROStudio.exe");
+        if (!File.Exists(portableExe)) {
+            portableExe = Path.Combine(baseDir, "dist", "IROStudio", "IROStudio.exe");
+        }
         string installedExe = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Programs", "IROStudio", "IROStudio.exe");

@@ -2,8 +2,15 @@
 local.properties
 **/build/
 .idea/
+dist/
+desktop/dist/
 tools/cache/
+tools/build/
+tools/ui.xml
 tools/categories.json
 tools/urls.json
 *.jks
 *.keystore
+*.apk
+*.exe
+*.jar

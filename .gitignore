@@ -13,12 +13,20 @@ ios/DerivedData/
 *.xcuserstate
 *.xcresult
 
-# Android / Gradle
+# Android / Gradle / Desktop
 android/.gradle/
 android/local.properties
 android/**/build/
+android/dist/
+android/desktop/dist/
+android/tools/cache/
+android/tools/build/
+android/tools/ui.xml
 *.jks
 *.keystore
+*.apk
+*.exe
+*.jar
 
 # Node
 node_modules/

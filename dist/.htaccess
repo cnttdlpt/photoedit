@@ -1,0 +1,38 @@
+# IRO Studio 3.0 — Apache / cPanel / LiteSpeed Configuration
+# Bật rewrite engine và thiết lập MIME Types
+<IfModule mod_mime.c>
+  AddType text/html .html
+  AddType text/css .css
+  AddType text/javascript .js .mjs
+  AddType application/json .json
+  AddType text/plain .cube
+  AddType image/webp .webp
+  AddType image/png .png
+  AddType image/jpeg .jpg .jpeg
+  AddType image/svg+xml .svg
+</IfModule>
+
+# Bật nén GZIP / Deflate giúp tải trang và nạp recipes.json siêu nhanh
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json text/javascript
+</IfModule>
+
+# Cache-Control tối ưu hiệu năng
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresByType application/json "access plus 0 seconds"
+  ExpiresByType text/css "access plus 1 month"
+  ExpiresByType text/javascript "access plus 1 month"
+  ExpiresByType application/javascript "access plus 1 month"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+</IfModule>
+
+# Bảo mật cơ bản
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Access-Control-Allow-Origin "*"
+</IfModule>

@@ -5,7 +5,8 @@ import {
   rotatePixels90, buildMonotoneCurveLut, computeHistogramAndStats,
   autoBalanceSettings, encodeRecipeCode, decodeRecipeCode,
   bakeRecipeToCube, extractDominantPalette, matchColorFromReference,
-  promptToRecipeVi, embedRecipeIntoPixels, extractRecipeFromPixels
+  promptToRecipeVi, embedRecipeIntoPixels, extractRecipeFromPixels,
+  parseFujiRecipe, PHOTO_FRAMES
 } from './dist/engine.mjs';
 
 const identity = 'LUT_3D_SIZE 2\n0 0 0\n1 0 0\n0 1 0\n1 1 0\n0 0 1\n1 0 1\n0 1 1\n1 1 1';
@@ -128,3 +129,50 @@ test('IRO Studio 3.0: Clarity, Texture, Dehaze, Swirly Bokeh, Depth Fog, Darkroo
   assert.notDeepEqual(f0, p);
   assert.notDeepEqual(f0, f1); // Frame 0 and Frame 1 have distinct organic 24fps grain/breath
 });
+
+test('Web Studio Flagship: 392 Fuji Recipes Parser, 30 Photo Frames & 3-Way Color Wheels', () => {
+  // Test PHOTO_FRAMES catalog
+  assert.equal(PHOTO_FRAMES.length, 31);
+  assert.equal(PHOTO_FRAMES[0].key, 'None');
+  assert.equal(PHOTO_FRAMES[1].key, 'Classic');
+  assert.equal(PHOTO_FRAMES[10].key, 'Film35');
+  assert.equal(PHOTO_FRAMES[30].key, 'Corners');
+
+  // Test parseFujiRecipe
+  const sampleFuji = {
+    name: 'Golden Negative',
+    sensors: ['BAYER'],
+    film: 'Classic Chrome',
+    rawSettings: {
+      'Highlight': '+1',
+      'Shadow': '-2',
+      'Color': '-2',
+      'Noise Reduction': '-2',
+      'Sharpening': '0',
+      'White Balance': 'Daylight, +4 Red & -2 Blue',
+      'Dynamic Range': 'DR-Auto',
+      'Exposure Compensation': '-1/3 to +1/3'
+    }
+  };
+  const parsed = parseFujiRecipe(sampleFuji);
+  assert.equal(parsed.settings.film, 'Classic Chrome');
+  assert.equal(parsed.settings.highlight, 1);
+  assert.equal(parsed.settings.shadow, -2);
+  assert.equal(parsed.settings.color, -2);
+  assert.equal(parsed.settings.red, 4);
+  assert.equal(parsed.settings.blue, -2);
+
+  // Test 3-Way Color Wheels
+  const pixels = new Uint8ClampedArray([128, 128, 128, 255, 30, 30, 30, 255, 230, 230, 230, 255]);
+  const graded = processPixels(pixels, 3, 1, {
+    ...defaults,
+    shadowsHue: 240, // Cool blue shadows
+    shadowsSat: 50,
+    highlightsHue: 35, // Warm amber highlights
+    highlightsSat: 50
+  });
+  assert.notDeepEqual(graded, pixels);
+  // Dark pixel (index 4..6) has shadows grading applied (blue lifted)
+  assert.ok(graded[6] >= graded[4]); // Blue channel higher than Red channel in shadows
+});
+

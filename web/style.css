@@ -1,0 +1,970 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+:root {
+  /* Material Design 3 (M3 Expressive) Dark Darkroom Tokens */
+  --md-sys-color-background: #0b0d10;
+  --md-sys-color-surface: #111318;
+  --md-sys-color-surface-container-lowest: #090b0e;
+  --md-sys-color-surface-container-low: #15181e;
+  --md-sys-color-surface-container: #1b1f27;
+  --md-sys-color-surface-container-high: #232833;
+  --md-sys-color-surface-container-highest: #2e3440;
+
+  --md-sys-color-on-surface: #eef0f5;
+  --md-sys-color-on-surface-variant: #9ca3b0;
+  --md-sys-color-outline: #444b57;
+  --md-sys-color-outline-variant: #262b35;
+
+  /* M3 Primary / Tertiary Warm Amber & Google RGB Accents */
+  --md-sys-color-primary: #f59e0b;
+  --md-sys-color-on-primary: #261600;
+  --md-sys-color-primary-container: #422c05;
+  --md-sys-color-on-primary-container: #ffdf9e;
+
+  --md-sys-color-secondary-container: #243040;
+  --md-sys-color-on-secondary-container: #d3e4ff;
+
+  --md-google-blue: #4285f4;
+  --md-google-red: #ea4335;
+  --md-google-yellow: #fbbc04;
+  --md-google-green: #34a853;
+
+  /* M3 Shape Tokens */
+  --md-sys-shape-corner-xs: 6px;
+  --md-sys-shape-corner-sm: 10px;
+  --md-sys-shape-corner-md: 16px;
+  --md-sys-shape-corner-lg: 22px;
+  --md-sys-shape-corner-xl: 28px;
+  --md-sys-shape-corner-full: 999px;
+
+  /* M3 Expressive Motion Tokens (Spring & Emphasized Curves) */
+  --md-sys-motion-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-sys-motion-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --md-sys-motion-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --md-sys-motion-spring-spatial: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --md-sys-motion-spring-gentle: cubic-bezier(0.22, 1.25, 0.36, 1);
+
+  font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+/* Warm Porcelain Light Theme (Đồng bộ với StudioStyle.java trên Android) */
+body.theme-porcelain {
+  --md-sys-color-background: #f6f7f9;
+  --md-sys-color-surface: #eff1f5;
+  --md-sys-color-surface-container-lowest: #ffffff;
+  --md-sys-color-surface-container-low: #f3f4f8;
+  --md-sys-color-surface-container: #e6e9ef;
+  --md-sys-color-surface-container-high: #dcdfe7;
+  --md-sys-color-surface-container-highest: #d0d5df;
+
+  --md-sys-color-on-surface: #181a1f;
+  --md-sys-color-on-surface-variant: #5e636e;
+  --md-sys-color-outline: #8a8e98;
+  --md-sys-color-outline-variant: #dcdfe6;
+
+  --md-sys-color-primary: #e07a3b;
+  --md-sys-color-on-primary: #ffffff;
+  --md-sys-color-primary-container: #ffdbca;
+  --md-sys-color-on-primary-container: #341100;
+
+  --md-sys-color-secondary-container: #dce4f5;
+  --md-sys-color-on-secondary-container: #141c2b;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-surface);
+  height: 100vh;
+  overflow: hidden;
+  transition: background-color 350ms var(--md-sys-motion-emphasized),
+              color 350ms var(--md-sys-motion-emphasized);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* M3 Top App Bar */
+.topbar {
+  min-height: 64px;
+  padding: 8px 18px;
+  background: var(--md-sys-color-surface);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 20;
+  transition: background-color 300ms var(--md-sys-motion-emphasized);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand h1 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: linear-gradient(135deg, var(--md-sys-color-primary), var(--md-google-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.brand span {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  letter-spacing: 0.03em;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* M3 Expressive Buttons with Morphing Corner Radius & Spring Physics */
+button {
+  position: relative;
+  overflow: hidden;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--md-sys-shape-corner-full);
+  border: 1px solid transparent;
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 240ms var(--md-sys-motion-spring-spatial),
+              border-radius 240ms var(--md-sys-motion-spring-spatial),
+              background-color 200ms var(--md-sys-motion-emphasized),
+              box-shadow 200ms var(--md-sys-motion-emphasized);
+}
+
+button:hover {
+  background: var(--md-sys-color-surface-container-highest);
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: scale(0.94);
+  border-radius: var(--md-sys-shape-corner-md);
+}
+
+button.primary {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.28);
+}
+
+button.primary:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.38);
+}
+
+button.secondary {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+button.ghost {
+  background: var(--md-sys-color-surface-container);
+  border-color: var(--md-sys-color-outline-variant);
+}
+
+button.active-mode {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+/* M3 Ripple Wave Animation */
+.md3-ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  background: rgba(255, 255, 255, 0.28);
+  pointer-events: none;
+  animation: md3RippleAnim 520ms var(--md-sys-motion-emphasized-decelerate) forwards;
+}
+
+@keyframes md3RippleAnim {
+  to {
+    transform: scale(3.6);
+    opacity: 0;
+  }
+}
+
+/* Workspace 3-Column Adaptive Layout */
+.workspace {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 300px 1fr 350px;
+  min-height: 0;
+}
+
+.sidebar {
+  background: var(--md-sys-color-surface);
+  border-right: 1px solid var(--md-sys-color-outline-variant);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebar.right {
+  border-right: none;
+  border-left: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.panel-header h2 {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--md-sys-color-primary);
+}
+
+.panel-header p {
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-top: 2px;
+}
+
+/* M3 Expressive Morphing Film Cards */
+.film-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.film {
+  padding: 10px 12px;
+  border-radius: var(--md-sys-shape-corner-md);
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  justify-content: flex-start;
+  text-align: left;
+  font-size: 12.5px;
+  transition: transform 280ms var(--md-sys-motion-spring-spatial),
+              border-radius 280ms var(--md-sys-motion-spring-spatial),
+              background-color 220ms var(--md-sys-motion-emphasized),
+              border-color 220ms var(--md-sys-motion-emphasized);
+}
+
+.film .swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: conic-gradient(#ea4335, #fbbc04, #34a853, #4285f4, #ea4335);
+  flex-shrink: 0;
+  transition: transform 280ms var(--md-sys-motion-spring-spatial);
+}
+
+.film small {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.film.active {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-color: var(--md-sys-color-primary);
+  border-radius: var(--md-sys-shape-corner-xl);
+  transform: scale(1.02);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.18);
+}
+
+.film.active .swatch {
+  transform: scale(1.25) rotate(45deg);
+}
+
+/* M3 Surface Container Cards */
+.lut-panel,
+.control-group,
+.export-options {
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: background-color 250ms var(--md-sys-motion-emphasized);
+}
+
+.lut-panel h3,
+.group-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* M3 Segmented Category Filter Bar */
+.md3-segmented-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 4px;
+  background: var(--md-sys-color-surface-container-lowest);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-full);
+}
+
+.md3-tab {
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: transparent;
+  color: var(--md-sys-color-on-surface-variant);
+  justify-content: center;
+  border: none;
+}
+
+.md3-tab.active {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Staggered Cascade Entrance Animation for Control Groups */
+@keyframes md3CascadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.control-group {
+  animation: md3CascadeIn 320ms var(--md-sys-motion-emphasized-decelerate) both;
+}
+
+/* Center Stage & Interactive Tick Ruler */
+.stage {
+  background: var(--md-sys-color-surface-container-lowest);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+
+.view-header {
+  padding: 12px 20px;
+  background: var(--md-sys-color-surface);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.view-header .info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.view-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.canvas-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.canvas-wrap.drag {
+  outline: 2px dashed var(--md-sys-color-primary);
+  outline-offset: -12px;
+}
+
+#canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--md-sys-shape-corner-md);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  transition: transform 380ms var(--md-sys-motion-spring-gentle),
+              filter 280ms var(--md-sys-motion-emphasized);
+}
+
+#canvas.canvas-pop {
+  transform: scale(0.965);
+}
+
+.badge {
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  padding: 6px 12px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: rgba(17, 19, 24, 0.78);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  transition: transform 240ms var(--md-sys-motion-spring-spatial);
+}
+
+/* M3 Precision Tick Ruler Dock */
+.tick-ruler-dock {
+  background: var(--md-sys-color-surface);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  padding: 8px 20px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tick-ruler-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.tick-ruler-header strong {
+  color: var(--md-sys-color-primary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+#tickRulerCanvas {
+  width: 100%;
+  height: 44px;
+  border-radius: var(--md-sys-shape-corner-md);
+  background: var(--md-sys-color-surface-container-low);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.status-bar {
+  padding: 8px 20px;
+  background: var(--md-sys-color-surface-container-low);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* M3 Sliders & Select Controls */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: var(--md-sys-shape-corner-sm);
+  transition: background-color 180ms var(--md-sys-motion-emphasized);
+}
+
+.control.focused-control {
+  background: var(--md-sys-color-surface-container-high);
+}
+
+.control label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.control output {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-primary);
+  transition: transform 200ms var(--md-sys-motion-spring-spatial);
+}
+
+.control output.pulse {
+  transform: scale(1.18);
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-highest);
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+  border: 2px solid var(--md-sys-color-surface);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: transform 200ms var(--md-sys-motion-spring-spatial),
+              border-radius 200ms var(--md-sys-motion-spring-spatial);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.3) scaleX(0.85);
+}
+
+select {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: var(--md-sys-shape-corner-md);
+  background: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  font-family: inherit;
+  font-size: 12.5px;
+  outline: none;
+}
+
+.recipe-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* M3 Snackbar Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-on-surface);
+  color: var(--md-sys-color-surface);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  animation: md3ToastIn 280ms var(--md-sys-motion-spring-spatial);
+}
+
+@keyframes md3ToastIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+.busy-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 13, 16, 0.42);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.busy-overlay[hidden] {
+  display: none !important;
+}
+
+/* Material Design 3 Modal & Dialogs */
+.md3-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: md3FadeIn 200ms ease-out;
+}
+.md3-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+@keyframes md3FadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.md3-dialog {
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-xl);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: md3DialogScale 250ms var(--md-sys-motion-spring-spatial);
+}
+
+@keyframes md3DialogScale {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.md3-dialog-header {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.md3-dialog-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.md3-dialog-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 4px 8px;
+  border-radius: var(--md-sys-shape-corner-sm);
+  transition: background 150ms;
+}
+.md3-dialog-close:hover {
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+.md3-dialog-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* 392 Recipes Browser */
+.recipe-browser-dialog {
+  width: 960px;
+  max-width: 95vw;
+  height: 85vh;
+}
+
+.recipe-search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.recipe-search-bar input {
+  flex: 1;
+  padding: 10px 16px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-md);
+  color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+  outline: none;
+}
+.recipe-search-bar input:focus {
+  border-color: var(--md-sys-color-primary);
+}
+
+.recipe-filter-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.recipe-chip {
+  padding: 6px 14px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 180ms ease;
+}
+.recipe-chip:hover {
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+.recipe-chip.active {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.recipe-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.recipe-card {
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 180ms, border-color 180ms, box-shadow 180ms;
+}
+.recipe-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.recipe-card-thumb {
+  height: 140px;
+  background: var(--md-sys-color-surface-container-highest);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.recipe-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 300ms ease;
+}
+.recipe-card:hover .recipe-card-thumb img {
+  transform: scale(1.05);
+}
+.recipe-card-thumb .fallback-art {
+  font-size: 32px;
+  opacity: 0.6;
+}
+
+.recipe-card-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(17, 19, 24, 0.85);
+  backdrop-filter: blur(4px);
+  padding: 3px 8px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.recipe-card-content {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.recipe-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  margin-bottom: 4px;
+}
+
+.recipe-card-sensor {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-bottom: 8px;
+}
+
+.recipe-card-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 14px;
+  flex: 1;
+}
+
+.spec-badge {
+  background: var(--md-sys-color-surface-container-high);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.recipe-card-btn {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border: none;
+  padding: 8px 14px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 150ms;
+  width: 100%;
+}
+.recipe-card-btn:hover {
+  opacity: 0.9;
+}
+
+/* LightCraft Suite Dialog */
+.lightcraft-dialog {
+  width: 860px;
+  max-width: 95vw;
+}
+
+.lightcraft-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 768px) {
+  .lightcraft-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lightcraft-panel {
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lightcraft-panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lightcraft-canvas-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #111318;
+  border-radius: 12px;
+  padding: 8px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* EXIF Editor Dialog */
+.exif-dialog {
+  width: 480px;
+  max-width: 95vw;
+}
+
+.exif-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.exif-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.exif-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.exif-field input {
+  padding: 8px 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-sm);
+  color: var(--md-sys-color-on-surface);
+  font-size: 13px;
+  outline: none;
+}
+.exif-field input:focus {
+  border-color: var(--md-sys-color-primary);
+}
+

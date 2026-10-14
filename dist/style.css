@@ -634,6 +634,337 @@ select {
   font-weight: 600;
 }
 
-. busy-overlay[hidden] {
+.busy-overlay[hidden] {
   display: none !important;
 }
+
+/* Material Design 3 Modal & Dialogs */
+.md3-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: md3FadeIn 200ms ease-out;
+}
+.md3-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+@keyframes md3FadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.md3-dialog {
+  background: var(--md-sys-color-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-xl);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: md3DialogScale 250ms var(--md-sys-motion-spring-spatial);
+}
+
+@keyframes md3DialogScale {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.md3-dialog-header {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.md3-dialog-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.md3-dialog-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 4px 8px;
+  border-radius: var(--md-sys-shape-corner-sm);
+  transition: background 150ms;
+}
+.md3-dialog-close:hover {
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+
+.md3-dialog-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* 392 Recipes Browser */
+.recipe-browser-dialog {
+  width: 960px;
+  max-width: 95vw;
+  height: 85vh;
+}
+
+.recipe-search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.recipe-search-bar input {
+  flex: 1;
+  padding: 10px 16px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-md);
+  color: var(--md-sys-color-on-surface);
+  font-size: 14px;
+  outline: none;
+}
+.recipe-search-bar input:focus {
+  border-color: var(--md-sys-color-primary);
+}
+
+.recipe-filter-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.recipe-chip {
+  padding: 6px 14px;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 180ms ease;
+}
+.recipe-chip:hover {
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+}
+.recipe-chip.active {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.recipe-grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.recipe-card {
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 180ms, border-color 180ms, box-shadow 180ms;
+}
+.recipe-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.recipe-card-thumb {
+  height: 140px;
+  background: var(--md-sys-color-surface-container-highest);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.recipe-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 300ms ease;
+}
+.recipe-card:hover .recipe-card-thumb img {
+  transform: scale(1.05);
+}
+.recipe-card-thumb .fallback-art {
+  font-size: 32px;
+  opacity: 0.6;
+}
+
+.recipe-card-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(17, 19, 24, 0.85);
+  backdrop-filter: blur(4px);
+  padding: 3px 8px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.recipe-card-content {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.recipe-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  margin-bottom: 4px;
+}
+
+.recipe-card-sensor {
+  font-size: 11px;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-bottom: 8px;
+}
+
+.recipe-card-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 14px;
+  flex: 1;
+}
+
+.spec-badge {
+  background: var(--md-sys-color-surface-container-high);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.recipe-card-btn {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border: none;
+  padding: 8px 14px;
+  border-radius: var(--md-sys-shape-corner-full);
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: opacity 150ms;
+  width: 100%;
+}
+.recipe-card-btn:hover {
+  opacity: 0.9;
+}
+
+/* LightCraft Suite Dialog */
+.lightcraft-dialog {
+  width: 860px;
+  max-width: 95vw;
+}
+
+.lightcraft-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 768px) {
+  .lightcraft-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lightcraft-panel {
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lightcraft-panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lightcraft-canvas-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #111318;
+  border-radius: 12px;
+  padding: 8px;
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+
+/* EXIF Editor Dialog */
+.exif-dialog {
+  width: 480px;
+  max-width: 95vw;
+}
+
+.exif-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.exif-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.exif-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.exif-field input {
+  padding: 8px 12px;
+  background: var(--md-sys-color-surface-container-high);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-sm);
+  color: var(--md-sys-color-on-surface);
+  font-size: 13px;
+  outline: none;
+}
+.exif-field input:focus {
+  border-color: var(--md-sys-color-primary);
+}
+

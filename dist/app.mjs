@@ -2,7 +2,8 @@ import {
   defaults, films, parseCube, processPixels, rotatePixels90,
   autoBalanceSettings, promptToRecipeVi, encodeRecipeCode, decodeRecipeCode,
   embedRecipeIntoPixels, extractRecipeFromPixels,
-  bakeRecipeToCube, extractDominantPalette, matchColorFromReference
+  bakeRecipeToCube, extractDominantPalette, matchColorFromReference,
+  PHOTO_FRAMES, defaultPhotoInfo, parseFujiRecipe, renderPhotoFrame, buildMonotoneCurveLut
 } from './engine.mjs';
 
 const $ = id => document.getElementById(id);
@@ -727,8 +728,9 @@ if ($('shareCode')) {
 
 if ($('frameSelect')) {
   $('frameSelect').onchange = e => {
-    settings.frame = e.target.value;
-    toast(`Khung ảnh khi xuất: ${e.target.options[e.target.selectedIndex].text}`);
+    settings.frameStyle = Number(e.target.value);
+    settings.frame = e.target.options[e.target.selectedIndex].text;
+    toast(`Khung ảnh khi xuất: ${settings.frame}`);
   };
 }
 
@@ -792,101 +794,13 @@ $('recipefile').onchange = async e => {
   $('recipefile').value = '';
 };
 
+let currentPhotoInfo = { ...defaultPhotoInfo };
+
 function renderFramedCanvas(rawCanvas, rawPixels, s) {
   drawQuartzDateStamp(rawCanvas.getContext('2d'), rawCanvas.width, rawCanvas.height, s.dateStamp);
-  if (!s.frame || s.frame === 'None') return rawCanvas;
-  const pad = Math.round(Math.max(rawCanvas.width, rawCanvas.height) * 0.048);
-
-  if (s.frame === 'Film35mm') {
-    const topBar = Math.round(pad * 1.45);
-    const out = document.createElement('canvas');
-    out.width = rawCanvas.width + pad;
-    out.height = rawCanvas.height + topBar * 2;
-    const g = out.getContext('2d');
-    g.fillStyle = '#0c0d0f';
-    g.fillRect(0, 0, out.width, out.height);
-    g.drawImage(rawCanvas, Math.round(pad * 0.5), topBar);
-
-    g.fillStyle = '#e5e7eb';
-    const holeW = Math.max(12, Math.round(topBar * 0.42));
-    const holeH = Math.max(16, Math.round(topBar * 0.54));
-    const step = Math.round(holeW * 2.1);
-    for (let x = pad; x < out.width - pad; x += step) {
-      g.fillRect(x, Math.round((topBar - holeH) * 0.5), holeW, holeH);
-      g.fillRect(x, out.height - topBar + Math.round((topBar - holeH) * 0.5), holeW, holeH);
-    }
-    g.fillStyle = '#f59e0b';
-    g.font = `700 ${Math.max(11, Math.round(topBar * 0.24))}px monospace`;
-    g.fillText(`FUJIFILM ${s.film.toUpperCase()} 400 · IRO SAFETY FILM`, pad, topBar - 4);
-    g.fillText(`► 24A   DR${s.dr}   CHROME ${s.chrome}`, pad, out.height - 5);
-    return out;
-  }
-
-  if (s.frame === 'HasselbladV') {
-    const out = document.createElement('canvas');
-    out.width = rawCanvas.width + pad * 2;
-    out.height = rawCanvas.height + pad * 2;
-    const g = out.getContext('2d');
-    g.fillStyle = '#0e0f12';
-    g.fillRect(0, 0, out.width, out.height);
-    g.strokeStyle = '#ffffff';
-    g.lineWidth = Math.max(2, Math.round(pad * 0.08));
-    g.strokeRect(pad - 2, pad - 2, rawCanvas.width + 4, rawCanvas.height + 4);
-    g.drawImage(rawCanvas, pad, pad);
-    const vSize = Math.max(10, Math.round(pad * 0.28));
-    const vy1 = pad + Math.round(rawCanvas.height * 0.28);
-    const vy2 = pad + Math.round(rawCanvas.height * 0.72);
-    g.fillStyle = '#0e0f12';
-    for (const vy of [vy1, vy2]) {
-      g.beginPath();
-      g.moveTo(pad + rawCanvas.width + 4, vy - vSize);
-      g.lineTo(pad + rawCanvas.width - vSize, vy);
-      g.lineTo(pad + rawCanvas.width + 4, vy + vSize);
-      g.closePath();
-      g.fill();
-    }
-    return out;
-  }
-
-  const bottomPad = Math.round(pad * 2.5);
-  const out = document.createElement('canvas');
-  out.width = rawCanvas.width + pad * 2;
-  out.height = rawCanvas.height + pad + bottomPad;
-  const g = out.getContext('2d');
-  const dark = s.frame === 'DarkroomBlack';
-  g.fillStyle = dark ? '#101214' : s.frame === 'PostcardGPS' ? '#f6f1e7' : '#faf8f5';
-  g.fillRect(0, 0, out.width, out.height);
-  g.drawImage(rawCanvas, pad, pad);
-
-  g.fillStyle = dark ? '#e5e7eb' : '#1f2937';
-  const fontSize = Math.max(14, Math.round(pad * 0.42));
-  g.font = `600 ${fontSize}px system-ui, -apple-system, sans-serif`;
-  const titleText = s.frame === 'PostcardGPS'
-    ? `POSTCARD ARCHIVE · ${s.film.toUpperCase()} · VIETNAM`
-    : `FUJIFILM SIMULATION · ${s.film.toUpperCase()}`;
-  g.fillText(titleText, pad, rawCanvas.height + pad + Math.round(bottomPad * 0.48));
-
-  g.fillStyle = dark ? '#9ca3af' : '#6b7280';
-  g.font = `400 ${Math.round(fontSize * 0.78)}px monospace`;
-  const metaText = `DR${s.dr} · WB ${s.wb} · Clarity ${s.clarity} · ProMist ${s.proMist}% · ${encodeRecipeCode(s).slice(0, 18)}...`;
-  g.fillText(metaText, pad, rawCanvas.height + pad + Math.round(bottomPad * 0.78));
-
-  if (rawPixels) {
-    const palette = extractDominantPalette(rawPixels, 5);
-    const radius = Math.max(8, Math.round(fontSize * 0.55));
-    const startX = out.width - pad - (palette.length * radius * 2.6) + radius;
-    const centerY = rawCanvas.height + pad + Math.round(bottomPad * 0.58);
-    palette.forEach((sw, i) => {
-      g.beginPath();
-      g.arc(startX + i * radius * 2.6, centerY, radius, 0, Math.PI * 2);
-      g.fillStyle = sw.hex;
-      g.fill();
-      g.lineWidth = 1.5;
-      g.strokeStyle = dark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)';
-      g.stroke();
-    });
-  }
-  return out;
+  const styleIdx = s.frameStyle !== undefined ? Number(s.frameStyle) : (typeof s.frame === 'number' ? s.frame : 0);
+  if (!styleIdx || styleIdx === 0) return rawCanvas;
+  return renderPhotoFrame(rawCanvas, rawPixels, s, currentPhotoInfo, styleIdx);
 }
 
 $('export').onclick = async () => {
@@ -896,10 +810,22 @@ $('export').onclick = async () => {
   try {
     const fmt = $('format').value;
     const ext = fmt === 'image/jpeg' ? '.jpg' : fmt === 'image/webp' ? '.webp' : '.png';
+    const scaleFactor = Number($('exportScale')?.value || 1);
+    let srcCanvas = source;
+    if (scaleFactor > 1) {
+      const scaled = document.createElement('canvas');
+      scaled.width = source.width * scaleFactor;
+      scaled.height = source.height * scaleFactor;
+      const sctx = scaled.getContext('2d');
+      sctx.imageSmoothingQuality = 'high';
+      sctx.drawImage(source, 0, 0, scaled.width, scaled.height);
+      srcCanvas = scaled;
+    }
+
     const result = await job({
-      pixels: source.getContext('2d').getImageData(0, 0, source.width, source.height).data,
-      width: source.width,
-      height: source.height,
+      pixels: srcCanvas.getContext('2d').getImageData(0, 0, srcCanvas.width, srcCanvas.height).data,
+      width: srcCanvas.width,
+      height: srcCanvas.height,
       settings: { ...settings, diagnosticMode: 'Off' },
       lut: luts.find(l => l.id === selected)
     });
@@ -916,13 +842,13 @@ $('export').onclick = async () => {
       const a = document.createElement('a');
       const base = currentName.replace(/\.[^/.]+$/, '');
       a.href = URL.createObjectURL(blob);
-      a.download = `${base}-IRO${ext}`;
+      a.download = `${base}-IRO${scaleFactor > 1 ? '-2X' : ''}${ext}`;
       a.click();
       URL.revokeObjectURL(a.href);
       exporting = false;
       $('busy').hidden = true;
-      toast(fmt === 'image/png' ? 'Đã xuất PNG (kèm công thức nhúng ẩn trong ảnh)!' : 'Xuất ảnh thành công!');
-    }, fmt, fmt === 'image/png' ? undefined : 0.92);
+      toast(`Đã xuất ảnh thành công (${finalCanvas.width}x${finalCanvas.height})!`);
+    }, fmt, fmt === 'image/png' ? undefined : 0.94);
   } catch (e) {
     exporting = false;
     $('busy').hidden = true;
@@ -1112,3 +1038,440 @@ if (rulerCanvas) {
 
 attachMd3Ripples();
 drawTickRuler();
+
+// =========================================================================
+// THƯ VIỆN 392 CÔNG THỨC MÀU PHIM FUJI X WEEKLY (1-CLICK LOAD)
+// =========================================================================
+let allRecipes = [];
+let currentSensor = 'all';
+
+async function initRecipeLibrary() {
+  try {
+    const res = await fetch('./recipes.json');
+    if (!res.ok) return;
+    const data = await res.json();
+    allRecipes = Array.isArray(data.recipes) ? data.recipes : [];
+    if ($('totalRecipeCount')) $('totalRecipeCount').textContent = allRecipes.length;
+    renderRecipeGrid();
+  } catch (err) {
+    console.warn('recipes.json chưa sẵn sàng:', err);
+  }
+}
+
+function renderRecipeGrid() {
+  const grid = $('recipeGrid');
+  if (!grid) return;
+  const search = ($('recipeSearchInput')?.value || '').toLowerCase().trim();
+  const filtered = allRecipes.filter(r => {
+    const matchSensor = currentSensor === 'all' || (r.sensors && r.sensors.some(s => s.toLowerCase().includes(currentSensor.toLowerCase())));
+    if (!matchSensor) return false;
+    if (!search) return true;
+    const nameMatch = (r.name || '').toLowerCase().includes(search);
+    const filmMatch = (r.film || '').toLowerCase().includes(search);
+    return nameMatch || filmMatch;
+  });
+
+  grid.innerHTML = '';
+  const toRender = filtered.slice(0, 80);
+  for (const r of toRender) {
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+    const thumbUrl = r.sampleImageUrl || (r.sampleImages && r.sampleImages[0]) || '';
+    const filmName = r.film || 'Classic Chrome';
+    const sensorsStr = (r.sensors || []).join(' / ');
+    const raw = r.rawSettings || {};
+    const hl = raw.Highlight || '0';
+    const sh = raw.Shadow || '0';
+    const wb = raw['White Balance'] ? raw['White Balance'].split(',')[0] : 'Auto';
+
+    card.innerHTML = `
+      <div class="recipe-card-thumb">
+        ${thumbUrl ? `<img src="${thumbUrl}" loading="lazy" alt="${r.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">` : ''}
+        <div class="fallback-art" style="${thumbUrl ? 'display:none;' : ''}">🎞️</div>
+        <span class="recipe-card-badge">${filmName}</span>
+      </div>
+      <div class="recipe-card-content">
+        <h4 class="recipe-card-title">${r.name}</h4>
+        <div class="recipe-card-sensor">${sensorsStr}</div>
+        <div class="recipe-card-specs">
+          <span class="spec-badge">HL: ${hl}</span>
+          <span class="spec-badge">SH: ${sh}</span>
+          <span class="spec-badge">WB: ${wb}</span>
+        </div>
+        <button class="recipe-card-btn">Áp dụng công thức</button>
+      </div>
+    `;
+
+    card.querySelector('.recipe-card-btn').onclick = (e) => {
+      e.stopPropagation();
+      applyFujiRecipe(r);
+    };
+    card.onclick = () => applyFujiRecipe(r);
+    grid.appendChild(card);
+  }
+}
+
+function applyFujiRecipe(recipe) {
+  const parsed = parseFujiRecipe(recipe, defaults);
+  settings = { ...settings, ...parsed.settings };
+  quadView = false;
+  sync();
+  render();
+  if ($('recipeModal')) $('recipeModal').hidden = true;
+  toast(`Đã nạp công thức "${recipe.name}" (${parsed.film})!`);
+}
+
+if ($('recipeLibraryBtn')) {
+  $('recipeLibraryBtn').onclick = () => {
+    if ($('recipeModal')) $('recipeModal').hidden = false;
+    if (allRecipes.length === 0) initRecipeLibrary();
+  };
+}
+
+if ($('closeRecipeModal')) {
+  $('closeRecipeModal').onclick = () => {
+    if ($('recipeModal')) $('recipeModal').hidden = true;
+  };
+}
+if ($('recipeModal')) {
+  $('recipeModal').onclick = (e) => {
+    if (e.target === $('recipeModal')) $('recipeModal').hidden = true;
+  };
+}
+
+if ($('recipeSearchInput')) {
+  $('recipeSearchInput').oninput = () => renderRecipeGrid();
+}
+
+if ($('recipeSensorChips')) {
+  $('recipeSensorChips').querySelectorAll('.recipe-chip').forEach(chip => {
+    chip.onclick = () => {
+      $('recipeSensorChips').querySelectorAll('.recipe-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentSensor = chip.dataset.sensor;
+      renderRecipeGrid();
+    };
+  });
+}
+
+// =========================================================================
+// LIGHTCRAFT SUITE (TONE CURVE & 3-WAY COLOR WHEELS INTERACTIVE WIDGETS)
+// =========================================================================
+let redrawToneCurve = null;
+let redrawColorWheels = null;
+
+function initToneCurveWidget() {
+  const c = $('toneCurveCanvas');
+  if (!c) return;
+  const tctx = c.getContext('2d');
+  let draggingIdx = -1;
+
+  function drawCurve() {
+    const w = c.width, h = c.height;
+    tctx.clearRect(0, 0, w, h);
+
+    tctx.fillStyle = '#111318';
+    tctx.fillRect(0, 0, w, h);
+
+    // Grid 4x4
+    tctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    tctx.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+      const p = (i / 4) * w;
+      tctx.beginPath(); tctx.moveTo(p, 0); tctx.lineTo(p, h); tctx.stroke();
+      tctx.beginPath(); tctx.moveTo(0, p); tctx.lineTo(w, p); tctx.stroke();
+    }
+
+    // Diagonal
+    tctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+    tctx.setLineDash([4, 4]);
+    tctx.beginPath(); tctx.moveTo(0, h); tctx.lineTo(w, 0); tctx.stroke();
+    tctx.setLineDash([]);
+
+    // Curve
+    const lut = buildMonotoneCurveLut(settings.curvePoints);
+    tctx.strokeStyle = '#f59e0b';
+    tctx.lineWidth = 2.5;
+    tctx.beginPath();
+    for (let x = 0; x < w; x++) {
+      const inVal = Math.round((x / w) * 255);
+      const outVal = lut[inVal];
+      const y = h - (outVal / 255) * h;
+      if (x === 0) tctx.moveTo(x, y); else tctx.lineTo(x, y);
+    }
+    tctx.stroke();
+
+    // Control points
+    settings.curvePoints.forEach(([px, py], i) => {
+      const cx = px * w, cy = h - py * h;
+      tctx.beginPath();
+      tctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
+      tctx.fillStyle = (i === draggingIdx) ? '#ffea00' : '#ffffff';
+      tctx.fill();
+      tctx.strokeStyle = '#f59e0b';
+      tctx.lineWidth = 2;
+      tctx.stroke();
+    });
+  }
+
+  function getCoords(e) {
+    const rect = c.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
+    return { x, y };
+  }
+
+  const onDown = e => {
+    const { x, y } = getCoords(e);
+    let bestIdx = -1, bestDist = 0.09;
+    settings.curvePoints.forEach(([px, py], i) => {
+      const d = Math.hypot(px - x, py - y);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    });
+    draggingIdx = bestIdx;
+    if (draggingIdx >= 0) e.preventDefault();
+  };
+
+  const onMove = e => {
+    if (draggingIdx < 0) return;
+    e.preventDefault();
+    const { x, y } = getCoords(e);
+    if (draggingIdx === 0) settings.curvePoints[0] = [0, y];
+    else if (draggingIdx === settings.curvePoints.length - 1) settings.curvePoints[draggingIdx] = [1, y];
+    else {
+      const prevX = settings.curvePoints[draggingIdx - 1][0] + 0.02;
+      const nextX = settings.curvePoints[draggingIdx + 1][0] - 0.02;
+      settings.curvePoints[draggingIdx] = [Math.max(prevX, Math.min(nextX, x)), y];
+    }
+    drawCurve();
+    render();
+  };
+
+  const onUp = () => { draggingIdx = -1; };
+
+  c.onmousedown = onDown;
+  window.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+  c.ontouchstart = onDown;
+  window.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onUp);
+
+  c.ondblclick = () => {
+    settings.curvePoints = [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]];
+    drawCurve();
+    render();
+    toast('Đã đặt lại đường cong Tone Curve về mặc định!');
+  };
+
+  if ($('resetCurveBtn')) {
+    $('resetCurveBtn').onclick = () => {
+      settings.curvePoints = [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]];
+      drawCurve();
+      render();
+      toast('Đã đặt lại đường cong Tone Curve.');
+    };
+  }
+
+  drawCurve();
+  redrawToneCurve = drawCurve;
+}
+
+function initColorWheelsWidget() {
+  const c = $('colorWheelsCanvas');
+  if (!c) return;
+  const wctx = c.getContext('2d');
+  const wheelLabels = ['SHADOWS', 'MIDTONES', 'HIGHLIGHTS'];
+  let activeWheel = -1;
+
+  function drawWheels() {
+    const w = c.width, h = c.height;
+    wctx.clearRect(0, 0, w, h);
+    const radius = Math.min(w / 3.4, h * 0.38);
+    const centerY = h * 0.54;
+
+    for (let i = 0; i < 3; i++) {
+      const cx = (w / 3) * (i + 0.5);
+
+      for (let angle = 0; angle < 360; angle += 4) {
+        const rad1 = (angle * Math.PI) / 180;
+        const rad2 = ((angle + 4.5) * Math.PI) / 180;
+        wctx.beginPath();
+        wctx.moveTo(cx, centerY);
+        wctx.arc(cx, centerY, radius, rad1, rad2);
+        wctx.closePath();
+        wctx.fillStyle = `hsl(${angle}, 85%, 55%)`;
+        wctx.fill();
+      }
+
+      const radial = wctx.createRadialGradient(cx, centerY, 0, cx, centerY, radius);
+      radial.addColorStop(0, '#ffffff');
+      radial.addColorStop(0.35, 'rgba(255, 255, 255, 0.85)');
+      radial.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      wctx.fillStyle = radial;
+      wctx.beginPath();
+      wctx.arc(cx, centerY, radius, 0, Math.PI * 2);
+      wctx.fill();
+
+      wctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      wctx.lineWidth = 1.5;
+      wctx.stroke();
+
+      wctx.fillStyle = '#9ca3b0';
+      wctx.font = '700 10px system-ui, sans-serif';
+      wctx.textAlign = 'center';
+      wctx.fillText(wheelLabels[i], cx, centerY - radius - 8);
+
+      const hue = i === 0 ? settings.shadowsHue : i === 1 ? settings.midtonesHue : settings.highlightsHue;
+      const sat = i === 0 ? settings.shadowsSat : i === 1 ? settings.midtonesSat : settings.highlightsSat;
+      const rPuck = (sat / 100) * radius;
+      const angRad = (hue * Math.PI) / 180;
+      const px = cx + Math.cos(angRad) * rPuck;
+      const py = centerY + Math.sin(angRad) * rPuck;
+
+      wctx.beginPath();
+      wctx.arc(px, py, 5.5, 0, Math.PI * 2);
+      wctx.fillStyle = sat > 0 ? `hsl(${hue}, 90%, 55%)` : '#333333';
+      wctx.fill();
+      wctx.strokeStyle = '#ffffff';
+      wctx.lineWidth = 2;
+      wctx.stroke();
+    }
+  }
+
+  function handlePointer(e) {
+    const rect = c.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const x = (clientX - rect.left) * (c.width / rect.width);
+    const y = (clientY - rect.top) * (c.height / rect.height);
+    const radius = Math.min(c.width / 3.4, c.height * 0.38);
+    const centerY = c.height * 0.54;
+
+    if (activeWheel < 0) {
+      for (let i = 0; i < 3; i++) {
+        const cx = (c.width / 3) * (i + 0.5);
+        if (Math.hypot(x - cx, y - centerY) <= radius * 1.15) {
+          activeWheel = i;
+          break;
+        }
+      }
+    }
+
+    if (activeWheel >= 0) {
+      const cx = (c.width / 3) * (activeWheel + 0.5);
+      const dx = x - cx, dy = y - centerY;
+      const dist = Math.min(radius, Math.hypot(dx, dy));
+      const sat = Math.round((dist / radius) * 100);
+      let angle = Math.round((Math.atan2(dy, dx) * 180) / Math.PI);
+      if (angle < 0) angle += 360;
+
+      if (activeWheel === 0) { settings.shadowsHue = angle; settings.shadowsSat = sat; }
+      else if (activeWheel === 1) { settings.midtonesHue = angle; settings.midtonesSat = sat; }
+      else { settings.highlightsHue = angle; settings.highlightsSat = sat; }
+
+      drawWheels();
+      render();
+    }
+  }
+
+  c.onmousedown = handlePointer;
+  window.addEventListener('mousemove', e => { if (activeWheel >= 0) { e.preventDefault(); handlePointer(e); } });
+  window.addEventListener('mouseup', () => { activeWheel = -1; });
+  c.ontouchstart = handlePointer;
+  window.addEventListener('touchmove', e => { if (activeWheel >= 0) { e.preventDefault(); handlePointer(e); } }, { passive: false });
+  window.addEventListener('touchend', () => { activeWheel = -1; });
+
+  c.ondblclick = e => {
+    const rect = c.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (c.width / rect.width);
+    for (let i = 0; i < 3; i++) {
+      const cx = (c.width / 3) * (i + 0.5);
+      if (Math.abs(x - cx) < c.width / 6) {
+        if (i === 0) { settings.shadowsHue = 0; settings.shadowsSat = 0; }
+        else if (i === 1) { settings.midtonesHue = 0; settings.midtonesSat = 0; }
+        else { settings.highlightsHue = 0; settings.highlightsSat = 0; }
+        drawWheels();
+        render();
+        toast(`Đã đặt lại bánh xe màu ${wheelLabels[i]}.`);
+        break;
+      }
+    }
+  };
+
+  if ($('resetWheelsBtn')) {
+    $('resetWheelsBtn').onclick = () => {
+      settings.shadowsHue = 0; settings.shadowsSat = 0;
+      settings.midtonesHue = 0; settings.midtonesSat = 0;
+      settings.highlightsHue = 0; settings.highlightsSat = 0;
+      drawWheels();
+      render();
+      toast('Đã đặt lại bộ 3 bánh xe màu về trung tính.');
+    };
+  }
+
+  drawWheels();
+  redrawColorWheels = drawWheels;
+}
+
+if ($('lightCraftBtn')) {
+  $('lightCraftBtn').onclick = () => {
+    if ($('lightCraftModal')) $('lightCraftModal').hidden = false;
+    if (redrawToneCurve) redrawToneCurve();
+    if (redrawColorWheels) redrawColorWheels();
+  };
+}
+if ($('closeLightCraftModal')) {
+  $('closeLightCraftModal').onclick = () => {
+    if ($('lightCraftModal')) $('lightCraftModal').hidden = true;
+  };
+}
+if ($('lightCraftModal')) {
+  $('lightCraftModal').onclick = (e) => {
+    if (e.target === $('lightCraftModal')) $('lightCraftModal').hidden = true;
+  };
+}
+
+// EXIF modal
+if ($('editExifBtn')) {
+  $('editExifBtn').onclick = () => {
+    if ($('exifModal')) {
+      $('exifCamera').value = currentPhotoInfo.camera || '';
+      $('exifLens').value = currentPhotoInfo.lens || '';
+      $('exifFocal').value = currentPhotoInfo.focal || '';
+      $('exifAperture').value = currentPhotoInfo.aperture || '';
+      $('exifShutter').value = currentPhotoInfo.shutter || '';
+      $('exifIso').value = currentPhotoInfo.iso || '';
+      $('exifDate').value = currentPhotoInfo.date || '';
+      $('exifAuthor').value = currentPhotoInfo.author || '';
+      $('exifModal').hidden = false;
+    }
+  };
+}
+if ($('closeExifModal')) {
+  $('closeExifModal').onclick = () => {
+    if ($('exifModal')) $('exifModal').hidden = true;
+  };
+}
+if ($('saveExifBtn')) {
+  $('saveExifBtn').onclick = () => {
+    currentPhotoInfo = {
+      camera: $('exifCamera').value.trim() || 'FUJIFILM X-T5',
+      lens: $('exifLens').value.trim() || 'XF 35mm F1.4 R',
+      focal: $('exifFocal').value.trim() || '35mm',
+      aperture: $('exifAperture').value.trim() || 'f/1.4',
+      shutter: $('exifShutter').value.trim() || '1/250s',
+      iso: $('exifIso').value.trim() || 'ISO 400',
+      date: $('exifDate').value.trim() || '2026.10.14',
+      author: $('exifAuthor').value.trim() || 'IRO Studio'
+    };
+    if ($('exifModal')) $('exifModal').hidden = true;
+    toast('Đã lưu thông số máy ảnh & EXIF cho khung ảnh!');
+  };
+}
+
+initRecipeLibrary();
+initToneCurveWidget();
+initColorWheelsWidget();
+

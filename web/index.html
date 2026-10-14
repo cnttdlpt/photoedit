@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>IRO Studio 3.0 — Material Design 3 Expressive Darkroom</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>IRO</h1>
+        <span>Material 3 Expressive</span>
+      </div>
+      <div class="actions">
+        <button id="themeToggleBtn" class="ghost" title="Chuyển đổi giao diện Darkroom / Warm Porcelain">🌓 Giao diện M3</button>
+        <button id="recipeLibraryBtn" class="primary" title="Khám phá 392 công thức màu Fuji X Weekly">📖 392 Công thức</button>
+        <button id="lightCraftBtn" class="secondary" title="Đường cong Tone Curve & Bánh xe màu 3-Way">🎛️ LightCraft</button>
+        <button id="aiAuto" class="secondary">✨ AI Cân bằng</button>
+        <button id="promptRecipeBtn" class="ghost">💬 Mô tả cảm xúc</button>
+        <button id="matchRefBtn" class="ghost">🎨 Học màu ảnh mẫu</button>
+        <button id="livingFilmBtn" class="ghost">🎬 Living Film 24fps</button>
+        <button id="dateStampBtn" class="ghost">📅 Dấu ngày '26</button>
+        <button id="quadViewBtn" class="ghost">⊞ Xem 4 Màu</button>
+        <button id="contactSheetBtn" class="ghost">🎞️ Contact Sheet</button>
+        <button id="rotate90" class="ghost">↻ Xoay 90°</button>
+        <button id="exportCube" class="ghost">📦 Xuất .CUBE</button>
+        <button id="shareCode" class="ghost">Mã IRO</button>
+        <button id="importLut">Nhập .CUBE</button>
+        <button id="open">Mở ảnh</button>
+        <button id="export" class="primary">Xuất ảnh</button>
+        <input type="file" id="photo" accept="image/*" hidden>
+        <input type="file" id="refPhoto" accept="image/*" hidden>
+        <input type="file" id="lutfile" accept=".cube" hidden>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar left">
+        <div class="panel-header">
+          <h2>GIẢ LẬP MÀU PHIM</h2>
+          <p>Thẻ M3 Morphing Pill · Chuẩn Fujifilm X-Trans V</p>
+        </div>
+        <div id="films" class="film-grid"></div>
+
+        <div class="lut-panel">
+          <h3>LUT 3D TÙY CHỈNH (INDEXEDDB)</h3>
+          <select id="lutSelect">
+            <option value="">Không dùng LUT 3D</option>
+          </select>
+          <div class="control">
+            <label for="lutAmount">Cường độ LUT <output id="lutValue">100%</output></label>
+            <input type="range" id="lutAmount" min="0" max="100" value="100">
+          </div>
+          <button id="removeLut" class="text-btn" hidden>Gỡ bỏ LUT</button>
+        </div>
+
+        <div class="lut-panel">
+          <h3>BIỂU ĐỒ RGB HISTOGRAM & PALETTE</h3>
+          <canvas id="histogram" width="256" height="88" style="width:100%;height:88px;background:#111318;border-radius:12px"></canvas>
+          <div id="paletteSwatches" style="display:flex;gap:6px;margin-top:8px;height:18px"></div>
+        </div>
+      </aside>
+
+      <section class="stage">
+        <div class="view-header">
+          <div class="info">
+            <h2 id="lookTitle">Classic Chrome</h2>
+            <span id="filename">Fujifilm Classic Chrome Demo</span>
+            <span id="imageSize" class="tag">ẢNH MẪU MINH HỌA</span>
+          </div>
+          <div class="tools">
+            <label style="font-size:12px;display:inline-flex;align-items:center;gap:6px">
+              Trước/Sau
+              <input type="range" id="splitCompare" min="0" max="100" value="0" style="width:85px">
+            </label>
+            <button id="compare" class="ghost">Giữ xem gốc</button>
+            <button id="sampleRecipe" class="ghost">Công thức mẫu</button>
+            <button id="reset" class="ghost">Đặt lại</button>
+          </div>
+        </div>
+
+        <div class="canvas-wrap" id="drop">
+          <canvas id="canvas"></canvas>
+          <span id="imageTag" class="badge">IRO / CLASSIC CHROME</span>
+          <div id="busy" class="busy-overlay" hidden>
+            <div class="spinner"></div>
+            <span>Đang xử lý quang học & hạt phim...</span>
+          </div>
+        </div>
+
+        <!-- Thanh trượt thước chia vạch độ chính xác cao chuẩn M3 Expressive (TickRulerView) -->
+        <div class="tick-ruler-dock">
+          <div class="tick-ruler-header">
+            <span id="rulerLabel">THƯỚC CHIA VẠCH ĐỘ CHÍNH XÁC CAO (M3 TICK RULER) · BÙ SÁNG EV</span>
+            <strong id="rulerValue">+0.00</strong>
+          </div>
+          <canvas id="tickRulerCanvas" width="720" height="44"></canvas>
+        </div>
+
+        <div class="status-bar">
+          <span id="status">Thử màu trên ảnh mẫu hoặc mở ảnh của bạn</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px">M3 Expressive Motion</span>
+        </div>
+      </section>
+
+      <aside class="sidebar right">
+        <div class="panel-header">
+          <h2>PHÒNG TỐI QUANG HỌC 3.0</h2>
+          <p>Chọn nhóm công cụ M3 Segmented Tabs</p>
+        </div>
+
+        <div class="md3-segmented-tabs" id="categoryTabs">
+          <button class="md3-tab active" data-cat="all">Tất cả</button>
+          <button class="md3-tab" data-cat="0">Ánh sáng</button>
+          <button class="md3-tab" data-cat="1">Màu sắc</button>
+          <button class="md3-tab" data-cat="2">Quang học</button>
+        </div>
+
+        <div id="controls" class="controls"></div>
+
+        <div class="recipe-actions">
+          <button id="saveRecipe" class="secondary">Lưu công thức</button>
+          <button id="loadRecipe" class="secondary">Tải công thức</button>
+          <input type="file" id="recipefile" accept=".json" hidden>
+        </div>
+
+        <div class="export-options">
+          <label for="frameSelect">Khung triển lãm (PhotoFrame 30 Mẫu)</label>
+          <select id="frameSelect">
+            <option value="0">Không chèn thông tin</option>
+            <optgroup label="Mẫu cơ bản (1..3)">
+              <option value="1">1. Classic · dải trắng</option>
+              <option value="2">2. White · cột thông tin</option>
+              <option value="3">3. Glass · chữ trên ảnh</option>
+            </optgroup>
+            <optgroup label="Mẫu mở rộng (4..18)">
+              <option value="4">4. Dark · dải đen</option>
+              <option value="5">5. Centered · thông số giữa</option>
+              <option value="6">6. Gallery · viền trắng rộng</option>
+              <option value="7">7. Noir · viền đen rộng</option>
+              <option value="8">8. Instant · ảnh lấy liền</option>
+              <option value="9">9. Vintage · giấy kem</option>
+              <option value="10">10. Film 35 · viền lỗ phim</option>
+              <option value="11">11. Cinema · thanh đen</option>
+              <option value="12">12. Blur · nền ảnh mờ</option>
+              <option value="13">13. Palette · bảng màu ảnh</option>
+              <option value="14">14. Postcard · bưu thiếp</option>
+              <option value="15">15. Editorial · trang tạp chí</option>
+              <option value="16">16. Double · viền kép</option>
+              <option value="17">17. Date · dấu ngày màu cam</option>
+              <option value="18">18. Signature · chữ ký tối giản</option>
+            </optgroup>
+            <optgroup label="Mẫu trang trí & nghệ thuật (19..30)">
+              <option value="19">19. Float · ảnh nổi đổ bóng</option>
+              <option value="20">20. Soft · viền bo tròn</option>
+              <option value="21">21. Torn · giấy xé</option>
+              <option value="22">22. Tape · băng dính scrapbook</option>
+              <option value="23">23. Wood · khung gỗ</option>
+              <option value="24">24. Gold · viền kim loại</option>
+              <option value="25">25. Neon · ánh sáng viền</option>
+              <option value="26">26. Notebook · giấy kẻ ô</option>
+              <option value="27">27. Ticket · vé kỷ niệm</option>
+              <option value="28">28. Blueprint · bản vẽ xanh</option>
+              <option value="29">29. Arch · vòm triển lãm</option>
+              <option value="30">30. Corners · góc giữ ảnh</option>
+            </optgroup>
+          </select>
+
+          <label for="exportScale" style="margin-top:8px;display:block">Độ phân giải xuất ảnh</label>
+          <select id="exportScale">
+            <option value="1">1x (Tiêu chuẩn hiển thị Web)</option>
+            <option value="2">2x (Ultra HD 4K In ấn Triển lãm)</option>
+          </select>
+
+          <label for="format" style="margin-top:8px;display:block">Định dạng xuất (PNG tự nhúng ẩn Recipe)</label>
+          <select id="format">
+            <option value="image/jpeg">JPEG (Chất lượng cao 92%)</option>
+            <option value="image/png">PNG (Không nén · Nhúng ẩn công thức)</option>
+            <option value="image/webp">WebP (Siêu nhẹ 92%)</option>
+          </select>
+
+          <button id="editExifBtn" class="ghost" style="margin-top:10px;width:100%;font-size:12px">⚙️ Tùy chỉnh thông số máy & EXIF...</button>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Modal 1: Thư viện 392 Công thức Fuji X Weekly -->
+  <div id="recipeModal" class="md3-modal-backdrop" hidden>
+    <div class="md3-dialog recipe-browser-dialog">
+      <div class="md3-dialog-header">
+        <h3>📖 Thư viện 392 Công thức Màu Phim (Fuji X Weekly)</h3>
+        <button id="closeRecipeModal" class="md3-dialog-close" title="Đóng">✕</button>
+      </div>
+      <div class="md3-dialog-body">
+        <div class="recipe-search-bar">
+          <input type="text" id="recipeSearchInput" placeholder="Tìm theo tên công thức (vd: Kodak, Portra, Cinestill, Golden Negative), giả lập màu, từ khóa...">
+        </div>
+        <div class="recipe-filter-chips" id="recipeSensorChips">
+          <button class="recipe-chip active" data-sensor="all">Tất cả (<span id="totalRecipeCount">391</span>)</button>
+          <button class="recipe-chip" data-sensor="BAYER">BAYER</button>
+          <button class="recipe-chip" data-sensor="X-Trans IV">X-Trans IV</button>
+          <button class="recipe-chip" data-sensor="X-Trans V">X-Trans V</button>
+          <button class="recipe-chip" data-sensor="X-Trans III">X-Trans III</button>
+          <button class="recipe-chip" data-sensor="X-Trans II">X-Trans II</button>
+          <button class="recipe-chip" data-sensor="GFX">GFX</button>
+        </div>
+        <div class="recipe-grid-container" id="recipeGrid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: LightCraft Suite (Tone Curve & 3-Way Color Wheels) -->
+  <div id="lightCraftModal" class="md3-modal-backdrop" hidden>
+    <div class="md3-dialog lightcraft-dialog">
+      <div class="md3-dialog-header">
+        <h3>🎛️ LightCraft Studio — Tone Curve & 3-Way Color Wheels</h3>
+        <button id="closeLightCraftModal" class="md3-dialog-close" title="Đóng">✕</button>
+      </div>
+      <div class="md3-dialog-body">
+        <div class="lightcraft-layout">
+          <div class="lightcraft-panel">
+            <div class="lightcraft-panel-title">
+              <span>ĐƯỜNG CONG TONE CURVE (FRITSCH–CARLSON)</span>
+              <button id="resetCurveBtn" class="text-btn">Đặt lại</button>
+            </div>
+            <div class="lightcraft-canvas-wrap">
+              <canvas id="toneCurveCanvas" width="300" height="300"></canvas>
+            </div>
+            <p style="font-size:11px;color:var(--md-sys-color-on-surface-variant)">Kéo 5 điểm điều khiển (Blacks, Shadows, Midtones, Highlights, Whites). Đúp chuột để đặt lại đường chéo gốc.</p>
+          </div>
+
+          <div class="lightcraft-panel">
+            <div class="lightcraft-panel-title">
+              <span>3-WAY COLOR WHEELS (SHADOWS · MID · HIGH)</span>
+              <button id="resetWheelsBtn" class="text-btn">Đặt lại</button>
+            </div>
+            <div class="lightcraft-canvas-wrap">
+              <canvas id="colorWheelsCanvas" width="360" height="280"></canvas>
+            </div>
+            <p style="font-size:11px;color:var(--md-sys-color-on-surface-variant)">Chạm/kéo núm màu trên 3 đĩa để pha sắc độ điện ảnh độc lập. Nhấn đúp tâm để đưa về trung tính.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Tùy chỉnh thông số máy & EXIF -->
+  <div id="exifModal" class="md3-modal-backdrop" hidden>
+    <div class="md3-dialog exif-dialog">
+      <div class="md3-dialog-header">
+        <h3>⚙️ Tùy chỉnh thông số khung ảnh (EXIF)</h3>
+        <button id="closeExifModal" class="md3-dialog-close" title="Đóng">✕</button>
+      </div>
+      <div class="md3-dialog-body">
+        <div class="exif-form">
+          <div class="exif-field">
+            <label for="exifCamera">Tên máy ảnh</label>
+            <input type="text" id="exifCamera" value="FUJIFILM X-T5">
+          </div>
+          <div class="exif-field">
+            <label for="exifLens">Ống kính</label>
+            <input type="text" id="exifLens" value="XF 35mm F1.4 R">
+          </div>
+          <div class="exif-field">
+            <label for="exifFocal">Tiêu cự</label>
+            <input type="text" id="exifFocal" value="35mm">
+          </div>
+          <div class="exif-field">
+            <label for="exifAperture">Khẩu độ</label>
+            <input type="text" id="exifAperture" value="f/1.4">
+          </div>
+          <div class="exif-field">
+            <label for="exifShutter">Tốc độ màn trập</label>
+            <input type="text" id="exifShutter" value="1/250s">
+          </div>
+          <div class="exif-field">
+            <label for="exifIso">Độ nhạy sáng ISO</label>
+            <input type="text" id="exifIso" value="ISO 400">
+          </div>
+          <div class="exif-field">
+            <label for="exifDate">Ngày chụp</label>
+            <input type="text" id="exifDate" value="2026.10.14">
+          </div>
+          <div class="exif-field">
+            <label for="exifAuthor">Tác giả / Dòng chữ cá nhân</label>
+            <input type="text" id="exifAuthor" value="IRO Studio">
+          </div>
+          <button id="saveExifBtn" class="primary" style="margin-top:10px">Lưu thông số</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>

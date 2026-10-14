@@ -9,8 +9,11 @@ export const defaults = {
   dateStamp: false,
   wb: 'Auto', red: 0, blue: 0, highlight: 0, shadow: 0, color: 0,
   sharpness: 0, nr: -4, exposure: 0, temperature: 0, rotation: 0,
-  frame: 'None',
-  curvePoints: [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]]
+  frame: 'None', frameStyle: 0,
+  curvePoints: [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]],
+  shadowsHue: 0, shadowsSat: 0,
+  midtonesHue: 0, midtonesSat: 0,
+  highlightsHue: 0, highlightsSat: 0
 };
 
 export const films = {
@@ -291,6 +294,30 @@ export function processPixels(input, width, height, rawSettings, lut, frameSeed 
         const desat = v[k] * (1 - 0.55 * bb) + (curLum * 255) * (0.55 * bb);
         v[k] = desat * (1 - 0.65 * bb) + silver * (0.65 * bb);
       }
+    }
+
+    // 3-Way Color Grading Wheels (Shadows · Midtones · Highlights OkLab/Luminance-weighted)
+    if ((s.shadowsSat && s.shadowsSat > 0) || (s.midtonesSat && s.midtonesSat > 0) || (s.highlightsSat && s.highlightsSat > 0)) {
+      const curL = clamp((v[0] * .2126 + v[1] * .7152 + v[2] * .0722) / 255, 0, 1);
+      const wSh = Math.pow(1 - curL, 2);
+      const wHi = Math.pow(curL, 2);
+      const wMid = 4 * curL * (1 - curL);
+
+      const applyWheel = (hueDeg, satPct, weight) => {
+        if (!satPct || satPct <= 0 || weight <= 0) return;
+        const rad = ((hueDeg || 0) * Math.PI) / 180;
+        const rShift = Math.cos(rad);
+        const gShift = Math.cos(rad - (2 * Math.PI / 3));
+        const bShift = Math.cos(rad + (2 * Math.PI / 3));
+        const mag = (satPct / 100) * weight * 60;
+        v[0] = clamp(v[0] + rShift * mag, 0, 255);
+        v[1] = clamp(v[1] + gShift * mag, 0, 255);
+        v[2] = clamp(v[2] + bShift * mag, 0, 255);
+      };
+
+      applyWheel(s.shadowsHue, s.shadowsSat, wSh);
+      applyWheel(s.midtonesHue, s.midtonesSat, wMid);
+      applyWheel(s.highlightsHue, s.highlightsSat, wHi);
     }
 
     // Hóa chất Giấy Ảnh Phòng Tối Cổ Điển (Historic Darkroom Print Processes)
@@ -741,3 +768,546 @@ export function matchColorFromReference(sourcePixels, refPixels, baseSettings = 
     reasonVi: `Đã sao chép bảng màu từ ảnh tham chiếu (gợi ý ${film}, EV ${exposure >= 0 ? '+' : ''}${exposure.toFixed(2)}, Temp ${tempShift >= 0 ? '+' : ''}${tempShift}).`
   };
 }
+
+export const PHOTO_FRAMES = [
+  { id: 0, key: 'None', name: 'Không chèn thông tin' },
+  { id: 1, key: 'Classic', name: 'Classic · dải trắng' },
+  { id: 2, key: 'White', name: 'White · cột thông tin' },
+  { id: 3, key: 'Glass', name: 'Glass · chữ trên ảnh' },
+  { id: 4, key: 'Dark', name: 'Dark · dải đen' },
+  { id: 5, key: 'Centered', name: 'Centered · thông số giữa' },
+  { id: 6, key: 'Gallery', name: 'Gallery · viền trắng rộng' },
+  { id: 7, key: 'Noir', name: 'Noir · viền đen rộng' },
+  { id: 8, key: 'Instant', name: 'Instant · ảnh lấy liền' },
+  { id: 9, key: 'Vintage', name: 'Vintage · giấy kem' },
+  { id: 10, key: 'Film35', name: 'Film 35 · viền lỗ phim' },
+  { id: 11, key: 'Cinema', name: 'Cinema · thanh đen' },
+  { id: 12, key: 'Blur', name: 'Blur · nền ảnh mờ' },
+  { id: 13, key: 'Palette', name: 'Palette · bảng màu ảnh' },
+  { id: 14, key: 'Postcard', name: 'Postcard · bưu thiếp' },
+  { id: 15, key: 'Editorial', name: 'Editorial · trang tạp chí' },
+  { id: 16, key: 'Double', name: 'Double · viền kép' },
+  { id: 17, key: 'Date', name: 'Date · dấu ngày màu cam' },
+  { id: 18, key: 'Signature', name: 'Signature · chữ ký tối giản' },
+  { id: 19, key: 'Float', name: 'Float · ảnh nổi đổ bóng' },
+  { id: 20, key: 'Soft', name: 'Soft · viền bo tròn' },
+  { id: 21, key: 'Torn', name: 'Torn · giấy xé' },
+  { id: 22, key: 'Tape', name: 'Tape · băng dính scrapbook' },
+  { id: 23, key: 'Wood', name: 'Wood · khung gỗ' },
+  { id: 24, key: 'Gold', name: 'Gold · viền kim loại' },
+  { id: 25, key: 'Neon', name: 'Neon · ánh sáng viền' },
+  { id: 26, key: 'Notebook', name: 'Notebook · giấy kẻ ô' },
+  { id: 27, key: 'Ticket', name: 'Ticket · vé kỷ niệm' },
+  { id: 28, key: 'Blueprint', name: 'Blueprint · bản vẽ xanh' },
+  { id: 29, key: 'Arch', name: 'Arch · vòm triển lãm' },
+  { id: 30, key: 'Corners', name: 'Corners · góc giữ ảnh' }
+];
+
+export const defaultPhotoInfo = {
+  camera: 'FUJIFILM X-T5',
+  lens: 'XF 35mm F1.4 R',
+  focal: '35mm',
+  aperture: 'f/1.4',
+  shutter: '1/250s',
+  iso: 'ISO 400',
+  date: '2026.10.14',
+  author: 'IRO Studio'
+};
+
+export function parseFujiRecipe(recipe, base = defaults) {
+  const raw = recipe.rawSettings || {};
+  const s = { ...base };
+  const notes = [];
+
+  if (recipe.film) s.film = recipe.film;
+
+  const parseNum = (text, fallback = 0) => {
+    if (!text) return fallback;
+    const m = String(text).trim().match(/^[+−–-]?\d+(?:\.\d+)?(?:\/\d+)?/);
+    if (!m) return fallback;
+    try {
+      const clean = m[0].replace(/[−–]/g, '-');
+      if (clean.includes('/')) {
+        const [num, den] = clean.split('/').map(Number);
+        return den !== 0 ? num / den : fallback;
+      }
+      return Number(clean);
+    } catch {
+      return fallback;
+    }
+  };
+
+  const bound = (v, lo, hi) => Math.max(lo, Math.min(hi, Number.isFinite(v) ? v : lo));
+
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value !== 'string') continue;
+    const k = key.toLowerCase().trim();
+    const v = value.toLowerCase().trim();
+    const num = parseNum(value, 0);
+
+    if (/\b(?:to|or|sometimes|depending|usually|occasionally)\b/.test(v)) {
+      notes.push(`${key}: có khoảng lựa chọn; xem ghi chú gốc.`);
+    }
+
+    if (k === 'film simulation') {
+      s.film = value;
+    } else if (k === 'highlight' || k === 'highlights' || k === 'highlight tone') {
+      s.highlight = bound(num, -2, 4);
+    } else if (k === 'shadow' || k === 'shadows' || k === 'shadow tone') {
+      s.shadow = bound(num, -2, 4);
+    } else if (k === 'highlight & shadow') {
+      s.highlight = bound(num, -2, 4);
+      s.shadow = bound(num, -2, 4);
+    } else if (k === 'color' || k === 'saturation') {
+      s.color = bound(num, -4, 4);
+    } else if (k === 'sharpness' || k === 'sharpeness' || k === 'sharpening') {
+      s.sharpness = bound(num, -4, 4);
+    } else if (k === 'noise reduction' || k === 'noise-reduction' || k === 'high iso nr') {
+      s.nr = bound(num, -4, 4);
+    } else if (k === 'clarity') {
+      s.clarity = bound(num * 20, -100, 100);
+    } else if (k === 'grain' || k === 'grain effect') {
+      s.grain = v.includes('strong') ? 18 : (v.includes('weak') ? 8 : 0);
+      s.grainSize = v.includes('large') ? 2 : 1;
+    } else if (k === 'color chrome' || k === 'color chrome effect') {
+      s.chrome = v.includes('strong') ? 2 : (v.includes('weak') ? 1 : 0);
+    } else if (k === 'color chrome fx blue' || k === 'color chrome effect blue') {
+      s.chromeBlue = v.includes('strong') ? 2 : (v.includes('weak') ? 1 : 0);
+    } else if (k === 'dynamic range' || k === 'dr') {
+      s.dr = v.includes('400') ? 400 : (v.includes('200') ? 200 : 100);
+      if (v.includes('auto')) notes.push('DR Auto: giữ DR100 trong web editor.');
+    } else if (k === 'white balance' || k === 'wb') {
+      s.wb = value.split(',')[0].trim();
+      const redM = value.match(/([+−–-]?\d+)\s*Red/i);
+      const blueM = value.match(/([+−–-]?\d+)\s*Blue/i);
+      if (redM) s.red = bound(parseNum(redM[1], 0), -9, 9);
+      if (blueM) s.blue = bound(parseNum(blueM[1], 0), -9, 9);
+    } else if (k === 'exposure compensation' || k === 'exposure') {
+      if (v.includes(' to ') || v.includes(' or ')) {
+        s.exposure = 0;
+      } else {
+        s.exposure = bound(parseNum(value, 0), -3, 3);
+      }
+    }
+  }
+
+  return { settings: s, notes, name: recipe.name || 'Fuji Recipe', film: s.film, sensor: (recipe.sensors || []).join(' / ') };
+}
+
+function resolveFrameIndex(styleIdOrKey) {
+  if (typeof styleIdOrKey === 'number') {
+    return Math.max(0, Math.min(30, Math.round(styleIdOrKey)));
+  }
+  if (!styleIdOrKey || styleIdOrKey === 'None') return 0;
+  const legacyMap = {
+    'GalleryWhite': 6,
+    'DarkroomBlack': 4,
+    'Film35mm': 10,
+    'HasselbladV': 16,
+    'PostcardGPS': 14
+  };
+  if (legacyMap[styleIdOrKey]) return legacyMap[styleIdOrKey];
+  const found = PHOTO_FRAMES.findIndex(f => f.key.toLowerCase() === String(styleIdOrKey).toLowerCase() || f.name.toLowerCase().includes(String(styleIdOrKey).toLowerCase()));
+  return found >= 0 ? found : 0;
+}
+
+function drawFittedText(ctx, text, x, y, maxWidth, size, color, bold = false, align = 'left') {
+  if (!text || maxWidth <= 0) return;
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.textAlign = align;
+  ctx.textBaseline = 'alphabetic';
+  let curSize = Math.max(9, size);
+  ctx.font = `${bold ? '700 ' : '400 '}${curSize}px system-ui, -apple-system, sans-serif`;
+  let measured = ctx.measureText(text).width;
+  if (measured > maxWidth) {
+    curSize = Math.max(9, curSize * (maxWidth / measured));
+    ctx.font = `${bold ? '700 ' : '400 '}${curSize}px system-ui, -apple-system, sans-serif`;
+    measured = ctx.measureText(text).width;
+  }
+  let str = text;
+  if (measured > maxWidth) {
+    while (str.length > 3 && ctx.measureText(str + '...').width > maxWidth) {
+      str = str.slice(0, -1);
+    }
+    str += '...';
+  }
+  ctx.fillText(str, x, y);
+  ctx.restore();
+}
+
+export function renderPhotoFrame(sourceCanvas, pixels, settings = defaults, info = defaultPhotoInfo, styleInput = 0) {
+  const style = resolveFrameIndex(styleInput);
+  if (style === 0 || typeof document === 'undefined') return sourceCanvas;
+
+  const w = sourceCanvas.width;
+  const h = sourceCanvas.height;
+  const safeInfo = {
+    camera: info?.camera || 'FUJIFILM X-T5',
+    lens: info?.lens || 'XF 35mm F1.4 R',
+    focal: info?.focal || '35mm',
+    aperture: info?.aperture || 'f/1.4',
+    shutter: info?.shutter || '1/250s',
+    iso: info?.iso || 'ISO 400',
+    date: info?.date || '2026.10.14',
+    author: info?.author || (settings.film ? `FUJIFILM ${settings.film}` : 'IRO Studio')
+  };
+  const settingsStr = [safeInfo.focal, safeInfo.aperture, safeInfo.shutter, safeInfo.iso].filter(Boolean).join('  ');
+  const title = safeInfo.camera || 'PHOTO';
+  const bottomStr = [safeInfo.date, safeInfo.author].filter(Boolean).join('  ·  ');
+
+  // Nhóm cơ bản 1..3
+  if (style === 1) { // Classic
+    const pad = Math.max(1, Math.round(w * 0.025));
+    const footer = Math.max(1, Math.round(w * 0.125));
+    const out = Object.assign(document.createElement('canvas'), { width: w, height: h + footer });
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.drawImage(sourceCanvas, 0, 0);
+
+    drawFittedText(ctx, title, pad, h + footer * 0.37, w * 0.43, w * 0.028, '#202520', true);
+    drawFittedText(ctx, safeInfo.author, pad, h + footer * 0.70, w * 0.43, w * 0.018, '#687068', false);
+    drawFittedText(ctx, settingsStr, w * 0.49, h + footer * 0.37, w * 0.485, w * 0.020, '#353b35', false);
+    drawFittedText(ctx, safeInfo.date, w * 0.49, h + footer * 0.70, w * 0.485, w * 0.018, '#687068', false);
+    return out;
+  }
+
+  if (style === 2) { // White (Cột thông tin bên phải)
+    const pad = Math.max(1, Math.round(w * 0.025));
+    const side = Math.max(1, Math.round(w * 0.30));
+    const ow = w + side + pad * 2, oh = h + pad * 2;
+    const out = Object.assign(document.createElement('canvas'), { width: ow, height: oh });
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, ow, oh);
+    ctx.drawImage(sourceCanvas, pad, pad);
+
+    const x = w + pad * 2, width = side - pad, center = oh * 0.5;
+    const unit = Math.min(w, h * 1.7);
+    drawFittedText(ctx, title, x, center - unit * 0.07, width, unit * 0.032, '#202520', true);
+    const rows = [safeInfo.focal, [safeInfo.aperture, safeInfo.shutter].filter(Boolean).join('  '), safeInfo.iso, safeInfo.date, safeInfo.author];
+    let y = center - unit * 0.025;
+    for (const row of rows) {
+      if (row) {
+        drawFittedText(ctx, row, x, y, width, unit * 0.019, '#687068', false);
+        y += unit * 0.032;
+      }
+    }
+    return out;
+  }
+
+  if (style === 3) { // Glass (Dải mờ đè chân ảnh)
+    const out = Object.assign(document.createElement('canvas'), { width: w, height: h });
+    const ctx = out.getContext('2d');
+    ctx.drawImage(sourceCanvas, 0, 0);
+
+    const pad = Math.max(1, Math.round(w * 0.025));
+    const bar = Math.min(h * 0.35, w * 0.15);
+    const top = h - bar;
+    const unit = bar / 0.15;
+    const grad = ctx.createLinearGradient(0, top, 0, h);
+    grad.addColorStop(0, 'rgba(0, 0, 0, 0.03)');
+    grad.addColorStop(1, 'rgba(0, 0, 0, 0.82)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, top, w, bar);
+
+    drawFittedText(ctx, title, pad, top + bar * 0.39, w - pad * 2, unit * 0.031, '#ffffff', true);
+    drawFittedText(ctx, settingsStr, pad, top + bar * 0.65, w - pad * 2, unit * 0.020, '#eeeeee', false);
+    drawFittedText(ctx, bottomStr, pad, top + bar * 0.87, w - pad * 2, unit * 0.018, '#dddddd', false);
+    return out;
+  }
+
+  // Nhóm mở rộng 4..18
+  if (style >= 4 && style <= 18) {
+    const unit = Math.min(w, h * 1.7);
+    let pad = Math.max(1, Math.round(w * 0.05));
+    let foot = Math.max(1, Math.round(w * 0.15));
+    const overlay = (style === 17 || style === 18);
+
+    if (style === 4 || style === 5) { pad = 0; foot = Math.max(1, Math.round(w * 0.14)); }
+    if (style === 6 || style === 7) pad = Math.max(1, Math.round(w * 0.09));
+    if (style === 8 || style === 9) foot = Math.max(1, Math.round(w * 0.23));
+    if (style === 10) pad = Math.max(1, Math.round(w * 0.055));
+    if (style === 11) { pad = 0; foot = Math.max(1, Math.round(w * 0.12)); }
+    if (style === 15) { pad = Math.max(1, Math.round(w * 0.04)); foot = Math.max(1, Math.round(w * 0.20)); }
+    if (overlay) { pad = 0; foot = 0; }
+
+    const top = (style === 11) ? foot : pad;
+    const ow = w + pad * 2;
+    const oh = h + top + pad + foot;
+
+    const dark = (style === 4 || style === 7 || style === 10 || style === 11 || style === 12);
+    const bg = dark ? '#151716' : (style === 9 || style === 14 ? '#f1eadb' : '#ffffff');
+    const ink = dark ? '#f2f0e7' : '#252b28';
+    const muted = dark ? '#b6bcb4' : '#68716a';
+
+    const out = Object.assign(document.createElement('canvas'), { width: ow, height: oh });
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, ow, oh);
+
+    if (style === 12) { // Blur
+      ctx.drawImage(sourceCanvas, 0, 0, ow, oh);
+      ctx.fillStyle = 'rgba(0,0,0,0.42)';
+      ctx.fillRect(0, 0, ow, oh);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(pad - w * 0.008, top - w * 0.008, w + w * 0.016, h + w * 0.026);
+    }
+
+    ctx.drawImage(sourceCanvas, pad, top);
+
+    if (overlay) {
+      const margin = w * 0.035;
+      const base = h - unit * 0.035;
+      ctx.save();
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.75)';
+      ctx.shadowBlur = Math.round(unit * 0.01);
+      if (style === 17) {
+        drawFittedText(ctx, `'26 10 14  ${safeInfo.date}`, margin, base, w - margin * 2, unit * 0.036, '#ffaa54', true, 'left');
+      } else {
+        drawFittedText(ctx, safeInfo.author || title, margin, base, w - margin * 2, unit * 0.028, '#ffffff', false, 'left');
+      }
+      ctx.restore();
+      return out;
+    }
+
+    const x = Math.max(pad, w * 0.025);
+    let area = ow - x * 2;
+    const y = top + h + foot * 0.35;
+    if (style === 13) area -= w * 0.25;
+
+    if (style === 8 || style === 9) { // Instant / Vintage
+      drawFittedText(ctx, safeInfo.author || title, x, top + h + foot * 0.40, area, w * 0.038, ink, true);
+      drawFittedText(ctx, settingsStr, x, top + h + foot * 0.65, area, w * 0.020, muted, false);
+      drawFittedText(ctx, safeInfo.date, x, top + h + foot * 0.82, area, w * 0.018, muted, false);
+    } else if (style === 14) { // Postcard
+      ctx.strokeStyle = '#b9ad98';
+      ctx.lineWidth = Math.max(1, w * 0.001);
+      ctx.beginPath();
+      ctx.moveTo(ow * 0.62, top + h + foot * 0.15);
+      ctx.lineTo(ow * 0.62, oh - pad * 0.3);
+      ctx.stroke();
+
+      drawFittedText(ctx, title, x, y, ow * 0.55, w * 0.030, ink, true);
+      drawFittedText(ctx, safeInfo.author, x, y + foot * 0.27, ow * 0.55, w * 0.019, muted, false);
+      drawFittedText(ctx, settingsStr, ow * 0.65, y, ow * 0.31, w * 0.017, muted, false);
+      drawFittedText(ctx, safeInfo.date, ow * 0.65, y + foot * 0.27, ow * 0.31, w * 0.017, muted, false);
+    } else if (style === 15) { // Editorial
+      drawFittedText(ctx, 'PHOTOGRAPH / ' + title, x, top + h + foot * 0.30, area, w * 0.032, ink, true);
+      ctx.fillStyle = ink;
+      ctx.fillRect(x, top + h + foot * 0.43, ow - x * 2, Math.max(1, w * 0.002));
+      drawFittedText(ctx, settingsStr, x, top + h + foot * 0.64, area, w * 0.020, muted, false);
+      drawFittedText(ctx, bottomStr, x, top + h + foot * 0.84, area, w * 0.018, muted, false);
+    } else {
+      const centered = (style === 5 || style === 6 || style === 7 || style === 11 || style === 12 || style === 16);
+      const align = centered ? 'center' : 'left';
+      const targetX = centered ? ow * 0.5 : x;
+      drawFittedText(ctx, title, targetX, y, area, w * 0.028, ink, true, align);
+      drawFittedText(ctx, settingsStr, targetX, y + foot * 0.25, area, w * 0.020, muted, false, align);
+      drawFittedText(ctx, bottomStr, targetX, y + foot * 0.47, area, w * 0.017, muted, false, align);
+    }
+
+    if (style === 10) { // Film 35 (Sprocket holes)
+      ctx.fillStyle = '#dad4c5';
+      const holeW = pad * 0.45, holeH = w * 0.025, step = Math.max(3, holeH * 1.8);
+      for (let yy = top; yy < top + h - holeH; yy += step) {
+        ctx.beginPath();
+        ctx.roundRect(pad * 0.25, yy, holeW, holeH, holeW * 0.2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.roundRect(ow - pad * 0.70, yy, holeW, holeH, holeW * 0.2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#f59e0b';
+      drawFittedText(ctx, `FUJIFILM ${settings.film.toUpperCase()} 400 · IRO FILM`, pad, top - 4, w, Math.max(10, pad * 0.22), '#f59e0b', true);
+    }
+
+    if (style === 13 && pixels) { // Palette
+      const palette = extractDominantPalette(pixels, 5);
+      const swatch = w * 0.032, gap = w * 0.007;
+      const start = ow - pad - 5 * swatch - 4 * gap;
+      palette.forEach((sw, i) => {
+        ctx.fillStyle = sw.hex;
+        ctx.fillRect(start + i * (swatch + gap), top + h + foot * 0.2, swatch, swatch);
+      });
+    }
+
+    if (style === 16) { // Double
+      ctx.strokeStyle = '#bebeb5';
+      ctx.lineWidth = Math.max(1, w * 0.001);
+      const inset = pad * 0.4;
+      ctx.strokeRect(inset, inset, ow - inset * 2, oh - inset * 2);
+    }
+
+    return out;
+  }
+
+  // Nhóm trang trí nghệ thuật 19..30
+  const pad = Math.max(1, Math.round(w * 0.07));
+  const foot = Math.max(1, Math.round(w * 0.17));
+  const top = (style === 29) ? pad * 2.2 : pad;
+  const ow = Math.round(w + pad * 2);
+  const oh = Math.round(h + top + pad + foot);
+  const dark = (style === 25 || style === 28);
+
+  const bg = (style === 23) ? '#9d7750'
+    : (style === 24) ? '#f2eee5'
+    : (style === 25) ? '#101122'
+    : (style === 28) ? '#153553'
+    : (style === 26) ? '#f7f3e7'
+    : (style === 21 || style === 22 || style === 27) ? '#ded6c7'
+    : '#e9edf0';
+  const ink = dark ? '#eef5ff' : '#2e3433';
+  const muted = dark ? '#b8cde2' : '#707572';
+
+  const out = Object.assign(document.createElement('canvas'), { width: ow, height: oh });
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, ow, oh);
+
+  if (style === 23) { // Wood grain
+    ctx.lineWidth = Math.max(1, w * 0.0015);
+    for (let i = 0; i < 24; i++) {
+      const gx = (i + 0.5) * ow / 24;
+      ctx.strokeStyle = i % 2 === 0 ? 'rgba(128,69,36,0.19)' : 'rgba(255,230,170,0.15)';
+      ctx.beginPath();
+      ctx.moveTo(gx, 0);
+      ctx.bezierCurveTo(gx + pad * 0.4, oh * 0.33, gx - pad * 0.3, oh * 0.66, gx, oh);
+      ctx.stroke();
+    }
+  }
+
+  if (style === 26 || style === 28) { // Notebook / Blueprint
+    ctx.strokeStyle = style === 28 ? 'rgba(72,200,255,0.19)' : 'rgba(76,129,144,0.16)';
+    ctx.lineWidth = Math.max(1, w * 0.001);
+    const step = Math.max(4, w * 0.035);
+    for (let x = 0; x < ow; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, oh); ctx.stroke();
+    }
+    for (let y = 0; y < oh; y += step) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(ow, y); ctx.stroke();
+    }
+  }
+
+  const paperX = pad * 0.5, paperY = top - pad * 0.5;
+  const paperW = w + pad, paperH = oh - pad * 0.45 - paperY;
+
+  if (style === 19) { // Float
+    for (let i = 10; i > 0; i--) {
+      ctx.fillStyle = 'rgba(0,0,0,0.015)';
+      const d = pad * i * 0.035;
+      ctx.beginPath();
+      ctx.roundRect(paperX - d, paperY + pad * 0.2 - d, paperW + d * 2, paperH + d * 2, pad * 0.15);
+      ctx.fill();
+    }
+  }
+
+  ctx.fillStyle = dark ? '#112334' : '#ffffff';
+  if (style === 21) { // Torn
+    ctx.beginPath();
+    const step = Math.max(2, w * 0.022);
+    ctx.moveTo(paperX, paperY);
+    for (let x = paperX; x < paperX + paperW; x += step) {
+      ctx.lineTo(x, paperY + pad * 0.09 * Math.sin(x * 1.3));
+    }
+    ctx.lineTo(paperX + paperW, paperY + paperH);
+    for (let x = paperX + paperW; x > paperX; x -= step) {
+      ctx.lineTo(x, paperY + paperH + pad * 0.09 * Math.sin(x * 0.7));
+    }
+    ctx.closePath();
+    ctx.fill();
+  } else if (style === 20) { // Soft
+    ctx.beginPath();
+    ctx.roundRect(paperX, paperY, paperW, paperH, pad * 0.42);
+    ctx.fill();
+  } else if (style === 29) { // Arch
+    ctx.beginPath();
+    ctx.moveTo(paperX, paperY + paperH);
+    ctx.lineTo(paperX, top);
+    ctx.bezierCurveTo(paperX, paperY - pad * 0.8, paperX + paperW, paperY - pad * 0.8, paperX + paperW, top);
+    ctx.lineTo(paperX + paperW, paperY + paperH);
+    ctx.closePath();
+    ctx.fill();
+  } else {
+    ctx.fillRect(paperX, paperY, paperW, paperH);
+  }
+
+  if (style === 25) { // Neon
+    for (let i = 8; i > 0; i--) {
+      ctx.strokeStyle = 'rgba(105, 220, 255, 0.06)';
+      ctx.lineWidth = Math.max(1, w * 0.0015 * i);
+      ctx.strokeRect(pad - pad * 0.12, top - pad * 0.12, w + pad * 0.24, h + pad * 0.24);
+    }
+    ctx.strokeStyle = '#b7f0ff';
+    ctx.lineWidth = Math.max(1, w * 0.002);
+    ctx.strokeRect(pad - pad * 0.12, top - pad * 0.12, w + pad * 0.24, h + pad * 0.24);
+  }
+
+  ctx.drawImage(sourceCanvas, pad, top);
+
+  if (style === 24) { // Gold
+    const goldGrad = ctx.createLinearGradient(0, 0, ow, oh);
+    goldGrad.addColorStop(0, '#9c7637');
+    goldGrad.addColorStop(0.5, '#efd99b');
+    goldGrad.addColorStop(1, '#ae8742');
+    ctx.strokeStyle = goldGrad;
+    ctx.lineWidth = Math.max(1, w * 0.008);
+    ctx.strokeRect(paperX, paperY, paperW, paperH);
+  }
+
+  if (style === 22) { // Tape
+    ctx.fillStyle = 'rgba(225, 199, 145, 0.74)';
+    for (let side = 0; side < 2; side++) {
+      const cx = (side === 0) ? pad * 1.15 : pad + w - pad * 0.15;
+      ctx.save();
+      ctx.translate(cx, top);
+      ctx.rotate((side === 0 ? -24 : 23) * Math.PI / 180);
+      ctx.fillRect(-pad * 0.58, -pad * 0.22, pad * 1.16, pad * 0.44);
+      ctx.restore();
+    }
+  }
+
+  if (style === 30) { // Corners
+    ctx.fillStyle = '#3d4944';
+    const len = pad * 0.55;
+    for (const x of [0, 1]) {
+      for (const y of [0, 1]) {
+        const cx = pad + x * w, cy = top + y * h;
+        const dx = (x === 0) ? 1 : -1, dy = (y === 0) ? 1 : -1;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(cx + dx * len, cy);
+        ctx.lineTo(cx, cy + dy * len);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  }
+
+  if (style === 27) { // Ticket
+    const ty = top + h + foot * 0.12;
+    ctx.strokeStyle = '#a69c8a';
+    ctx.lineWidth = Math.max(1, w * 0.002);
+    ctx.setLineDash([w * 0.012, w * 0.012]);
+    ctx.beginPath();
+    ctx.moveTo(pad, ty);
+    ctx.lineTo(pad + w, ty);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(paperX, ty, pad * 0.18, 0, Math.PI * 2);
+    ctx.arc(paperX + paperW, ty, pad * 0.18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const baseline = top + h + foot * 0.39;
+  drawFittedText(ctx, title, pad + w * 0.5, baseline, w, w * 0.028, ink, true, 'center');
+  drawFittedText(ctx, settingsStr, pad + w * 0.5, baseline + foot * 0.24, w, w * 0.019, muted, false, 'center');
+  drawFittedText(ctx, bottomStr, pad + w * 0.5, baseline + foot * 0.47, w, w * 0.017, muted, false, 'center');
+
+  return out;
+}
+

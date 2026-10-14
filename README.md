@@ -1,18 +1,27 @@
-# IRO — Phòng màu ảnh
+# IRO Studio 3.0 — Hệ sinh thái phòng tối & giả lập màu phim đa nền tảng
 
-**Bản native:** [iOS / iPhone / iPad](ios/README.md) · [Android](android/README.md). Mở `ios/IRO.xcodeproj` trong Xcode để chạy bản iOS chuyển từ cốt lõi Android.
+Dự án **IRO Studio** được tích hợp trọn vẹn trong hệ sinh thái sáng tạo ảnh nguồn mở [PhotoCraft](https://github.com/cnttdlpt/photocraft):
+- **Desktop (Rust/wgpu):** [PhotoCraft](https://github.com/cnttdlpt/photocraft) — Phần mềm chỉnh sửa ảnh chuyên nghiệp thay thế Photoshop viết bằng 100% Rust cho macOS, Windows, Linux.
+- **Mobile Android:** [`android/`](android/README.md) — Ứng dụng native Android (Material Design 3 Expressive, Camera2 API, GPU preview, Darkroom 3.0).
+- **Mobile iOS:** [`ios/`](ios/README.md) — Ứng dụng native iOS (Swift/SwiftUI + Metal Compute Shaders).
+- **Web Studio:** [`web/`](web/README.md) — Phòng tối trực tuyến độc lập (Standalone Web), nạp 392 công thức Fuji X Weekly, 30 mẫu khung ảnh triển lãm và bộ công cụ LightCraft.
 
-## Bản web ban đầu
+---
 
-App chỉnh màu ảnh chạy trong trình duyệt; ảnh không gửi lên máy chủ. Không cần cài thư viện.
+## 🚀 Các tính năng cốt lõi đồng bộ trên mọi nền tảng
 
-Chạy `npm start`, mở http://127.0.0.1:4173. Kiểm tra bộ xử lý bằng `npm test`.
+1. **Thư viện 392 công thức màu phim Fuji X Weekly (`recipes.json`):**
+   - Hỗ trợ đầy đủ cảm biến: `BAYER`, `X-Trans IV`, `X-Trans V`, `X-Trans III`, `X-Trans II`, `GFX`.
+   - Tìm kiếm công thức, lọc theo cảm biến và nạp thông số chỉ với 1 chạm.
+2. **30 Mẫu khung ảnh triển lãm (PhotoFrame):**
+   - Đầy đủ 30 phong cách từ cơ bản (*Classic, White, Glass, Dark, Centered*), mở rộng (*Gallery, Noir, Instant Polaroid, Vintage, Film 35mm Sprocket, Cinema, Blur, Palette 5 màu, Postcard, Editorial, Double, Date LED cam, Signature*) đến nghệ thuật (*Float, Soft, Torn giấy xé, Tape băng dính, Wood vân gỗ, Gold mạ vàng, Neon, Notebook, Ticket, Blueprint, Arch, Corners*).
+   - Tự động điền và định dạng thông số EXIF (Máy ảnh, Ống kính, Khẩu độ, Màn trập, ISO, Ngày chụp).
+3. **LightCraft Suite:**
+   - **Tone Curve:** Đường cong nội suy đơn điệu bậc ba Fritsch–Carlson không vọt lố với 5 điểm điều khiển.
+   - **3-Way Color Wheels:** Bộ 3 bánh xe màu điện ảnh (Shadows, Midtones, Highlights) trong không gian cảm nhận OkLab/OkLCh.
+4. **Phòng tối quang học 3.0:**
+   - Black Pro-Mist bloom, Halation quầng đỏ CineStill 800T, Bleach Bypass giữ bạc, Dehaze khử sương mù, Texture tái tạo da, Swirly Bokeh Helios 44-2, 3D Depth Fog, Light Leak 35mm, Hạt muối bạc Dual-Band và Chuyển động Living Film 24fps.
+5. **Xuất ảnh & Xuất bảng màu 3D LUT:**
+   - Hỗ trợ xuất ảnh JPEG, PNG (nhúng ẩn công thức LSB) và WebP tỉ lệ 1x / 2x (Ultra HD 4K Print Quality).
+   - Xuất bảng màu 3D LUT `.cube` (33x33x33) dùng cho DaVinci Resolve, Premiere Pro, Final Cut Pro và CapCut.
 
-- Nhập JPEG, PNG, WebP, AVIF; kéo thả ảnh vào khung xem trước.
-- Chín lựa chọn màu, gồm Original và tám mô phỏng lấy cảm hứng từ Fuji. Đây là mô phỏng gần đúng, không phải thuật toán Fujifilm chính thức.
-- Nhập LUT 3D .cube 2–65 điểm mỗi chiều, hỗ trợ DOMAIN_MIN/MAX và nội suy trilinear. LUT lưu trong IndexedDB của trình duyệt.
-- Recipe mẫu đúng các giá trị trên ảnh tham khảo. DR và WB Auto được mô phỏng trên ảnh đã giải mã; Auto giữ cân bằng trắng sẵn có. ISO là thông số tham khảo lúc chụp.
-- Xuất JPEG/PNG/WebP ở kích thước nguồn, giới hạn 24 MP. Preview có cạnh dài tối đa 1400 px. Hạt và nét có thể khác nhẹ giữa preview và ảnh xuất do độ phân giải.
-- Lưu/nhập recipe JSON. LUT được nhập riêng, recipe tham chiếu LUT bằng tên.
-
-Ảnh RAW/HEIC, LUT 1D, profile ICC nâng cao và metadata EXIF đầu ra chưa hỗ trợ. Grain và NR là hiệu ứng hậu kỳ gần đúng. Xuất ảnh dùng không gian màu canvas của trình duyệt. Phông chữ Google Fonts cần mạng; khi offline dùng sans-serif hệ thống.

@@ -81,13 +81,25 @@ public class EngineTest {
         };
         check((ColorEngine.process(noisy, 3, 3, s, null)[4] & 255) < 255, "NR smooths a center impulse");
 
-        // 3. Kiểm thử AutoBalancer (port từ iOS ColorEngine.swift)
-        int[] darkCoolLowSat = new int[16];
-        Arrays.fill(darkCoolLowSat, 0xff202840); // Ảnh tối, ám xanh lạnh, độ bão hòa thấp
-        Settings balanced = AutoBalancer.analyze(darkCoolLowSat, 4, 4, new Settings());
-        check(balanced.exposure > 0.0, "AutoBalancer brightens dark image");
-        check(balanced.temperature > 0.0, "AutoBalancer warms cool image");
-        check(balanced.clarity == 1.0 && balanced.sharpness == 1.0, "AutoBalancer adds subtle clarity and sharpness");
+        // 3. Kiểm thử AutoBalancer & AutoBalanceGuard (port từ iOS ColorEngine.swift & AutoBalanceGuard.swift)
+        int[] darkPixels = new int[16];
+        Arrays.fill(darkPixels, 0xff505050); // sRGB 80: ảnh tối cần nâng sáng
+        Settings balancedDark = AutoBalancer.analyze(darkPixels, 4, 4, new Settings());
+        check(balancedDark.exposure > 0.0, "AutoBalancer brightens dark image");
+
+        int[] coolNeutral = new int[16];
+        Arrays.fill(coolNeutral, 0xff828c96); // [130, 140, 150]: ảnh ám lạnh gần trung tính
+        Settings balancedCool = AutoBalancer.analyze(coolNeutral, 4, 4, new Settings());
+        check(balancedCool.temperature > 0.0, "AutoBalancer warms cool image");
+
+        int[] warmNeutral = new int[16];
+        Arrays.fill(warmNeutral, 0xff968c82); // [150, 140, 130]: ảnh ám ấm gần trung tính
+        Settings balancedWarm = AutoBalancer.analyze(warmNeutral, 4, 4, new Settings());
+        check(balancedWarm.temperature < 0.0, "AutoBalancer cools warm image");
+
+        // Kiểm tra AutoBalanceGuard bảo vệ ảnh không bị tối và không bị clipping
+        Settings guarded = AutoBalanceGuard.protect(darkPixels, 4, 4, balancedDark);
+        check(guarded.exposure >= 0.0 && guarded.exposure <= 1.5, "AutoBalanceGuard retains safe exposure");
 
         // 4. Kiểm thử UndoState.History (port từ iOS EditorModel.swift)
         UndoState.History history = new UndoState.History();

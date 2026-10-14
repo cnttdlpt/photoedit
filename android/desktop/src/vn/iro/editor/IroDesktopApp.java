@@ -1,1766 +1,1903 @@
 package vn.iro.editor;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
-
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
-import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.RenderingHints;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.dnd.DnDConstants;
-import java.awt.dnd.DropTarget;
-import java.awt.dnd.DropTargetAdapter;
-import java.awt.dnd.DropTargetDropEvent;
+import java.awt.Shape;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.DefaultListModel;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
-import javax.swing.ListCellRenderer;
-import javax.swing.ListSelectionModel;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import static vn.iro.editor.DesktopWidgets.*;
 
 /**
- * Ứng dụng máy tính <b>IRO Studio CC 2025 · Windows Desktop Edition</b>.
- * Thiết kế UX/UI theo chuẩn <b>Adobe Photoshop CC 2025 / Camera Raw 17 (Adobe Spectrum Dark UI)</b>.
+ * Ứng dụng <b>IRO Studio — Windows Desktop Edition</b> với giao diện
+ * <b>Android Tablet Minimal Rounded Studio UX</b> (thẻ trắng bo tròn 28px nổi trên nền xám nhạt
+ * {@code #F5F6F9}, thanh điều hướng viên thuốc bên trái, thước kẻ vạch {@link TickRulerWidget},
+ * lưới thẻ thông số 2 cột và lưới ảnh mẫu Fuji X Weekly 3 cột).
  */
-public final class IroDesktopApp extends JFrame {
+public final class IroDesktopApp {
 
-    private static final String[] FILM_FILTERS = {
-            "Tất cả (392)",
-            "Classic Chrome",
-            "Classic Negative",
-            "Velvia",
-            "Provia",
-            "Astia",
-            "Nostalgic Neg.",
-            "Eterna",
-            "Reala Ace",
-            "Acros",
-            "Monochrome",
-            "Sepia",
-            "PRO Neg. Hi",
-            "PRO Neg. Std",
-            "Eterna Bleach Bypass"
-    };
+    private static String cliScreenshotPath = null;
+    private static String cliInitialTab = null;
 
-    private final List<Recipe> allRecipes = new ArrayList<>();
-    private final DefaultListModel<Recipe> recipeListModel = new DefaultListModel<>();
-    private JList<Recipe> recipeList;
-    private JTextField searchField;
-    private int activeFilmFilterIndex = 0;
-    private JButton filmFilterTriggerBtn;
-    private JLabel statusLabel;
-    private JLabel zoomStatusLabel;
+    public static void main(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            if ("--screenshot".equalsIgnoreCase(args[i]) && i + 1 < args.length) {
+                cliScreenshotPath = args[++i];
+            } else if ("--tab".equalsIgnoreCase(args[i]) && i + 1 < args.length) {
+                cliInitialTab = args[++i];
+            }
+        }
+        System.setProperty("awt.useSystemAAFontSettings", "on");
+        System.setProperty("swing.aatext", "true");
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) {
+        }
+        SwingUtilities.invokeLater(() -> {
+            IroDesktopApp app = new IroDesktopApp();
+            app.show();
+        });
+    }
 
-    private Settings settings = new Settings();
-    private final LightCraftEngine.State lightCraft = new LightCraftEngine.State();
-    private CubeLut activeLut = null;
-    private String activeRecipeName = "Golden Negative";
-    private int currentSampleIndex = 0;
+    private final JFrame frame;
+    private final ImageCanvasPanel canvasPanel;
+    private final HistogramPanel histogramPanel;
+    private final AndroidNavRail navRail;
 
-    private final List<Settings> undoStack = new ArrayList<>();
-    private final List<Settings> redoStack = new ArrayList<>();
+    private final PillButton topRecipeBadgeBtn;
+    private final PillButton splitBtn;
+    private final PillButton holdOriginalBtn;
+    private final JLabel bottomStatusLabel;
 
+    // Danh sách công thức đang ghim trên tab Màu phim & kho 392 công thức FujiXWeekly
+    private final List<Recipe> activeRecipes = new ArrayList<>();
+    private final List<Recipe> catalogRecipes = new ArrayList<>();
+    private Recipe currentRecipe;
+    private Settings currentSettings = new Settings();
+    private final LightCraftEngine.State lightCraftState = new LightCraftEngine.State();
+
+    // Lịch sử Undo / Redo (lưu JSON)
+    private final List<String> undoStack = new ArrayList<>();
+    private final List<String> redoStack = new ArrayList<>();
+    private boolean suppressEvents = false;
+
+    // Ảnh gốc & ảnh thu nhỏ để render thời gian thực
     private BufferedImage fullSourceImage;
     private BufferedImage previewSourceImage;
     private int[] previewSourcePixels;
+    private int previewW;
+    private int previewH;
+    private BufferedImage thumbSourceImage;
 
-    private DesktopWidgets.PhotoshopToolStrip toolStrip;
-    private DesktopWidgets.ImageCanvasPanel canvasPanel;
-    private DesktopWidgets.HistogramPanel histogramPanel;
-    private DesktopWidgets.ToneCurveWidget toneCurveWidget;
-    private DesktopWidgets.ColorWheelWidget shadowsWheelWidget;
-    private DesktopWidgets.ColorWheelWidget midtonesWheelWidget;
-    private DesktopWidgets.ColorWheelWidget highlightsWheelWidget;
+    private CubeLut activeCubeLut;
+    private String currentPhotoName = "FujiXWeekly_Sample.jpg";
+    private int currentSampleIndex = 0;
 
-    private CardLayout inspectorCards;
-    private JPanel inspectorCardHost;
-    private final DesktopWidgets.SpectrumButton[] inspectorTabBtns = new DesktopWidgets.SpectrumButton[4];
-
-    private final Map<String, DesktopWidgets.SpectrumSlider> settingSliders = new HashMap<>();
-    private final DesktopWidgets.SpectrumButton[] drButtons = new DesktopWidgets.SpectrumButton[3];
-    private final AtomicBoolean syncingSliders = new AtomicBoolean(false);
-
-    private int selectedMixerBand = 0;
-    private final DesktopWidgets.SpectrumButton[] mixerBandBtns = new DesktopWidgets.SpectrumButton[8];
-    private DesktopWidgets.SpectrumSlider mixerHueSlider;
-    private DesktopWidgets.SpectrumSlider mixerSatSlider;
-    private DesktopWidgets.SpectrumSlider mixerLumSlider;
-
+    // Đa luồng render
     private final ExecutorService renderExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "IRO-Desktop-Render");
         t.setDaemon(true);
         return t;
     });
-    private Future<?> activeRenderTask;
+    private final AtomicInteger renderGeneration = new AtomicInteger(0);
+    private final Map<String, BufferedImage> recipeThumbCache = new ConcurrentHashMap<>();
+
+    // Bảng điều khiển bên phải (CardLayout chuyển giữa Tinh chỉnh / Màu phim / Khung ảnh / LightCraft)
+    private final CardLayout rightCardLayout = new CardLayout();
+    private final JPanel rightCardContainer = new JPanel(rightCardLayout);
+
+    // Thành phần tab Tinh chỉnh (giống hệt Android Tablet Minimal Adjust)
+    private JLabel activeParamTitleLabel;
+    private PillButton drCyclePillBtn;
+    private PillButton activeParamValuePill;
+    private TickRulerWidget mainTickRuler;
+    private int selectedParamIndex = 0;
+    private final List<ParamChipCard> paramChipCards = new ArrayList<>();
+
+    // Thành phần tab Màu phim (giống hệt Android Tablet Fuji Filters 3 cột)
+    private JPanel filmGridPanel;
+    private boolean useFujiSampleOnCards = true;
+    private PillButton modeSamplePill;
+    private PillButton modePhotoPill;
+    private final List<FilmRecipeCard> filmCards = new ArrayList<>();
+
+    // Thành phần tab Khung ảnh
+    private final List<FrameTemplateCard> frameCards = new ArrayList<>();
+
+    // Thành phần tab LightCraft
+    private ToneCurveWidget toneCurveWidget;
+    private ColorWheelWidget shadowWheel;
+    private ColorWheelWidget midtoneWheel;
+    private ColorWheelWidget highlightWheel;
+    private int activeHslChannel = 0;
+    private TickRulerWidget hslHueRuler;
+    private TickRulerWidget hslSatRuler;
+    private TickRulerWidget hslLumRuler;
+    private TickRulerWidget maskExpRuler;
+    private TickRulerWidget maskTempRuler;
+    private TickRulerWidget maskSatRuler;
+    private TickRulerWidget maskFeatherRuler;
+
+    // Định nghĩa 14 thông số Tinh chỉnh giống hệt Android Tablet
+    private final ParamDef[] paramDefs = new ParamDef[]{
+            new ParamDef("Độ phơi sáng", "EV", -3.0, 3.0, 0.0),
+            new ParamDef("Vùng sáng", "Highlight", -2.0, 4.0, 0.0),
+            new ParamDef("Vùng tối", "Shadow", -2.0, 4.0, 0.0),
+            new ParamDef("Độ bão hòa", "Color", -4.0, 4.0, 0.0),
+            new ParamDef("Độ nét", "Sharpness", -4.0, 4.0, 0.0),
+            new ParamDef("Khử nhiễu", "NR", -4.0, 4.0, -4.0),
+            new ParamDef("Độ rõ (Clarity)", "Clarity", -5.0, 5.0, 0.0),
+            new ParamDef("Hạt phim (Grain)", "Grain", 0.0, 30.0, 0.0),
+            new ParamDef("Nhiệt độ màu", "Temp", -100.0, 100.0, 0.0),
+            new ParamDef("Dịch Đỏ (WB R)", "WB Red", -9.0, 9.0, 0.0),
+            new ParamDef("Dịch Xanh (WB B)", "WB Blue", -9.0, 9.0, 0.0),
+            new ParamDef("Giả lập Chrome", "CC Effect", 0.0, 2.0, 0.0),
+            new ParamDef("Chrome Xanh", "CC Blue", 0.0, 2.0, 0.0),
+            new ParamDef("Cường độ LUT", "Strength", 0.0, 100.0, 100.0)
+    };
 
     public IroDesktopApp() {
-        super("Adobe Camera Raw / IRO Studio CC 2025 · Fujifilm & LightCraft Photo Editor");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1480, 900);
-        setMinimumSize(new Dimension(1160, 720));
-        setLocationRelativeTo(null);
-        getContentPane().setBackground(DesktopWidgets.PS_DARKEST);
-        setLayout(new BorderLayout(0, 0));
+        loadBundledCatalogRecipes();
+        if (!catalogRecipes.isEmpty()) {
+            int limit = Math.min(24, catalogRecipes.size());
+            for (int i = 0; i < limit; i++) {
+                activeRecipes.add(catalogRecipes.get(i));
+            }
+            currentRecipe = activeRecipes.get(0);
+            currentSettings = currentRecipe.adjustments(null);
+        }
 
-        setWindowIcon();
-        loadRecipesCatalog();
+        frame = new JFrame("IRO Studio — Fujifilm X-Trans V & LightCraft Desktop");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(1480, 900);
+        frame.setMinimumSize(new Dimension(1120, 700));
+        frame.setLocationRelativeTo(null);
 
-        add(buildPhotoshopTopChrome(), BorderLayout.NORTH);
-        add(buildLeftDockArea(), BorderLayout.WEST);
-        add(buildCenterArtboardArea(), BorderLayout.CENTER);
-        add(buildRightCameraRawDock(), BorderLayout.EAST);
-        add(buildPhotoshopStatusBar(), BorderLayout.SOUTH);
+        // Nền xám sáng mềm mại chuẩn Android Tablet (#F5F6F9)
+        JPanel root = new JPanel(new BorderLayout(14, 0));
+        root.setBackground(APP_BG);
+        root.setBorder(new EmptyBorder(14, 14, 14, 14));
+        frame.setContentPane(root);
+
+        // 1. THANH NAVIGATION RAIL BÊN TRÁI (NỔI BO TRÒN 28px)
+        navRail = new AndroidNavRail(new AndroidNavRail.NavListener() {
+            @Override
+            public void onSectionSelected(int index) {
+                switchSection(index);
+            }
+
+            @Override
+            public void onOpenPhotoClicked() {
+                openImageDialog();
+            }
+
+            @Override
+            public void onAutoBalanceClicked() {
+                runAutoBalance();
+            }
+        });
+        root.add(navRail, BorderLayout.WEST);
+
+        // 2. VÙNG TRUNG TÂM: THANH PILL NỔI PHÍA TRÊN + KHUNG ẢNH BO TRÒN 28px
+        JPanel centerColumn = new JPanel(new BorderLayout(0, 12));
+        centerColumn.setOpaque(false);
+
+        canvasPanel = new ImageCanvasPanel();
+        histogramPanel = new HistogramPanel();
+
+        topRecipeBadgeBtn = new PillButton("Classic Chrome • Kodachrome 64", false, false);
+        topRecipeBadgeBtn.setFont(FONT_BOLD);
+        topRecipeBadgeBtn.addActionListener(e -> {
+            navRail.setActiveIndex(1);
+            switchSection(1);
+        });
+
+        splitBtn = new PillButton("Chia đôi", false, true);
+        holdOriginalBtn = new PillButton("Giữ xem Gốc", false, true);
+
+        centerColumn.add(buildTopFloatingBar(), BorderLayout.NORTH);
+        centerColumn.add(canvasPanel, BorderLayout.CENTER);
+
+        bottomStatusLabel = new JLabel("Sẵn sàng • Lăn chuột để Zoom (100% - 500%) • Nhấp đúp thước kẻ để đặt lại thông số");
+        bottomStatusLabel.setFont(FONT_SMALL);
+        bottomStatusLabel.setForeground(TEXT_SECONDARY);
+        bottomStatusLabel.setBorder(new EmptyBorder(0, 8, 0, 8));
+        centerColumn.add(bottomStatusLabel, BorderLayout.SOUTH);
+
+        root.add(centerColumn, BorderLayout.CENTER);
+
+        // 3. THẺ CÔNG CỤ BÊN PHẢI BO TRÒN 28px (RỘNG 436px GIỐNG ANDROID TABLET)
+        RoundedCardPanel rightFloatingCard = new RoundedCardPanel(28, CARD_BG, CARD_BORDER);
+        rightFloatingCard.setPreferredSize(new Dimension(436, 760));
+        rightFloatingCard.setLayout(new BorderLayout());
+        rightFloatingCard.setBorder(new EmptyBorder(16, 16, 16, 16));
+
+        rightCardContainer.setOpaque(false);
+        rightCardContainer.add(buildAdjustSectionPanel(), "SECTION_0");
+        rightCardContainer.add(buildFilmSectionPanel(), "SECTION_1");
+        rightCardContainer.add(buildFrameSectionPanel(), "SECTION_2");
+        rightCardContainer.add(buildLightCraftSectionPanel(), "SECTION_3");
+
+        rightFloatingCard.add(rightCardContainer, BorderLayout.CENTER);
+        root.add(rightFloatingCard, BorderLayout.EAST);
 
         setupKeyboardShortcuts();
-        setupDragAndDrop();
+        loadBuiltInSamplePhoto(0);
+        syncUiFromState();
+        pushHistorySnapshot();
 
-        loadBundledSamplePhoto(0);
-    }
-
-    private void setWindowIcon() {
-        BufferedImage icon = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = icon.createGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(DesktopWidgets.PS_LOGO_BG);
-        g2.fillRoundRect(2, 2, 60, 60, 14, 14);
-        g2.setColor(DesktopWidgets.PS_LOGO_FG);
-        g2.setStroke(new java.awt.BasicStroke(2.5f));
-        g2.drawRoundRect(2, 2, 59, 59, 14, 14);
-        g2.setFont(new Font("Segoe UI", Font.BOLD, 30));
-        g2.drawString("Ir", 16, 43);
-        g2.dispose();
-        setIconImage(icon);
-    }
-
-    private void loadRecipesCatalog() {
-        allRecipes.clear();
-        try {
-            InputStream in = IroDesktopApp.class.getResourceAsStream("/recipes.json");
-            if (in == null) {
-                File local = new File("app/src/main/assets/recipes.json");
-                if (local.isFile()) {
-                    in = new FileInputStream(local);
-                }
-            }
-            if (in != null) {
-                String text = readStreamUtf8(in).trim();
-                JSONArray arr = text.startsWith("{")
-                        ? new JSONObject(text).getJSONArray("recipes")
-                        : new JSONArray(text);
-                for (int i = 0; i < arr.length(); i++) {
-                    try {
-                        allRecipes.add(new Recipe(arr.getJSONObject(i)));
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-        } catch (Exception e) {
-            DebugLogger.e(DebugLogger.TAG_RECIPE, "Không nạp được recipes.json", e);
+        if ("filters".equalsIgnoreCase(cliInitialTab) || "film".equalsIgnoreCase(cliInitialTab)) {
+            navRail.setActiveIndex(1);
+            switchSection(1);
+        } else if ("lightcraft".equalsIgnoreCase(cliInitialTab) || "curve".equalsIgnoreCase(cliInitialTab)) {
+            navRail.setActiveIndex(3);
+            switchSection(3);
+        } else if ("frame".equalsIgnoreCase(cliInitialTab)) {
+            navRail.setActiveIndex(2);
+            switchSection(2);
         }
-    }
 
-    private static String readStreamUtf8(InputStream in) throws Exception {
-        try (InputStream stream = in; ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            byte[] buf = new byte[8192];
-            int n;
-            while ((n = stream.read(buf)) != -1) {
-                out.write(buf, 0, n);
-            }
-            return new String(out.toByteArray(), StandardCharsets.UTF_8);
-        }
-    }
-
-    // =========================================================================
-    // 1. THANH MENU & OPTIONS BAR 2 TẦNG CHUẨN PHOTOSHOP CC 2025
-    // =========================================================================
-    private JComponent buildPhotoshopTopChrome() {
-        JPanel chrome = new JPanel();
-        chrome.setLayout(new BoxLayout(chrome, BoxLayout.Y_AXIS));
-        chrome.setBackground(DesktopWidgets.PS_HEADER);
-
-        // TẦNG 1: Application Menu Bar + Workspace Switcher (Photoshop CC 2025 Header)
-        JPanel menuRow = new JPanel(new BorderLayout(10, 0));
-        menuRow.setBackground(new Color(0x1F, 0x1F, 0x1F));
-        menuRow.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, DesktopWidgets.PS_DIVIDER),
-                BorderFactory.createEmptyBorder(4, 10, 4, 10)));
-
-        JPanel menuLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        menuLeft.setOpaque(false);
-
-        // Logo vuông [Ir] kiểu [Ps] Photoshop CC 2025
-        JLabel irLogo = new JLabel("Ir", SwingConstants.CENTER) {
+        frame.addWindowListener(new WindowAdapter() {
             @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(DesktopWidgets.PS_LOGO_BG);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 6, 6);
-                g2.setColor(DesktopWidgets.PS_LOGO_FG);
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 6, 6);
-                super.paintComponent(g2);
-                g2.dispose();
+            public void windowClosing(WindowEvent e) {
+                renderExecutor.shutdownNow();
             }
-        };
-        irLogo.setPreferredSize(new Dimension(26, 24));
-        irLogo.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        irLogo.setForeground(DesktopWidgets.PS_LOGO_FG);
-        menuLeft.add(irLogo);
+        });
+    }
 
-        addTopMenuLabel(menuLeft, "Tệp (File)", this::chooseAndOpenImage);
-        addTopMenuLabel(menuLeft, "Chỉnh sửa (Edit)", this::performUndo);
-        addTopMenuLabel(menuLeft, "Hình ảnh (Auto AI)", this::runAutoBalance);
-        addTopMenuLabel(menuLeft, "Lớp & Mask", () -> switchInspectorTab(3));
-        addTopMenuLabel(menuLeft, "Bộ lọc (3D LUT)", this::chooseAndLoadCubeLut);
-        addTopMenuLabel(menuLeft, "Chế độ xem (Split)", () -> canvasPanel.setSplitView(!canvasPanel.isSplitView()));
+    public void show() {
+        frame.setVisible(true);
+        if (cliScreenshotPath != null && !cliScreenshotPath.trim().isEmpty()) {
+            Timer t = new Timer(2200, e -> {
+                try {
+                    BufferedImage snap = new BufferedImage(
+                            frame.getContentPane().getWidth(),
+                            frame.getContentPane().getHeight(),
+                            BufferedImage.TYPE_INT_RGB);
+                    Graphics2D g2 = snap.createGraphics();
+                    frame.getContentPane().paint(g2);
+                    g2.dispose();
+                    File out = new File(cliScreenshotPath);
+                    if (out.getParentFile() != null) out.getParentFile().mkdirs();
+                    ImageIO.write(snap, "png", out);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                } finally {
+                    System.exit(0);
+                }
+            });
+            t.setRepeats(false);
+            t.start();
+        }
+    }
 
-        JPanel menuRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        menuRight.setOpaque(false);
+    private void switchSection(int index) {
+        if (index == 4) {
+            showLibraryDialog();
+            return;
+        }
+        rightCardLayout.show(rightCardContainer, "SECTION_" + index);
+        if (index == 1) {
+            refreshFilmRecipeCardsAsync();
+        }
+    }
 
-        JLabel wsTag = new JLabel("Workspace:");
-        wsTag.setFont(DesktopWidgets.FONT_SMALL);
-        wsTag.setForeground(DesktopWidgets.TEXT_MUTED);
-        menuRight.add(wsTag);
+    // =========================================================================
+    // THANH PILL NỔI PHÍA TRÊN (GIỐNG HỆT TABLET ANDROID)
+    // =========================================================================
+    private JComponent buildTopFloatingBar() {
+        JPanel bar = new JPanel(new BorderLayout(12, 0));
+        bar.setOpaque(false);
 
-        DesktopWidgets.SpectrumButton wsRaw = new DesktopWidgets.SpectrumButton("Camera Raw 17", false, true);
-        wsRaw.setActiveState(true);
-        wsRaw.addActionListener(e -> switchInspectorTab(0));
-        menuRight.add(wsRaw);
+        // Trái: Pill tên công thức hiện tại
+        JPanel leftWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 2));
+        leftWrap.setOpaque(false);
+        leftWrap.add(topRecipeBadgeBtn);
+        bar.add(leftWrap, BorderLayout.WEST);
 
-        DesktopWidgets.SpectrumButton wsGrading = new DesktopWidgets.SpectrumButton("Color Grading", false, true);
-        wsGrading.addActionListener(e -> switchInspectorTab(2));
-        menuRight.add(wsGrading);
+        // Giữa: Viên thuốc trắng chứa Undo, Redo, Chia đôi, Giữ xem Gốc
+        JPanel centerOuter = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        centerOuter.setOpaque(false);
 
-        JButton exportTopBtn = DesktopWidgets.createCompactButton("Xuất bản (Ctrl+S)", true);
-        exportTopBtn.addActionListener(e -> exportFullResolutionImage());
-        menuRight.add(exportTopBtn);
+        RoundedCardPanel centerCapsule = new RoundedCardPanel(999, CARD_BG, CARD_BORDER);
+        centerCapsule.setLayout(new FlowLayout(FlowLayout.CENTER, 6, 4));
 
-        menuRow.add(menuLeft, BorderLayout.WEST);
-        menuRow.add(menuRight, BorderLayout.EAST);
+        CircleIconButton undoBtn = new CircleIconButton("undo", 32, true, "Hoàn tác (Ctrl+Z)");
+        undoBtn.addActionListener(e -> undo());
 
-        // TẦNG 2: Photoshop Tool Options Bar (#2C2C2C)
-        JPanel optionsRow = new JPanel(new BorderLayout(8, 0));
-        optionsRow.setBackground(DesktopWidgets.PS_HEADER);
-        optionsRow.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, DesktopWidgets.PS_DIVIDER),
-                BorderFactory.createEmptyBorder(5, 10, 5, 10)));
+        CircleIconButton redoBtn = new CircleIconButton("redo", 32, true, "Làm lại (Ctrl+Y)");
+        redoBtn.addActionListener(e -> redo());
 
-        JPanel optLeft = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        optLeft.setOpaque(false);
-
-        optLeft.add(createOptionBarButton("Mở ảnh (Ctrl+O)", false, this::chooseAndOpenImage));
-        optLeft.add(createOptionBarButton("Đổi ảnh mẫu Fuji", false, () -> {
-            currentSampleIndex++;
-            loadBundledSamplePhoto(currentSampleIndex);
-        }));
-        optLeft.add(createDividerLabel());
-        optLeft.add(createOptionBarButton("Auto-Balance AI (Ctrl+B)", false, this::runAutoBalance));
-        optLeft.add(createOptionBarButton("< Hoàn tác", false, this::performUndo));
-        optLeft.add(createOptionBarButton("Làm lại >", false, this::performRedo));
-        optLeft.add(createDividerLabel());
-
-        DesktopWidgets.SpectrumButton splitToggle = new DesktopWidgets.SpectrumButton("Chia đôi Trước / Sau (Y)", false, true);
-        splitToggle.addActionListener(e -> {
+        splitBtn.addActionListener(e -> {
             boolean next = !canvasPanel.isSplitView();
             canvasPanel.setSplitView(next);
-            splitToggle.setActiveState(next);
+            splitBtn.setActiveDark(next);
         });
-        optLeft.add(splitToggle);
 
-        JButton holdOrigBtn = DesktopWidgets.createCompactButton("Giữ xem Gốc (Space)", false);
-        holdOrigBtn.getModel().addChangeListener(e ->
-                canvasPanel.setShowOriginalOnly(holdOrigBtn.getModel().isPressed()));
-        optLeft.add(holdOrigBtn);
-
-        optLeft.add(createOptionBarButton("Đặt lại toàn bộ", false, this::resetAllAdjustments));
-
-        JPanel optRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
-        optRight.setOpaque(false);
-        optRight.add(createOptionBarButton("Nạp LUT .cube", false, this::chooseAndLoadCubeLut));
-        optRight.add(createOptionBarButton("Kho LUT GitHub", false, this::showOnlineLutDialog));
-        optRight.add(createOptionBarButton("Nhập JSON", false, this::importSettingsJson));
-        optRight.add(createOptionBarButton("Xuất JSON", false, this::exportSettingsJson));
-
-        optionsRow.add(optLeft, BorderLayout.WEST);
-        optionsRow.add(optRight, BorderLayout.EAST);
-
-        chrome.add(menuRow);
-        chrome.add(optionsRow);
-        return chrome;
-    }
-
-    private void addTopMenuLabel(JPanel parent, String text, Runnable action) {
-        JLabel lbl = new JLabel(text);
-        lbl.setFont(DesktopWidgets.FONT_UI);
-        lbl.setForeground(DesktopWidgets.TEXT_SECONDARY);
-        lbl.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
-        lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        lbl.addMouseListener(new MouseAdapter() {
+        holdOriginalBtn.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseEntered(MouseEvent e) {
-                lbl.setForeground( Color.WHITE);
+            public void mousePressed(MouseEvent e) {
+                canvasPanel.setShowOriginalOnly(true);
+                holdOriginalBtn.setActiveDark(true);
             }
 
             @Override
-            public void mouseExited(MouseEvent e) {
-                lbl.setForeground(DesktopWidgets.TEXT_SECONDARY);
-            }
-
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                action.run();
-            }
-        });
-        parent.add(lbl);
-    }
-
-    private static JButton createOptionBarButton(String text, boolean blue, Runnable r) {
-        JButton b = DesktopWidgets.createCompactButton(text, blue);
-        b.addActionListener(e -> r.run());
-        return b;
-    }
-
-    private static JLabel createDividerLabel() {
-        JLabel l = new JLabel("|");
-        l.setForeground(new Color(0x45, 0x45, 0x45));
-        l.setBorder(BorderFactory.createEmptyBorder(0, 3, 0, 3));
-        return l;
-    }
-
-    // =========================================================================
-    // 2. CỘT TRÁI: PHOTOSHOP TOOL STRIP (42px) + PRESETS / FUJI X WEEKLY DOCK (300px)
-    // =========================================================================
-    private JComponent buildLeftDockArea() {
-        JPanel leftWrap = new JPanel(new BorderLayout(0, 0));
-        leftWrap.setBackground(DesktopWidgets.PS_PANEL);
-
-        toolStrip = new DesktopWidgets.PhotoshopToolStrip(idx -> {
-            switch (idx) {
-                case 0: // Move / Pan
-                    canvasPanel.setSplitView(false);
-                    break;
-                case 1: // Zoom 150% / 100%
-                    canvasPanel.setZoom(canvasPanel.getZoom() < 1.4 ? 1.5 : 1.0);
-                    break;
-                case 2: // Split View
-                    canvasPanel.setSplitView(!canvasPanel.isSplitView());
-                    break;
-                case 3: // Auto-Balance AI
-                    runAutoBalance();
-                    break;
-                case 4: // Radial Mask
-                    lightCraft.maskMode = LightCraftEngine.MaskMode.RADIAL;
-                    switchInspectorTab(3);
-                    scheduleRender();
-                    break;
-                case 5: // Linear Mask
-                    lightCraft.maskMode = LightCraftEngine.MaskMode.LINEAR;
-                    switchInspectorTab(3);
-                    scheduleRender();
-                    break;
-                case 6: // AI Sky Mask
-                    lightCraft.maskMode = LightCraftEngine.MaskMode.SKY;
-                    switchInspectorTab(3);
-                    scheduleRender();
-                    break;
-                case 7: // Frame Tool
-                    int nextFrame = (canvasPanel.getFrameMode() + 1) % 4;
-                    canvasPanel.setFrameMode(nextFrame);
-                    switchInspectorTab(3);
-                    break;
-                default:
-                    break;
-            }
-        });
-        leftWrap.add(toolStrip, BorderLayout.WEST);
-
-        // Panel Presets & Fuji X Weekly
-        JPanel presetDock = new JPanel(new BorderLayout(0, 6));
-        presetDock.setPreferredSize(new Dimension(305, 600));
-        presetDock.setBackground(DesktopWidgets.PS_PANEL);
-        presetDock.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, DesktopWidgets.PS_DIVIDER));
-
-        JPanel dockHeader = new JPanel();
-        dockHeader.setLayout(new BoxLayout(dockHeader, BoxLayout.Y_AXIS));
-        dockHeader.setBackground(DesktopWidgets.PS_PANEL);
-        dockHeader.setBorder(BorderFactory.createEmptyBorder(8, 10, 6, 10));
-
-        // Tab Header kiểu Photoshop Panel
-        JLabel tabTitle = new JLabel("•  PRESETS · FUJI X WEEKLY (392)");
-        tabTitle.setFont(DesktopWidgets.FONT_SECTION);
-        tabTitle.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        tabTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-        dockHeader.add(tabTitle);
-        dockHeader.add(Box.createVerticalStrut(8));
-
-        // Ô tìm kiếm tối chuẩn Spectrum
-        searchField = new JTextField();
-        searchField.setFont(DesktopWidgets.FONT_UI);
-        searchField.setBackground(DesktopWidgets.BG_INPUT);
-        searchField.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        searchField.setCaretColor(DesktopWidgets.PS_BLUE_LIGHT);
-        searchField.setToolTipText("Tìm kiếm trong 392 công thức Fuji X Weekly (tên màu, cảm biến X-Trans...)");
-        searchField.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(DesktopWidgets.PS_BORDER, 1),
-                BorderFactory.createEmptyBorder(5, 8, 5, 8)));
-        searchField.setAlignmentX(Component.LEFT_ALIGNMENT);
-        searchField.setMaximumSize(new Dimension(300, 28));
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { filterRecipeList(); }
-            @Override public void removeUpdate(DocumentEvent e) { filterRecipeList(); }
-            @Override public void changedUpdate(DocumentEvent e) { filterRecipeList(); }
-        });
-        dockHeader.add(searchField);
-        dockHeader.add(Box.createVerticalStrut(6));
-
-        // Nút chọn hệ Film bằng Popup Menu tối (thay thế hoàn toàn JComboBox viền trắng của Swing)
-        filmFilterTriggerBtn = DesktopWidgets.createCompactButton("Hệ Film: Tất cả (392)  •", false);
-        filmFilterTriggerBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
-        filmFilterTriggerBtn.setMaximumSize(new Dimension(300, 26));
-        filmFilterTriggerBtn.addActionListener(e -> showDarkFilmFilterMenu());
-        dockHeader.add(filmFilterTriggerBtn);
-
-        presetDock.add(dockHeader, BorderLayout.NORTH);
-
-        // Danh sách công thức Fuji X Weekly
-        recipeList = new JList<>(recipeListModel);
-        recipeList.setBackground(DesktopWidgets.PS_DARKEST);
-        recipeList.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        recipeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        recipeList.setFixedCellHeight(68);
-        recipeList.setCellRenderer(new RecipeCardRenderer());
-        recipeList.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                Recipe selected = recipeList.getSelectedValue();
-                if (selected == null) return;
-                if (e.getClickCount() == 2) {
-                    applyRecipe(selected, true);
-                } else {
-                    applyRecipe(selected, false);
-                }
+            public void mouseReleased(MouseEvent e) {
+                canvasPanel.setShowOriginalOnly(false);
+                holdOriginalBtn.setActiveDark(false);
             }
         });
 
-        JScrollPane scroll = DesktopWidgets.createDarkScrollPane(recipeList);
-        scroll.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 0, DesktopWidgets.PS_BORDER));
-        presetDock.add(scroll, BorderLayout.CENTER);
+        centerCapsule.add(undoBtn);
+        centerCapsule.add(redoBtn);
+        centerCapsule.add(splitBtn);
+        centerCapsule.add(holdOriginalBtn);
+        centerOuter.add(centerCapsule);
+        bar.add(centerOuter, BorderLayout.CENTER);
 
-        // Nút thao tác dưới đáy Presets Dock
-        JPanel footer = new JPanel(new GridLayout(2, 1, 0, 5));
-        footer.setBackground(DesktopWidgets.PS_PANEL);
-        footer.setBorder(BorderFactory.createEmptyBorder(6, 10, 8, 10));
+        // Phải: Nút Xuất ảnh đen đậm + nút (...) tròn
+        JPanel rightWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 2));
+        rightWrap.setOpaque(false);
 
-        JButton openSampleBtn = DesktopWidgets.createStudioButton("Mở ảnh mẫu FujiXWeekly của công thức này", true);
-        openSampleBtn.addActionListener(e -> {
-            Recipe selected = recipeList.getSelectedValue();
-            if (selected != null) applyRecipe(selected, true);
-        });
-        footer.add(openSampleBtn);
+        PillButton exportBtn = new PillButton("Xuất ảnh", true, false);
+        exportBtn.addActionListener(e -> exportImageDialog());
 
-        JButton detailBtn = DesktopWidgets.createStudioButton("Thông số gốc & bài viết fujixweekly.com", false);
-        detailBtn.addActionListener(e -> {
-            Recipe selected = recipeList.getSelectedValue();
-            if (selected != null) showRecipeDetailDialog(selected);
-        });
-        footer.add(detailBtn);
+        CircleIconButton moreBtn = new CircleIconButton("more", 36, false, "Thêm công cụ (Đổi ảnh mẫu, LUT, Đặt lại)");
+        moreBtn.addActionListener(e -> showMorePopupMenu(moreBtn));
 
-        presetDock.add(footer, BorderLayout.SOUTH);
-        leftWrap.add(presetDock, BorderLayout.CENTER);
+        rightWrap.add(exportBtn);
+        rightWrap.add(moreBtn);
+        bar.add(rightWrap, BorderLayout.EAST);
 
-        filterRecipeList();
-        return leftWrap;
+        return bar;
     }
 
-    private void showDarkFilmFilterMenu() {
+    private void showMorePopupMenu(Component invoker) {
         JPopupMenu menu = new JPopupMenu();
-        menu.setBackground(DesktopWidgets.PS_SURFACE);
-        menu.setBorder(BorderFactory.createLineBorder(DesktopWidgets.PS_BORDER, 1));
-        for (int i = 0; i < FILM_FILTERS.length; i++) {
+        JMenuItem openItem = new JMenuItem("Mở ảnh từ máy tính (Ctrl+O)...");
+        openItem.addActionListener(e -> openImageDialog());
+
+        JMenuItem nextSampleItem = new JMenuItem("Đổi ảnh mẫu Fuji X Weekly kế tiếp");
+        nextSampleItem.addActionListener(e -> loadBuiltInSamplePhoto(currentSampleIndex + 1));
+
+        JMenuItem libItem = new JMenuItem("Mở Kho 392 công thức FujiXWeekly...");
+        libItem.addActionListener(e -> showLibraryDialog());
+
+        JMenuItem lutItem = new JMenuItem("Nạp tệp 3D LUT (.cube)...");
+        lutItem.addActionListener(e -> importCubeLutDialog());
+
+        JMenuItem resetItem = new JMenuItem("Đặt lại toàn bộ thông số về gốc");
+        resetItem.addActionListener(e -> resetAllAdjustments());
+
+        menu.add(openItem);
+        menu.add(nextSampleItem);
+        menu.addSeparator();
+        menu.add(libItem);
+        menu.add(lutItem);
+        menu.addSeparator();
+        menu.add(resetItem);
+        menu.show(invoker, 0, invoker.getHeight() + 4);
+    }
+
+    // =========================================================================
+    // SECTION 0: TINH CHỈNH (GIỐNG HỆT ANDROID TABLET MINIMAL ADJUST)
+    // =========================================================================
+    private JComponent buildAdjustSectionPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setOpaque(false);
+
+        // Khối cố định phía trên: Histogram + Tên thông số đang chọn + Thước kẻ vạch + Tự động cân bằng
+        JPanel topFixed = new JPanel();
+        topFixed.setOpaque(false);
+        topFixed.setLayout(new BoxLayout(topFixed, BoxLayout.Y_AXIS));
+
+        histogramPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        topFixed.add(histogramPanel);
+        topFixed.add(Box.createVerticalStrut(12));
+
+        // Hàng tiêu đề thông số + DR100 + giá trị + nút reset tròn
+        JPanel paramHeaderRow = new JPanel(new BorderLayout(8, 0));
+        paramHeaderRow.setOpaque(false);
+        paramHeaderRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        paramHeaderRow.setMaximumSize(new Dimension(500, 34));
+
+        activeParamTitleLabel = new JLabel("Độ phơi sáng");
+        activeParamTitleLabel.setFont(FONT_TITLE);
+        activeParamTitleLabel.setForeground(TEXT_PRIMARY);
+        paramHeaderRow.add(activeParamTitleLabel, BorderLayout.WEST);
+
+        JPanel badgesRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        badgesRight.setOpaque(false);
+
+        drCyclePillBtn = new PillButton("DR100", false, true);
+        drCyclePillBtn.setFont(FONT_SMALL_BOLD);
+        drCyclePillBtn.setMargin(new Insets(4, 10, 4, 10));
+        drCyclePillBtn.setToolTipText("Nhấn để chuyển Dải tương phản động: DR100 / DR200 / DR400");
+        drCyclePillBtn.addActionListener(e -> {
+            int nextDr = currentSettings.dr == 100 ? 200 : (currentSettings.dr == 200 ? 400 : 100);
+            currentSettings.dr = nextDr;
+            drCyclePillBtn.setText("DR" + nextDr);
+            pushHistorySnapshot();
+            triggerPreviewRender();
+        });
+
+        activeParamValuePill = new PillButton("0.0", false, true);
+        activeParamValuePill.setFont(FONT_MONO);
+        activeParamValuePill.setMargin(new Insets(4, 10, 4, 10));
+        activeParamValuePill.setToolTipText("Nhấn để đặt thông số đang chọn về mặc định");
+        activeParamValuePill.addActionListener(e -> resetSelectedParameter());
+
+        CircleIconButton resetAllCircle = new CircleIconButton("reset", 30, true, "Đặt lại mọi thông số về gốc");
+        resetAllCircle.addActionListener(e -> resetAllAdjustments());
+
+        badgesRight.add(drCyclePillBtn);
+        badgesRight.add(activeParamValuePill);
+        badgesRight.add(resetAllCircle);
+        paramHeaderRow.add(badgesRight, BorderLayout.EAST);
+
+        topFixed.add(paramHeaderRow);
+        topFixed.add(Box.createVerticalStrut(8));
+
+        // Thước kẻ vạch TickRulerWidget giống hệt Android
+        mainTickRuler = new TickRulerWidget(val -> {
+            if (suppressEvents) return;
+            setParameterValue(selectedParamIndex, val);
+            updateParameterBadges();
+            triggerPreviewRender();
+        });
+        mainTickRuler.setAlignmentX(Component.LEFT_ALIGNMENT);
+        topFixed.add(mainTickRuler);
+        topFixed.add(Box.createVerticalStrut(8));
+
+        // Nút viên thuốc "Tự động cân bằng ảnh"
+        JPanel autoRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        autoRow.setOpaque(false);
+        autoRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        PillButton autoPillBtn = new PillButton("Tự động cân bằng ảnh", false, true);
+        autoPillBtn.addActionListener(e -> runAutoBalance());
+        autoRow.add(autoPillBtn);
+        topFixed.add(autoRow);
+
+        panel.add(topFixed, BorderLayout.NORTH);
+
+        // Lưới 2 cột các thẻ viên thuốc thông số (14 thông số chuẩn Fujifilm X-Trans V)
+        JPanel grid = new JPanel(new GridLayout(0, 2, 10, 10));
+        grid.setOpaque(false);
+        paramChipCards.clear();
+        for (int i = 0; i < paramDefs.length; i++) {
             final int idx = i;
-            JMenuItem item = new JMenuItem(FILM_FILTERS[i]);
-            item.setFont(DesktopWidgets.FONT_UI);
-            item.setBackground(idx == activeFilmFilterIndex ? DesktopWidgets.PS_BLUE : DesktopWidgets.PS_SURFACE);
-            item.setForeground(DesktopWidgets.TEXT_PRIMARY);
-            item.addActionListener(e -> {
-                activeFilmFilterIndex = idx;
-                filmFilterTriggerBtn.setText("Hệ Film: " + FILM_FILTERS[idx] + "  •");
-                filterRecipeList();
+            ParamChipCard card = new ParamChipCard(paramDefs[i].title, "0.0");
+            card.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2) {
+                        selectedParamIndex = idx;
+                        resetSelectedParameter();
+                    } else {
+                        selectParameter(idx);
+                    }
+                }
             });
-            menu.add(item);
+            paramChipCards.add(card);
+            grid.add(card);
         }
-        menu.show(filmFilterTriggerBtn, 0, filmFilterTriggerBtn.getHeight());
+
+        JPanel gridWrap = new JPanel(new BorderLayout());
+        gridWrap.setOpaque(false);
+        gridWrap.add(grid, BorderLayout.NORTH);
+
+        panel.add(createMinimalScrollPane(gridWrap), BorderLayout.CENTER);
+        return panel;
     }
 
-    private void filterRecipeList() {
-        String q = searchField != null ? searchField.getText().trim().toLowerCase(Locale.ROOT) : "";
-        String filmFilter = activeFilmFilterIndex > 0 ? FILM_FILTERS[activeFilmFilterIndex].toLowerCase(Locale.ROOT) : "";
+    private void selectParameter(int index) {
+        selectedParamIndex = index;
+        ParamDef def = paramDefs[index];
+        activeParamTitleLabel.setText(def.title);
+        double cur = getParameterValue(index);
+        suppressEvents = true;
+        mainTickRuler.configure(def.min, def.max, def.defaultVal, cur);
+        suppressEvents = false;
+        updateParameterBadges();
+    }
 
-        recipeListModel.clear();
-        for (Recipe r : allRecipes) {
-            if (!filmFilter.isEmpty() && !r.film.toLowerCase(Locale.ROOT).contains(filmFilter)) {
-                continue;
-            }
-            if (!q.isEmpty()) {
-                boolean match = r.name.toLowerCase(Locale.ROOT).contains(q)
-                        || r.film.toLowerCase(Locale.ROOT).contains(q)
-                        || r.sensors.toLowerCase(Locale.ROOT).contains(q);
-                if (!match) continue;
-            }
-            recipeListModel.addElement(r);
+    private void resetSelectedParameter() {
+        ParamDef def = paramDefs[selectedParamIndex];
+        setParameterValue(selectedParamIndex, def.defaultVal);
+        selectParameter(selectedParamIndex);
+        pushHistorySnapshot();
+        triggerPreviewRender();
+    }
+
+    private void updateParameterBadges() {
+        activeParamValuePill.setText(formatParamValue(selectedParamIndex, getParameterValue(selectedParamIndex)));
+        drCyclePillBtn.setText("DR" + currentSettings.dr);
+        for (int i = 0; i < paramChipCards.size(); i++) {
+            double v = getParameterValue(i);
+            boolean modified = Math.abs(v - paramDefs[i].defaultVal) > 0.04;
+            paramChipCards.get(i).updateState(
+                    formatParamValue(i, v),
+                    i == selectedParamIndex,
+                    modified
+            );
         }
     }
 
-    private final class RecipeCardRenderer extends JPanel implements ListCellRenderer<Recipe> {
-        private final JLabel thumbLabel = new JLabel();
-        private final JLabel nameLabel = new JLabel();
-        private final JLabel metaLabel = new JLabel();
-        private final JLabel sensorLabel = new JLabel();
-        private boolean selectedCell = false;
+    private double getParameterValue(int idx) {
+        switch (idx) {
+            case 0: return currentSettings.exposure;
+            case 1: return currentSettings.highlight;
+            case 2: return currentSettings.shadow;
+            case 3: return currentSettings.color;
+            case 4: return currentSettings.sharpness;
+            case 5: return currentSettings.nr;
+            case 6: return currentSettings.clarity;
+            case 7: return currentSettings.grain;
+            case 8: return currentSettings.temperature;
+            case 9: return currentSettings.red;
+            case 10: return currentSettings.blue;
+            case 11: return currentSettings.colorChrome;
+            case 12: return currentSettings.chromeBlue;
+            case 13: return currentSettings.lutAmount;
+            default: return 0.0;
+        }
+    }
 
-        RecipeCardRenderer() {
-            setLayout(new BorderLayout(10, 0));
-            setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
+    private void setParameterValue(int idx, double v) {
+        switch (idx) {
+            case 0: currentSettings.exposure = v; break;
+            case 1: currentSettings.highlight = v; break;
+            case 2: currentSettings.shadow = v; break;
+            case 3: currentSettings.color = v; break;
+            case 4: currentSettings.sharpness = v; break;
+            case 5: currentSettings.nr = v; break;
+            case 6: currentSettings.clarity = v; break;
+            case 7: currentSettings.grain = Math.round(v); break;
+            case 8: currentSettings.temperature = Math.round(v); break;
+            case 9: currentSettings.red = Math.round(v); break;
+            case 10: currentSettings.blue = Math.round(v); break;
+            case 11: currentSettings.colorChrome = Math.round(v); break;
+            case 12: currentSettings.chromeBlue = Math.round(v); break;
+            case 13: currentSettings.lutAmount = Math.round(v); break;
+        }
+    }
 
-            thumbLabel.setPreferredSize(new Dimension(74, 52));
-            thumbLabel.setHorizontalAlignment(SwingConstants.CENTER);
-            thumbLabel.setOpaque(true);
-            thumbLabel.setBackground(DesktopWidgets.PS_SURFACE);
-            thumbLabel.setBorder(BorderFactory.createLineBorder(DesktopWidgets.PS_BORDER, 1));
-            add(thumbLabel, BorderLayout.WEST);
+    private String formatParamValue(int idx, double v) {
+        switch (idx) {
+            case 11: // Color Chrome
+            case 12: // Chrome Blue
+                int iv = (int) Math.round(v);
+                return iv == 0 ? "Tắt" : (iv == 1 ? "Nhẹ" : "Mạnh");
+            case 7: // Grain
+            case 8: // Temp
+            case 9: // WB Red
+            case 10: // WB Blue
+                int wb = (int) Math.round(v);
+                return (wb > 0 && idx >= 8 ? "+" : "") + wb;
+            case 13:
+                return ((int) Math.round(v)) + "%";
+            default:
+                double r = Math.round(v * 10.0) / 10.0;
+                return (r > 0 ? "+" : "") + String.format(Locale.US, "%.1f", r);
+        }
+    }
 
-            JPanel textPanel = new JPanel();
-            textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
-            textPanel.setOpaque(false);
+    private static final class ParamDef {
+        final String title;
+        final String shortCode;
+        final double min;
+        final double max;
+        final double defaultVal;
 
-            nameLabel.setFont(DesktopWidgets.FONT_BOLD);
-            nameLabel.setForeground(DesktopWidgets.TEXT_PRIMARY);
-            metaLabel.setFont(DesktopWidgets.FONT_SMALL);
-            metaLabel.setForeground(DesktopWidgets.PS_BLUE_LIGHT);
-            sensorLabel.setFont(DesktopWidgets.FONT_SMALL);
-            sensorLabel.setForeground(DesktopWidgets.TEXT_MUTED);
+        ParamDef(String title, String shortCode, double min, double max, double defaultVal) {
+            this.title = title;
+            this.shortCode = shortCode;
+            this.min = min;
+            this.max = max;
+            this.defaultVal = defaultVal;
+        }
+    }
 
-            textPanel.add(nameLabel);
-            textPanel.add(Box.createVerticalStrut(2));
-            textPanel.add(metaLabel);
-            textPanel.add(Box.createVerticalStrut(2));
-            textPanel.add(sensorLabel);
-            add(textPanel, BorderLayout.CENTER);
+    /** Thẻ thông số bo tròn 18px trong lưới 2 cột (giống hệt Android Tablet Minimal Adjust). */
+    private static final class ParamChipCard extends JPanel {
+        private final JLabel nameLbl;
+        private final JLabel valLbl;
+        private boolean selected;
+        private boolean modified;
+        private boolean hover;
+
+        ParamChipCard(String title, String valueText) {
+            setOpaque(false);
+            setPreferredSize(new Dimension(175, 50));
+            setLayout(new BorderLayout(6, 0));
+            setBorder(new EmptyBorder(10, 14, 10, 14));
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+            nameLbl = new JLabel(title);
+            nameLbl.setFont(FONT_BOLD);
+            nameLbl.setForeground(TEXT_PRIMARY);
+
+            valLbl = new JLabel(valueText);
+            valLbl.setFont(FONT_MONO);
+            valLbl.setForeground(TEXT_SECONDARY);
+
+            add(nameLbl, BorderLayout.WEST);
+            add(valLbl, BorderLayout.EAST);
+
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+                @Override public void mouseExited(MouseEvent e) { hover = false; repaint(); }
+            });
+        }
+
+        void updateState(String valText, boolean selected, boolean modified) {
+            this.selected = selected;
+            this.modified = modified;
+            valLbl.setText(valText);
+            nameLbl.setForeground(selected ? INK_DARK : TEXT_PRIMARY);
+            valLbl.setForeground(selected ? INK_DARK : (modified ? ACCENT_BLUE : TEXT_SECONDARY));
+            repaint();
         }
 
         @Override
         protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            g.setColor(new Color(0x28, 0x28, 0x28));
-            g.drawLine(0, getHeight() - 1, getWidth(), getHeight() - 1);
-            if (selectedCell) {
-                g.setColor(DesktopWidgets.PS_BLUE_LIGHT);
-                g.fillRect(0, 0, 3, getHeight());
-            }
-        }
-
-        @Override
-        public Component getListCellRendererComponent(
-                JList<? extends Recipe> list, Recipe value, int index, boolean isSelected, boolean cellHasFocus) {
-            this.selectedCell = isSelected;
-            setBackground(isSelected ? new Color(0x2B, 0x35, 0x42) : DesktopWidgets.PS_DARKEST);
-            nameLabel.setText(value.name);
-            metaLabel.setText(value.film);
-            sensorLabel.setText(value.sensors.isEmpty() ? "Fuji X Weekly" : value.sensors);
-
-            BufferedImage thumb = DesktopWidgets.DesktopFujiSampleLoader.getCachedForRecipe(value);
-            if (thumb != null) {
-                thumbLabel.setIcon(new ImageIcon(scaleThumbnail(thumb, 72, 50)));
-                thumbLabel.setText("");
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth();
+            int h = getHeight();
+            if (selected) {
+                g2.setColor(new Color(0xEC, 0xF0, 0xF7));
+                g2.fillRoundRect(0, 0, w - 1, h - 1, 18, 18);
+                g2.setColor(INK_DARK);
+                g2.setStroke(new BasicStroke(1.8f));
+                g2.drawRoundRect(1, 1, w - 3, h - 3, 18, 18);
             } else {
-                thumbLabel.setIcon(null);
-                thumbLabel.setForeground(DesktopWidgets.TEXT_MUTED);
-                thumbLabel.setFont(DesktopWidgets.FONT_SMALL);
-                thumbLabel.setText("RAW");
-                DesktopWidgets.DesktopFujiSampleLoader.loadRecipeSampleAsync(value, img -> list.repaint());
+                g2.setColor(hover ? SURFACE_HOVER : SURFACE_SOFT);
+                g2.fillRoundRect(0, 0, w - 1, h - 1, 18, 18);
+                if (modified) {
+                    g2.setColor(new Color(0xB8, 0xCC, 0xEC));
+                    g2.drawRoundRect(0, 0, w - 1, h - 1, 18, 18);
+                }
             }
-            return this;
+            g2.dispose();
+            super.paintComponent(g);
         }
     }
 
-    private static final Map<BufferedImage, BufferedImage> THUMB_SCALED_CACHE = new HashMap<>();
+    // =========================================================================
+    // SECTION 1: GIẢ LẬP MÀU PHIM (GIỐNG HỆT TABLET_FUJI_FILTERS.PNG 3 CỘT)
+    // =========================================================================
+    private JComponent buildFilmSectionPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 12));
+        panel.setOpaque(false);
 
-    private static synchronized BufferedImage scaleThumbnail(BufferedImage src, int w, int h) {
-        BufferedImage cached = THUMB_SCALED_CACHE.get(src);
-        if (cached != null) return cached;
+        JPanel topHeader = new JPanel();
+        topHeader.setOpaque(false);
+        topHeader.setLayout(new BoxLayout(topHeader, BoxLayout.Y_AXIS));
+
+        // Hàng 1: Tiêu đề "Giả lập Màu phim" + nút "+ Kho 392 màu"
+        JPanel row1 = new JPanel(new BorderLayout());
+        row1.setOpaque(false);
+        row1.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel title = new JLabel("Giả lập Màu phim");
+        title.setFont(FONT_TITLE);
+        title.setForeground(TEXT_PRIMARY);
+        row1.add(title, BorderLayout.WEST);
+
+        PillButton openCatalogPill = new PillButton("+ Kho 392 màu", false, true);
+        openCatalogPill.addActionListener(e -> showLibraryDialog());
+        row1.add(openCatalogPill, BorderLayout.EAST);
+        topHeader.add(row1);
+        topHeader.add(Box.createVerticalStrut(10));
+
+        // Hàng 2: Viên thuốc chuyển chế độ "Ảnh mẫu FujiXWeekly" | "Ảnh đang mở"
+        JPanel row2 = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        row2.setOpaque(false);
+        row2.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        modeSamplePill = new PillButton("Ảnh mẫu FujiXWeekly", true, true);
+        modeSamplePill.setFont(FONT_SMALL_BOLD);
+        modePhotoPill = new PillButton("Ảnh đang mở", false, true);
+        modePhotoPill.setFont(FONT_SMALL_BOLD);
+
+        modeSamplePill.addActionListener(e -> {
+            useFujiSampleOnCards = true;
+            modeSamplePill.setActiveDark(true);
+            modePhotoPill.setActiveDark(false);
+            recipeThumbCache.clear();
+            refreshFilmRecipeCardsAsync();
+        });
+        modePhotoPill.addActionListener(e -> {
+            useFujiSampleOnCards = false;
+            modeSamplePill.setActiveDark(false);
+            modePhotoPill.setActiveDark(true);
+            recipeThumbCache.clear();
+            refreshFilmRecipeCardsAsync();
+        });
+
+        row2.add(modeSamplePill);
+        row2.add(modePhotoPill);
+        topHeader.add(row2);
+
+        panel.add(topHeader, BorderLayout.NORTH);
+
+        // Lưới 3 cột thẻ công thức màu phim bo tròn (giống hệt tablet_fuji_filters.png)
+        filmGridPanel = new JPanel(new GridLayout(0, 3, 10, 10));
+        filmGridPanel.setOpaque(false);
+        rebuildFilmGridCards();
+
+        JPanel gridWrap = new JPanel(new BorderLayout());
+        gridWrap.setOpaque(false);
+        gridWrap.add(filmGridPanel, BorderLayout.NORTH);
+
+        panel.add(createMinimalScrollPane(gridWrap), BorderLayout.CENTER);
+        return panel;
+    }
+
+    private void rebuildFilmGridCards() {
+        if (filmGridPanel == null) return;
+        filmGridPanel.removeAll();
+        filmCards.clear();
+        for (Recipe r : activeRecipes) {
+            FilmRecipeCard card = new FilmRecipeCard(r);
+            card.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    applyRecipeSelection(r);
+                }
+            });
+            filmCards.add(card);
+            filmGridPanel.add(card);
+        }
+        filmGridPanel.revalidate();
+        filmGridPanel.repaint();
+        refreshFilmRecipeCardsAsync();
+    }
+
+    private void applyRecipeSelection(Recipe r) {
+        currentRecipe = r;
+        currentSettings = r.adjustments(null);
+        syncUiFromState();
+        pushHistorySnapshot();
+        triggerPreviewRender();
+        for (FilmRecipeCard c : filmCards) {
+            c.setSelected(currentRecipe != null && c.recipe.id.equals(currentRecipe.id));
+        }
+    }
+
+    private void refreshFilmRecipeCardsAsync() {
+        for (FilmRecipeCard card : filmCards) {
+            card.setSelected(currentRecipe != null && card.recipe.id.equals(currentRecipe.id));
+            String cacheKey = (useFujiSampleOnCards ? "sample:" : "photo:") + card.recipe.id;
+            BufferedImage cached = recipeThumbCache.get(cacheKey);
+            if (cached != null) {
+                card.setThumbnail(cached);
+                continue;
+            }
+            if (useFujiSampleOnCards) {
+                DesktopFujiSampleLoader.loadRecipeSampleAsync(card.recipe, img -> {
+                    if (img != null) {
+                        recipeThumbCache.put(cacheKey, img);
+                        card.setThumbnail(img);
+                    } else if (thumbSourceImage != null) {
+                        BufferedImage rendered = renderRecipeThumb(thumbSourceImage, card.recipe);
+                        recipeThumbCache.put(cacheKey, rendered);
+                        card.setThumbnail(rendered);
+                    }
+                });
+                // Nếu chưa có trong cache ngay lập tức nhưng có thumbSourceImage, hiển thị tạm
+                if (card.thumbnail == null && thumbSourceImage != null) {
+                    BufferedImage instant = DesktopFujiSampleLoader.getCachedForRecipe(card.recipe);
+                    if (instant != null) {
+                        recipeThumbCache.put(cacheKey, instant);
+                        card.setThumbnail(instant);
+                    } else {
+                        card.setThumbnail(renderRecipeThumb(thumbSourceImage, card.recipe));
+                    }
+                }
+            } else if (thumbSourceImage != null) {
+                BufferedImage rendered = renderRecipeThumb(thumbSourceImage, card.recipe);
+                recipeThumbCache.put(cacheKey, rendered);
+                card.setThumbnail(rendered);
+            }
+        }
+    }
+
+    private static BufferedImage renderRecipeThumb(BufferedImage src, Recipe r) {
+        int w = src.getWidth();
+        int h = src.getHeight();
+        int[] px = src.getRGB(0, 0, w, h, null, 0, w);
+        Settings s = r.adjustments(null);
+        int[] outPx = ColorEngine.process(px, w, h, s, null);
         BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g2 = out.createGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        double scale = Math.max((double) w / src.getWidth(), (double) h / src.getHeight());
-        int sw = (int) Math.round(src.getWidth() * scale);
-        int sh = (int) Math.round(src.getHeight() * scale);
-        g2.drawImage(src, (w - sw) / 2, (h - sh) / 2, sw, sh, null);
-        g2.dispose();
-        THUMB_SCALED_CACHE.put(src, out);
+        out.setRGB(0, 0, w, h, outPx, 0, w);
         return out;
     }
 
-    // =========================================================================
-    // 3. KHUNG GIỮA: ARTBOARD PHOTOSHOP CC 2025 + CONTEXTUAL TASK BAR NỔI
-    // =========================================================================
-    private JComponent buildCenterArtboardArea() {
-        JPanel workspace = new JPanel(new BorderLayout(0, 0));
-        workspace.setBackground(DesktopWidgets.PS_CANVAS_BG);
+    /** Thẻ công thức màu phim bo tròn 20px có ảnh thumbnail ở trên và nhãn ở dưới. */
+    private static final class FilmRecipeCard extends JPanel {
+        final Recipe recipe;
+        BufferedImage thumbnail;
+        private boolean selected;
+        private boolean hover;
 
-        canvasPanel = new DesktopWidgets.ImageCanvasPanel();
-        canvasPanel.setOnZoomChanged(() -> {
-            if (zoomStatusLabel != null) {
-                zoomStatusLabel.setText(String.format(Locale.ROOT, " %.0f%% ", canvasPanel.getZoom() * 100.0));
-            }
-        });
-        workspace.add(canvasPanel, BorderLayout.CENTER);
-
-        // Thanh Contextual Task Bar đặc trưng của Photoshop CC 2025 ở đáy vùng Canvas
-        JPanel bottomBarWrap = new JPanel(new BorderLayout(0, 0));
-        bottomBarWrap.setBackground(DesktopWidgets.PS_CANVAS_BG);
-        bottomBarWrap.setBorder(BorderFactory.createEmptyBorder(6, 14, 10, 14));
-
-        JPanel contextualBar = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 5)) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(new Color(0x25, 0x25, 0x25));
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
-                g2.setColor(new Color(0x3E, 0x3E, 0x3E));
-                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 10, 10);
-                g2.dispose();
-            }
-        };
-        contextualBar.setOpaque(false);
-
-        JLabel ctxTitle = new JLabel("Contextual Task Bar:");
-        ctxTitle.setFont(DesktopWidgets.FONT_BOLD);
-        ctxTitle.setForeground(DesktopWidgets.TEXT_SECONDARY);
-        contextualBar.add(ctxTitle);
-
-        String[][] quickFilms = {
-                {"Original", "Gốc"},
-                {"Classic Chrome", "Classic Chrome"},
-                {"Classic Negative", "Classic Neg."},
-                {"Velvia", "Velvia"},
-                {"Provia", "Provia"},
-                {"Astia", "Astia"},
-                {"Nostalgic Neg.", "Nostalgic Neg."},
-                {"Eterna", "Eterna"},
-                {"Reala Ace", "Reala Ace"},
-                {"Acros", "Acros B&W"}
-        };
-        for (String[] pair : quickFilms) {
-            final String filmKey = pair[0];
-            JButton b = DesktopWidgets.createCompactButton(pair[1], false);
-            b.addActionListener(e -> applyQuickFilmSimulation(filmKey));
-            contextualBar.add(b);
+        FilmRecipeCard(Recipe recipe) {
+            this.recipe = recipe;
+            setOpaque(false);
+            setPreferredSize(new Dimension(122, 134));
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+                @Override public void mouseExited(MouseEvent e) { hover = false; repaint(); }
+            });
         }
 
-        contextualBar.add(createDividerLabel());
-        JButton fitBtn = DesktopWidgets.createCompactButton("Fit 100%", false);
-        fitBtn.addActionListener(e -> canvasPanel.resetView());
-        contextualBar.add(fitBtn);
+        void setThumbnail(BufferedImage img) {
+            this.thumbnail = img;
+            repaint();
+        }
 
-        bottomBarWrap.add(contextualBar, BorderLayout.CENTER);
-        workspace.add(bottomBarWrap, BorderLayout.SOUTH);
-        return workspace;
+        void setSelected(boolean s) {
+            this.selected = s;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            int w = getWidth();
+            int h = getHeight();
+
+            g2.setColor(selected ? INK_DARK : (hover ? SURFACE_HOVER : SURFACE_SOFT));
+            g2.fillRoundRect(0, 0, w - 1, h - 1, 20, 20);
+
+            int imgPad = 5;
+            int imgW = w - imgPad * 2;
+            int imgH = h - 42;
+            Shape oldClip = g2.getClip();
+            g2.setClip(new java.awt.geom.RoundRectangle2D.Float(imgPad, imgPad, imgW, imgH, 14, 14));
+            if (thumbnail != null) {
+                double scale = Math.max((double) imgW / thumbnail.getWidth(), (double) imgH / thumbnail.getHeight());
+                int dw = (int) Math.round(thumbnail.getWidth() * scale);
+                int dh = (int) Math.round(thumbnail.getHeight() * scale);
+                int dx = imgPad + (imgW - dw) / 2;
+                int dy = imgPad + (imgH - dh) / 2;
+                g2.drawImage(thumbnail, dx, dy, dw, dh, null);
+            } else {
+                g2.setColor(new Color(0x52, 0x64, 0x7A));
+                g2.fillRect(imgPad, imgPad, imgW, imgH);
+            }
+            g2.setClip(oldClip);
+
+            g2.setFont(FONT_SMALL_BOLD);
+            g2.setColor(selected ? Color.WHITE : TEXT_PRIMARY);
+            String name = ellipsize(recipe.name, g2.getFontMetrics(), w - 14);
+            int nx = (w - g2.getFontMetrics().stringWidth(name)) / 2;
+            g2.drawString(name, nx, imgPad + imgH + 17);
+
+            g2.setFont(new Font("Segoe UI", Font.PLAIN, 10));
+            g2.setColor(selected ? new Color(0xC8, 0xCE, 0xDA) : TEXT_MUTED);
+            String sub = ellipsize(recipe.film, g2.getFontMetrics(), w - 12);
+            int sx = (w - g2.getFontMetrics().stringWidth(sub)) / 2;
+            g2.drawString(sub, sx, imgPad + imgH + 31);
+
+            if (!selected) {
+                g2.setColor(CARD_BORDER);
+                g2.drawRoundRect(0, 0, w - 1, h - 1, 20, 20);
+            }
+            g2.dispose();
+        }
+
+        private static String ellipsize(String s, java.awt.FontMetrics fm, int maxW) {
+            if (s == null) return "";
+            if (fm.stringWidth(s) <= maxW) return s;
+            String out = s;
+            while (out.length() > 3 && fm.stringWidth(out + "...") > maxW) {
+                out = out.substring(0, out.length() - 1);
+            }
+            return out + "...";
+        }
     }
 
     // =========================================================================
-    // 4. CỘT PHẢI: CAMERA RAW 17 INSPECTOR DOCK (HISTOGRAM + 4 TAB TỐI SPECTRUM)
+    // SECTION 2: KHUNG ẢNH EXIF & CÔNG CỤ LUT / JSON
     // =========================================================================
-    private JComponent buildRightCameraRawDock() {
-        JPanel dock = new JPanel(new BorderLayout(0, 0));
-        dock.setPreferredSize(new Dimension(368, 600));
-        dock.setBackground(DesktopWidgets.PS_PANEL);
-        dock.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, DesktopWidgets.PS_DIVIDER));
+    private JComponent buildFrameSectionPanel() {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        // 1. Khung Histogram + EXIF Telemetry trên đỉnh
-        JPanel topStack = new JPanel(new BorderLayout(0, 0));
-        topStack.setBackground(DesktopWidgets.PS_PANEL);
-        histogramPanel = new DesktopWidgets.HistogramPanel();
-        topStack.add(histogramPanel, BorderLayout.NORTH);
+        JLabel title = new JLabel("Khung ảnh Triển lãm & Công cụ LUT");
+        title.setFont(FONT_TITLE);
+        title.setForeground(TEXT_PRIMARY);
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(title);
+        panel.add(Box.createVerticalStrut(12));
 
-        // 2. Thanh Tab tùy chỉnh kiểu Adobe Spectrum (thay thế hoàn toàn JTabbedPane viền trắng của Swing)
-        JPanel tabStrip = new JPanel(new GridLayout(1, 4, 4, 0));
-        tabStrip.setBackground(DesktopWidgets.PS_HEADER);
-        tabStrip.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(0, 0, 1, 0, DesktopWidgets.PS_BORDER),
-                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
+        String[][] frameDefs = {
+                {"Không khung (Ảnh gốc tràn viền)", "Xuất ảnh nguyên bản không chèn viền ngoài"},
+                {"Khung Trắng Fujifilm EXIF", "Viền trắng sang trọng kèm thông số ống kính & màu phim"},
+                {"Khung Đen Cinema Darkroom", "Viền đen phòng tối điện ảnh làm nổi bật vùng sáng"},
+                {"Khung Polaroid Cổ điển", "Viền vuông cổ điển kèm nhãn công thức ở cạnh dưới"}
+        };
 
-        String[] tabNames = {"Cơ bản", "Curve", "Color Wheel", "Mask & FX"};
+        frameCards.clear();
+        for (int i = 0; i < frameDefs.length; i++) {
+            final int mode = i;
+            FrameTemplateCard card = new FrameTemplateCard(frameDefs[i][0], frameDefs[i][1]);
+            card.setAlignmentX(Component.LEFT_ALIGNMENT);
+            card.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    canvasPanel.setFrameMode(mode);
+                    for (int j = 0; j < frameCards.size(); j++) {
+                        frameCards.get(j).setSelected(j == mode);
+                    }
+                }
+            });
+            frameCards.add(card);
+            panel.add(card);
+            panel.add(Box.createVerticalStrut(8));
+        }
+        frameCards.get(0).setSelected(true);
+
+        panel.add(Box.createVerticalStrut(14));
+        JLabel lutHeader = new JLabel("3D LUT (.cube) & Sao lưu Công thức JSON");
+        lutHeader.setFont(FONT_BOLD);
+        lutHeader.setForeground(TEXT_PRIMARY);
+        lutHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(lutHeader);
+        panel.add(Box.createVerticalStrut(10));
+
+        JPanel btnGrid = new JPanel(new GridLayout(0, 2, 8, 8));
+        btnGrid.setOpaque(false);
+        btnGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        btnGrid.setMaximumSize(new Dimension(500, 130));
+
+        PillButton loadCubeBtn = new PillButton("Nạp .CUBE LUT", false, true);
+        loadCubeBtn.addActionListener(e -> importCubeLutDialog());
+
+        PillButton clearLutBtn = new PillButton("Gỡ 3D LUT", false, true);
+        clearLutBtn.addActionListener(e -> {
+            activeCubeLut = null;
+            bottomStatusLabel.setText("Đã gỡ 3D LUT (.cube).");
+            triggerPreviewRender();
+        });
+
+        PillButton copyJsonBtn = new PillButton("Sao chép JSON", false, true);
+        copyJsonBtn.addActionListener(e -> copySettingsJson());
+
+        PillButton importJsonBtn = new PillButton("Nhập JSON", false, true);
+        importJsonBtn.addActionListener(e -> importSettingsJsonDialog());
+
+        PillButton nextSampleBtn = new PillButton("Đổi ảnh mẫu", false, true);
+        nextSampleBtn.addActionListener(e -> loadBuiltInSamplePhoto(currentSampleIndex + 1));
+
+        PillButton openCatalogBtn = new PillButton("Kho 392 Màu", false, true);
+        openCatalogBtn.addActionListener(e -> showLibraryDialog());
+
+        btnGrid.add(loadCubeBtn);
+        btnGrid.add(clearLutBtn);
+        btnGrid.add(copyJsonBtn);
+        btnGrid.add(importJsonBtn);
+        btnGrid.add(nextSampleBtn);
+        btnGrid.add(openCatalogBtn);
+
+        panel.add(btnGrid);
+        panel.add(Box.createVerticalGlue());
+        return panel;
+    }
+
+    private static final class FrameTemplateCard extends JPanel {
+        private boolean selected;
+        private boolean hover;
+        private final JLabel titleLbl;
+        private final JLabel subLbl;
+
+        FrameTemplateCard(String title, String sub) {
+            setOpaque(false);
+            setMaximumSize(new Dimension(500, 62));
+            setPreferredSize(new Dimension(380, 62));
+            setLayout(new BorderLayout(0, 2));
+            setBorder(new EmptyBorder(10, 14, 10, 14));
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+            titleLbl = new JLabel(title);
+            titleLbl.setFont(FONT_BOLD);
+            titleLbl.setForeground(TEXT_PRIMARY);
+
+            subLbl = new JLabel(sub);
+            subLbl.setFont(FONT_SMALL);
+            subLbl.setForeground(TEXT_SECONDARY);
+
+            add(titleLbl, BorderLayout.NORTH);
+            add(subLbl, BorderLayout.SOUTH);
+
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseEntered(MouseEvent e) { hover = true; repaint(); }
+                @Override public void mouseExited(MouseEvent e) { hover = false; repaint(); }
+            });
+        }
+
+        void setSelected(boolean s) {
+            this.selected = s;
+            titleLbl.setForeground(s ? Color.WHITE : TEXT_PRIMARY);
+            subLbl.setForeground(s ? new Color(0xD0, 0xD6, 0xE2) : TEXT_SECONDARY);
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(selected ? INK_DARK : (hover ? SURFACE_HOVER : SURFACE_SOFT));
+            g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 18, 18);
+            g2.dispose();
+            super.paintComponent(g);
+        }
+    }
+
+    // =========================================================================
+    // SECTION 3: LIGHTCRAFT STUDIO (CURVES, 3-WAY WHEELS, 8-CH HSL, AI MASKS)
+    // =========================================================================
+    private JComponent buildLightCraftSectionPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+        panel.setOpaque(false);
+
+        JPanel topBox = new JPanel();
+        topBox.setOpaque(false);
+        topBox.setLayout(new BoxLayout(topBox, BoxLayout.Y_AXIS));
+
+        JLabel title = new JLabel("LightCraft Studio");
+        title.setFont(FONT_TITLE);
+        title.setForeground(TEXT_PRIMARY);
+        title.setAlignmentX(Component.LEFT_ALIGNMENT);
+        topBox.add(title);
+        topBox.add(Box.createVerticalStrut(8));
+
+        // Hàng tab con viên thuốc: Đường cong | Bánh xe | HSL 8 kênh | Mặt nạ AI
+        CardLayout subCards = new CardLayout();
+        JPanel subContainer = new JPanel(subCards);
+        subContainer.setOpaque(false);
+
+        JPanel subTabsRow = new JPanel(new GridLayout(1, 4, 6, 0));
+        subTabsRow.setOpaque(false);
+        subTabsRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        subTabsRow.setMaximumSize(new Dimension(500, 34));
+
+        String[] lcTabNames = {"Đường cong", "Bánh xe", "HSL 8 kênh", "Mặt nạ AI"};
+        PillButton[] lcTabBtns = new PillButton[4];
         for (int i = 0; i < 4; i++) {
             final int idx = i;
-            inspectorTabBtns[i] = new DesktopWidgets.SpectrumButton(tabNames[i], false, true);
-            inspectorTabBtns[i].addActionListener(e -> switchInspectorTab(idx));
-            tabStrip.add(inspectorTabBtns[i]);
-        }
-        inspectorTabBtns[0].setActiveState(true);
-        topStack.add(tabStrip, BorderLayout.SOUTH);
-
-        dock.add(topStack, BorderLayout.NORTH);
-
-        // 3. Nội dung 4 Tab trong CardLayout
-        inspectorCards = new CardLayout();
-        inspectorCardHost = new JPanel(inspectorCards);
-        inspectorCardHost.setBackground(DesktopWidgets.PS_PANEL);
-
-        inspectorCardHost.add(DesktopWidgets.createDarkScrollPane(buildFujiAdjustTab()), "tab0");
-        inspectorCardHost.add(DesktopWidgets.createDarkScrollPane(buildLightCraftCurveTab()), "tab1");
-        inspectorCardHost.add(DesktopWidgets.createDarkScrollPane(buildLightCraftGradingTab()), "tab2");
-        inspectorCardHost.add(DesktopWidgets.createDarkScrollPane(buildMaskAndFrameTab()), "tab3");
-
-        dock.add(inspectorCardHost, BorderLayout.CENTER);
-        return dock;
-    }
-
-    private void switchInspectorTab(int index) {
-        if (inspectorCards == null || inspectorCardHost == null) return;
-        for (int i = 0; i < inspectorTabBtns.length; i++) {
-            if (inspectorTabBtns[i] != null) {
-                inspectorTabBtns[i].setActiveState(i == index);
-            }
-        }
-        inspectorCards.show(inspectorCardHost, "tab" + index);
-    }
-
-    private JPanel buildFujiAdjustTab() {
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(DesktopWidgets.PS_PANEL);
-        p.setBorder(BorderFactory.createEmptyBorder(8, 12, 14, 12));
-
-        addAccordionHeader(p, "•  ÁNH SÁNG (LIGHT & DYNAMIC RANGE)");
-        addSettingSlider(p, "exposure", "Exposure (Phơi sáng)", -3.0, 3.0, 0.0, "%+.2f EV", v -> settings.exposure = v);
-        addSettingSlider(p, "highlight", "Highlights (Vùng sáng)", -2.0, 4.0, 0.0, "%+.1f", v -> settings.highlight = v);
-        addSettingSlider(p, "shadow", "Shadows (Vùng tối)", -2.0, 4.0, 0.0, "%+.1f", v -> settings.shadow = v);
-
-        // Bộ chọn Dynamic Range bằng 3 nút phẳng (thay cho JComboBox trắng)
-        JPanel drRow = new JPanel(new GridLayout(1, 3, 6, 0));
-        drRow.setOpaque(false);
-        drRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        drRow.setMaximumSize(new Dimension(330, 26));
-        String[] drLabels = {"DR100", "DR200", "DR400"};
-        int[] drValues = {100, 200, 400};
-        for (int i = 0; i < 3; i++) {
-            final int idx = i;
-            drButtons[i] = new DesktopWidgets.SpectrumButton(drLabels[i], false, true);
-            if (i == 0) drButtons[i].setActiveState(true);
-            drButtons[i].addActionListener(e -> {
-                settings.dr = drValues[idx];
-                for (int k = 0; k < 3; k++) drButtons[k].setActiveState(k == idx);
-                scheduleRender();
+            lcTabBtns[i] = new PillButton(lcTabNames[i], i == 0, true);
+            lcTabBtns[i].setFont(FONT_SMALL_BOLD);
+            lcTabBtns[i].setMargin(new Insets(4, 6, 4, 6));
+            lcTabBtns[i].addActionListener(e -> {
+                for (int j = 0; j < 4; j++) lcTabBtns[j].setActiveDark(j == idx);
+                subCards.show(subContainer, "LC_" + idx);
             });
-            drRow.add(drButtons[i]);
+            subTabsRow.add(lcTabBtns[i]);
         }
-        p.add(Box.createVerticalStrut(4));
-        p.add(drRow);
-        p.add(Box.createVerticalStrut(10));
+        topBox.add(subTabsRow);
+        panel.add(topBox, BorderLayout.NORTH);
 
-        addAccordionHeader(p, "•  MÀU SẮC & CÂN BẰNG TRẮNG (COLOR & WB)");
-        addSettingSlider(p, "temperature", "Temp (Nhiệt độ màu)", -100.0, 100.0, 0.0, "%+.0f", v -> settings.temperature = v)
-                .withGradient(new Color(0x28, 0x68, 0xC8), new Color(0xD8, 0x8A, 0x28));
-        addSettingSlider(p, "red", "WB Red Shift", -9.0, 9.0, 0.0, "%+.1f", v -> settings.red = v)
-                .withGradient(new Color(0x24, 0x8A, 0x8A), new Color(0xC8, 0x3E, 0x3E));
-        addSettingSlider(p, "blue", "WB Blue Shift", -9.0, 9.0, 0.0, "%+.1f", v -> settings.blue = v)
-                .withGradient(new Color(0xB8, 0x98, 0x28), new Color(0x32, 0x68, 0xD8));
-        addSettingSlider(p, "color", "Color (Độ đậm màu Fuji)", -4.0, 4.0, 0.0, "%+.1f", v -> settings.color = v)
-                .withGradient(new Color(0x55, 0x55, 0x55), new Color(0xE0, 0x48, 0x78));
-        addSettingSlider(p, "colorChrome", "Color Chrome Effect", 0.0, 2.0, 0.0, "%.1f", v -> settings.colorChrome = v);
-        addSettingSlider(p, "chromeBlue", "Color Chrome FX Blue", 0.0, 2.0, 0.0, "%.1f", v -> settings.chromeBlue = v);
+        subContainer.add(buildLcCurvePane(), "LC_0");
+        subContainer.add(buildLcWheelsPane(), "LC_1");
+        subContainer.add(buildLcHslPane(), "LC_2");
+        subContainer.add(buildLcMaskPane(), "LC_3");
 
-        p.add(Box.createVerticalStrut(8));
-        addAccordionHeader(p, "•  CHI TIẾT, HẠT PHIM & 3D LUT (DETAIL & FX)");
-        addSettingSlider(p, "clarity", "Clarity (Độ trong cục bộ)", -5.0, 5.0, 0.0, "%+.1f", v -> settings.clarity = v);
-        addSettingSlider(p, "sharpness", "Sharpness (Độ sắc nét)", -4.0, 4.0, 0.0, "%+.1f", v -> settings.sharpness = v);
-        addSettingSlider(p, "nr", "Noise Reduction (Khử nhiễu)", -4.0, 4.0, -4.0, "%+.1f", v -> settings.nr = v);
-        addSettingSlider(p, "grain", "Grain Amount (Hạt phim)", 0.0, 30.0, 0.0, "%.0f", v -> settings.grain = v);
-        addSettingSlider(p, "grainSize", "Grain Size (Cỡ hạt)", 1.0, 2.0, 1.0, "%.1f", v -> settings.grainSize = v);
-        addSettingSlider(p, "lutAmount", "3D LUT Intensity (%)", 0.0, 100.0, 100.0, "%.0f%%", v -> settings.lutAmount = v);
-
-        return p;
+        panel.add(subContainer, BorderLayout.CENTER);
+        return panel;
     }
 
-    private JPanel buildLightCraftCurveTab() {
+    private JComponent buildLcCurvePane() {
         JPanel p = new JPanel();
+        p.setOpaque(false);
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(DesktopWidgets.PS_PANEL);
-        p.setBorder(BorderFactory.createEmptyBorder(8, 12, 14, 12));
 
-        addAccordionHeader(p, "•  ĐƯỜNG CONG TONE CURVE (PARAMETRIC & POINT)");
-
-        JPanel chRow = new JPanel(new GridLayout(1, 4, 4, 0));
+        JPanel chRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         chRow.setOpaque(false);
         chRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        chRow.setMaximumSize(new Dimension(330, 26));
-        String[] chNames = {"RGB", "Red", "Green", "Blue"};
-        DesktopWidgets.SpectrumButton[] chBtns = new DesktopWidgets.SpectrumButton[4];
+
+        String[] chNames = {"RGB", "Đỏ (R)", "Lục (G)", "Lam (B)"};
+        PillButton[] chBtns = new PillButton[4];
+        toneCurveWidget = new ToneCurveWidget(lightCraftState, () -> {
+            pushHistorySnapshot();
+            triggerPreviewRender();
+        });
+
         for (int i = 0; i < 4; i++) {
-            final int chIdx = i;
-            chBtns[i] = new DesktopWidgets.SpectrumButton(chNames[i], false, true);
-            if (i == 0) chBtns[i].setActiveState(true);
+            final int ch = i;
+            chBtns[i] = new PillButton(chNames[i], i == 0, true);
+            chBtns[i].setFont(FONT_SMALL_BOLD);
+            chBtns[i].setMargin(new Insets(4, 10, 4, 10));
             chBtns[i].addActionListener(e -> {
-                for (int k = 0; k < 4; k++) chBtns[k].setActiveState(k == chIdx);
-                toneCurveWidget.setActiveChannel(chIdx);
+                for (int j = 0; j < 4; j++) chBtns[j].setActiveDark(j == ch);
+                toneCurveWidget.setActiveChannel(ch);
             });
             chRow.add(chBtns[i]);
         }
+
+        CircleIconButton resetCurveBtn = new CircleIconButton("reset", 30, true, "Đặt lại đường cong");
+        resetCurveBtn.addActionListener(e -> {
+            lightCraftState.resetCurves();
+            toneCurveWidget.repaint();
+            pushHistorySnapshot();
+            triggerPreviewRender();
+        });
+        chRow.add(resetCurveBtn);
         p.add(chRow);
-        p.add(Box.createVerticalStrut(6));
+        p.add(Box.createVerticalStrut(8));
 
-        toneCurveWidget = new DesktopWidgets.ToneCurveWidget(lightCraft, this::scheduleRender);
+        toneCurveWidget.setAlignmentX(Component.LEFT_ALIGNMENT);
         p.add(toneCurveWidget);
+        p.add(Box.createVerticalStrut(12));
+
+        JLabel presetTitle = new JLabel("12 Preset LightCraft Điện ảnh");
+        presetTitle.setFont(FONT_BOLD);
+        presetTitle.setForeground(TEXT_PRIMARY);
+        presetTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        p.add(presetTitle);
         p.add(Box.createVerticalStrut(8));
 
-        addAccordionHeader(p, "•  PARAMETRIC REGION SLIDERS");
-        p.add(new DesktopWidgets.SpectrumSlider("Highlights (Đỉnh sáng)", -100, 100, 0, "%+.0f", v -> {
-            lightCraft.paramHighlights = (float) v;
-            toneCurveWidget.repaint();
-            scheduleRender();
-        }));
-        p.add(new DesktopWidgets.SpectrumSlider("Lights (Vùng sáng vừa)", -100, 100, 0, "%+.0f", v -> {
-            lightCraft.paramLights = (float) v;
-            toneCurveWidget.repaint();
-            scheduleRender();
-        }));
-        p.add(new DesktopWidgets.SpectrumSlider("Darks (Vùng trầm)", -100, 100, 0, "%+.0f", v -> {
-            lightCraft.paramDarks = (float) v;
-            toneCurveWidget.repaint();
-            scheduleRender();
-        }));
-        p.add(new DesktopWidgets.SpectrumSlider("Shadows (Vùng tối sâu)", -100, 100, 0, "%+.0f", v -> {
-            lightCraft.paramShadows = (float) v;
-            toneCurveWidget.repaint();
-            scheduleRender();
-        }));
-
-        p.add(Box.createVerticalStrut(8));
-        addAccordionHeader(p, "•  12 PRESET PHÒNG TỐI LIGHTCRAFT");
-        JPanel presetGrid = new JPanel(new GridLayout(0, 2, 5, 5));
+        JPanel presetGrid = new JPanel(new GridLayout(0, 2, 8, 8));
         presetGrid.setOpaque(false);
         presetGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        presetGrid.setMaximumSize(new Dimension(330, 190));
         for (LightCraftEngine.BuiltinPreset preset : LightCraftEngine.PRESETS) {
-            JButton btn = DesktopWidgets.createCompactButton(preset.name, false);
-            btn.setToolTipText(preset.subtitle);
-            btn.addActionListener(e -> {
-                pushUndoState();
-                preset.applyTo(lightCraft, settings);
-                syncSlidersFromState();
-                toneCurveWidget.repaint();
-                if (shadowsWheelWidget != null) {
-                    shadowsWheelWidget.repaint();
-                    midtonesWheelWidget.repaint();
-                    highlightsWheelWidget.repaint();
-                }
-                scheduleRender();
-                setStatus("Đã áp dụng Preset LightCraft: " + preset.name + " (" + preset.subtitle + ")");
+            PillButton pb = new PillButton(preset.name, false, true);
+            pb.setFont(FONT_SMALL_BOLD);
+            pb.addActionListener(e -> {
+                preset.applyTo(lightCraftState, currentSettings);
+                syncUiFromState();
+                pushHistorySnapshot();
+                triggerPreviewRender();
             });
-            presetGrid.add(btn);
+            presetGrid.add(pb);
         }
         p.add(presetGrid);
-        return p;
+
+        return createMinimalScrollPane(p);
     }
 
-    private JPanel buildLightCraftGradingTab() {
+    private JComponent buildLcWheelsPane() {
         JPanel p = new JPanel();
+        p.setOpaque(false);
         p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(DesktopWidgets.PS_PANEL);
-        p.setBorder(BorderFactory.createEmptyBorder(8, 12, 14, 12));
 
-        addAccordionHeader(p, "•  3-WAY COLOR GRADING WHEELS (OKLAB)");
-        JPanel wheelsRow = new JPanel(new GridLayout(1, 3, 4, 0));
-        wheelsRow.setOpaque(false);
-        wheelsRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        wheelsRow.setMaximumSize(new Dimension(330, 122));
-        shadowsWheelWidget = new DesktopWidgets.ColorWheelWidget("Shadows", lightCraft.shadowsWheel, this::scheduleRender);
-        midtonesWheelWidget = new DesktopWidgets.ColorWheelWidget("Midtones", lightCraft.midtonesWheel, this::scheduleRender);
-        highlightsWheelWidget = new DesktopWidgets.ColorWheelWidget("Highlights", lightCraft.highlightsWheel, this::scheduleRender);
-        wheelsRow.add(shadowsWheelWidget);
-        wheelsRow.add(midtonesWheelWidget);
-        wheelsRow.add(highlightsWheelWidget);
-        p.add(wheelsRow);
-        p.add(Box.createVerticalStrut(6));
+        Runnable onWheel = this::triggerPreviewRender;
+        shadowWheel = new ColorWheelWidget("Shadows", lightCraftState.shadowsWheel, onWheel);
+        midtoneWheel = new ColorWheelWidget("Midtones", lightCraftState.midtonesWheel, onWheel);
+        highlightWheel = new ColorWheelWidget("Highlights", lightCraftState.highlightsWheel, onWheel);
 
-        p.add(new DesktopWidgets.SpectrumSlider("Shadows Luminance", -100, 100, 0, "%+.0f", v -> {
-            lightCraft.shadowsWheel.lum = (float) v;
-            scheduleRender();
-        }));
-        p.add(new DesktopWidgets.SpectrumSlider("Midtones Luminance", -100, 100, 0, "%+.0f", v -> {
-            lightCraft.midtonesWheel.lum = (float) v;
-            scheduleRender();
-        }));
-        p.add(new DesktopWidgets.SpectrumSlider("Highlights Luminance", -100, 100, 0, "%+.0f", v -> {
-            lightCraft.highlightsWheel.lum = (float) v;
-            scheduleRender();
-        }));
-        p.add(new DesktopWidgets.SpectrumSlider("Blending (Độ hòa trộn)", 0, 100, 50, "%.0f%%", v -> {
-            lightCraft.gradingBlending = (float) v;
-            scheduleRender();
-        }));
-        p.add(new DesktopWidgets.SpectrumSlider("Balance (Cân bằng vùng)", -100, 100, 0, "%+.0f", v -> {
-            lightCraft.gradingBalance = (float) v;
-            scheduleRender();
-        }));
+        JPanel wheelsGrid = new JPanel(new GridLayout(1, 3, 8, 8));
+        wheelsGrid.setOpaque(false);
+        wheelsGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        wheelsGrid.add(shadowWheel);
+        wheelsGrid.add(midtoneWheel);
+        wheelsGrid.add(highlightWheel);
+        p.add(wheelsGrid);
 
-        p.add(Box.createVerticalStrut(8));
-        addAccordionHeader(p, "•  COLOR MIXER 8 KÊNH (8-BAND OKLCH HSL)");
+        p.add(Box.createVerticalStrut(12));
+        PillButton resetWheels = new PillButton("Đặt lại 3 Bánh xe màu", false, true);
+        resetWheels.setAlignmentX(Component.LEFT_ALIGNMENT);
+        resetWheels.addActionListener(e -> {
+            lightCraftState.resetGrading();
+            shadowWheel.repaint();
+            midtoneWheel.repaint();
+            highlightWheel.repaint();
+            pushHistorySnapshot();
+            triggerPreviewRender();
+        });
+        p.add(resetWheels);
+        return createMinimalScrollPane(p);
+    }
 
-        JPanel bandButtons = new JPanel(new GridLayout(2, 4, 4, 4));
-        bandButtons.setOpaque(false);
-        bandButtons.setAlignmentX(Component.LEFT_ALIGNMENT);
-        bandButtons.setMaximumSize(new Dimension(330, 56));
+    private JComponent buildLcHslPane() {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+
+        String[] chLabels = LightCraftEngine.MIXER_BAND_NAMES;
+        JPanel chGrid = new JPanel(new GridLayout(2, 4, 6, 6));
+        chGrid.setOpaque(false);
+        chGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        chGrid.setMaximumSize(new Dimension(500, 74));
+
+        PillButton[] chPills = new PillButton[8];
         for (int i = 0; i < 8; i++) {
-            final int bandIdx = i;
-            mixerBandBtns[i] = new DesktopWidgets.SpectrumButton(LightCraftEngine.MIXER_BAND_NAMES[i], false, true);
-            mixerBandBtns[i].setForeground(new Color(LightCraftEngine.MIXER_BAND_COLORS[i]));
-            if (i == 0) mixerBandBtns[i].setActiveState(true);
-            mixerBandBtns[i].addActionListener(e -> {
-                selectedMixerBand = bandIdx;
-                for (int k = 0; k < 8; k++) mixerBandBtns[k].setActiveState(k == bandIdx);
-                syncingSliders.set(true);
-                try {
-                    mixerHueSlider.setValue(lightCraft.mixerHue[selectedMixerBand], false);
-                    mixerSatSlider.setValue(lightCraft.mixerSat[selectedMixerBand], false);
-                    mixerLumSlider.setValue(lightCraft.mixerLum[selectedMixerBand], false);
-                } finally {
-                    syncingSliders.set(false);
-                }
+            final int ch = i;
+            chPills[i] = new PillButton(chLabels[i], i == 0, true);
+            chPills[i].setFont(FONT_SMALL_BOLD);
+            chPills[i].setMargin(new Insets(4, 6, 4, 6));
+            chPills[i].addActionListener(e -> {
+                activeHslChannel = ch;
+                for (int j = 0; j < 8; j++) chPills[j].setActiveDark(j == ch);
+                syncHslRulers();
             });
-            bandButtons.add(mixerBandBtns[i]);
+            chGrid.add(chPills[i]);
         }
-        p.add(bandButtons);
-        p.add(Box.createVerticalStrut(6));
+        p.add(chGrid);
+        p.add(Box.createVerticalStrut(14));
 
-        mixerHueSlider = new DesktopWidgets.SpectrumSlider("Hue Shift (Đổi sắc độ)", -100, 100, 0, "%+.0f", v -> {
-            if (!syncingSliders.get()) {
-                lightCraft.mixerHue[selectedMixerBand] = (float) v;
-                scheduleRender();
-            }
+        hslHueRuler = new TickRulerWidget(val -> {
+            if (suppressEvents) return;
+            lightCraftState.mixerHue[activeHslChannel] = (float) val;
+            triggerPreviewRender();
         });
-        mixerSatSlider = new DesktopWidgets.SpectrumSlider("Saturation (Độ bão hòa)", -100, 100, 0, "%+.0f", v -> {
-            if (!syncingSliders.get()) {
-                lightCraft.mixerSat[selectedMixerBand] = (float) v;
-                scheduleRender();
-            }
+        hslSatRuler = new TickRulerWidget(val -> {
+            if (suppressEvents) return;
+            lightCraftState.mixerSat[activeHslChannel] = (float) val;
+            triggerPreviewRender();
         });
-        mixerLumSlider = new DesktopWidgets.SpectrumSlider("Luminance (Độ sáng kênh)", -100, 100, 0, "%+.0f", v -> {
-            if (!syncingSliders.get()) {
-                lightCraft.mixerLum[selectedMixerBand] = (float) v;
-                scheduleRender();
-            }
+        hslLumRuler = new TickRulerWidget(val -> {
+            if (suppressEvents) return;
+            lightCraftState.mixerLum[activeHslChannel] = (float) val;
+            triggerPreviewRender();
         });
-        p.add(mixerHueSlider);
-        p.add(mixerSatSlider);
-        p.add(mixerLumSlider);
 
-        return p;
+        p.add(createLabeledRulerBlock("Độ lệch màu (Hue)", hslHueRuler));
+        p.add(Box.createVerticalStrut(10));
+        p.add(createLabeledRulerBlock("Độ bão hòa (Saturation)", hslSatRuler));
+        p.add(Box.createVerticalStrut(10));
+        p.add(createLabeledRulerBlock("Độ sáng kênh (Luminance)", hslLumRuler));
+        p.add(Box.createVerticalStrut(12));
+
+        PillButton resetHslBtn = new PillButton("Đặt lại 8 kênh HSL", false, true);
+        resetHslBtn.setAlignmentX(Component.LEFT_ALIGNMENT);
+        resetHslBtn.addActionListener(e -> {
+            lightCraftState.resetMixer();
+            syncHslRulers();
+            pushHistorySnapshot();
+            triggerPreviewRender();
+        });
+        p.add(resetHslBtn);
+        syncHslRulers();
+        return createMinimalScrollPane(p);
     }
 
-    private JPanel buildMaskAndFrameTab() {
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setBackground(DesktopWidgets.PS_PANEL);
-        p.setBorder(BorderFactory.createEmptyBorder(8, 12, 14, 12));
+    private void syncHslRulers() {
+        if (hslHueRuler == null) return;
+        suppressEvents = true;
+        hslHueRuler.configure(-100, 100, 0, lightCraftState.mixerHue[activeHslChannel]);
+        hslSatRuler.configure(-100, 100, 0, lightCraftState.mixerSat[activeHslChannel]);
+        hslLumRuler.configure(-100, 100, 0, lightCraftState.mixerLum[activeHslChannel]);
+        suppressEvents = false;
+    }
 
-        addAccordionHeader(p, "•  MẶT NẠ CỤC BỘ AI (LOCAL MASKING)");
-        JPanel maskGrid = new JPanel(new GridLayout(0, 2, 5, 5));
-        maskGrid.setOpaque(false);
-        maskGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        maskGrid.setMaximumSize(new Dimension(330, 88));
+    private JComponent buildLcMaskPane() {
+        JPanel p = new JPanel();
+        p.setOpaque(false);
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
 
         LightCraftEngine.MaskMode[] modes = LightCraftEngine.MaskMode.values();
-        DesktopWidgets.SpectrumButton[] maskBtns = new DesktopWidgets.SpectrumButton[modes.length];
+        JPanel maskGrid = new JPanel(new GridLayout(0, 2, 6, 6));
+        maskGrid.setOpaque(false);
+        maskGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        maskGrid.setMaximumSize(new Dimension(500, 115));
+
+        PillButton[] maskBtns = new PillButton[modes.length];
         for (int i = 0; i < modes.length; i++) {
-            final int idx = i;
-            maskBtns[i] = new DesktopWidgets.SpectrumButton(modes[i].label, false, true);
-            if (i == 0) maskBtns[i].setActiveState(true);
+            final int m = i;
+            maskBtns[i] = new PillButton(modes[i].label, i == 0, true);
+            maskBtns[i].setFont(FONT_SMALL_BOLD);
             maskBtns[i].addActionListener(e -> {
-                for (int k = 0; k < modes.length; k++) maskBtns[k].setActiveState(k == idx);
-                lightCraft.maskMode = modes[idx];
-                scheduleRender();
+                lightCraftState.maskMode = modes[m];
+                for (int j = 0; j < maskBtns.length; j++) maskBtns[j].setActiveDark(j == m);
+                triggerPreviewRender();
             });
             maskGrid.add(maskBtns[i]);
         }
         p.add(maskGrid);
-        p.add(Box.createVerticalStrut(6));
+        p.add(Box.createVerticalStrut(12));
 
-        JCheckBox showOverlayCb = new JCheckBox("Hiển thị lớp phủ Mask màu đỏ (Overlay)");
-        showOverlayCb.setOpaque(false);
-        showOverlayCb.setFont(DesktopWidgets.FONT_UI);
-        showOverlayCb.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        showOverlayCb.setAlignmentX(Component.LEFT_ALIGNMENT);
-        showOverlayCb.addActionListener(e -> {
-            lightCraft.showMaskOverlay = showOverlayCb.isSelected();
-            scheduleRender();
+        maskExpRuler = new TickRulerWidget(v -> {
+            if (suppressEvents) return;
+            lightCraftState.maskExposure = (float) v;
+            triggerPreviewRender();
         });
-        p.add(showOverlayCb);
-
-        JCheckBox invertMaskCb = new JCheckBox("Đảo ngược vùng chọn Mask (Invert)");
-        invertMaskCb.setOpaque(false);
-        invertMaskCb.setFont(DesktopWidgets.FONT_UI);
-        invertMaskCb.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        invertMaskCb.setAlignmentX(Component.LEFT_ALIGNMENT);
-        invertMaskCb.addActionListener(e -> {
-            lightCraft.maskInvert = invertMaskCb.isSelected();
-            scheduleRender();
+        maskTempRuler = new TickRulerWidget(v -> {
+            if (suppressEvents) return;
+            lightCraftState.maskTemp = (float) v;
+            triggerPreviewRender();
         });
-        p.add(invertMaskCb);
-        p.add(Box.createVerticalStrut(6));
+        maskSatRuler = new TickRulerWidget(v -> {
+            if (suppressEvents) return;
+            lightCraftState.maskSaturation = (float) v;
+            triggerPreviewRender();
+        });
+        maskFeatherRuler = new TickRulerWidget(v -> {
+            if (suppressEvents) return;
+            lightCraftState.radialFeather = (float) v;
+            triggerPreviewRender();
+        });
 
-        p.add(new DesktopWidgets.SpectrumSlider("Mask Exposure (EV)", -2.0, 2.0, 0.0, "%+.2f EV", v -> {
-            lightCraft.maskExposure = (float) v;
-            scheduleRender();
-        }));
-        p.add(new DesktopWidgets.SpectrumSlider("Mask Temperature", -100.0, 100.0, 0.0, "%+.0f", v -> {
-            lightCraft.maskTemp = (float) v;
-            scheduleRender();
-        }));
-        p.add(new DesktopWidgets.SpectrumSlider("Mask Clarity", -100.0, 100.0, 0.0, "%+.0f", v -> {
-            lightCraft.maskClarity = (float) v;
-            scheduleRender();
-        }));
-        p.add(new DesktopWidgets.SpectrumSlider("Mask Saturation", -100.0, 100.0, 0.0, "%+.0f", v -> {
-            lightCraft.maskSaturation = (float) v;
-            scheduleRender();
-        }));
+        suppressEvents = true;
+        maskExpRuler.configure(-2.0, 2.0, 0.0, 0.0);
+        maskTempRuler.configure(-100, 100, 0, 0);
+        maskSatRuler.configure(-100, 100, 0, 0);
+        maskFeatherRuler.configure(0, 100, 65, 65);
+        suppressEvents = false;
 
-        p.add(Box.createVerticalStrut(10));
-        addAccordionHeader(p, "•  KHUNG TRIỂN LÃM FUJIFILM EXIF (FRAME)");
-        String[] frameNames = {"Không khung", "Khung Trắng EXIF", "Khung Đen Cinema", "Polaroid Cổ điển"};
-        JPanel frameGrid = new JPanel(new GridLayout(2, 2, 5, 5));
-        frameGrid.setOpaque(false);
-        frameGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        frameGrid.setMaximumSize(new Dimension(330, 58));
-        DesktopWidgets.SpectrumButton[] frameBtns = new DesktopWidgets.SpectrumButton[4];
-        for (int i = 0; i < 4; i++) {
-            final int fIdx = i;
-            frameBtns[i] = new DesktopWidgets.SpectrumButton(frameNames[i], false, true);
-            if (i == 0) frameBtns[i].setActiveState(true);
-            frameBtns[i].addActionListener(e -> {
-                for (int k = 0; k < 4; k++) frameBtns[k].setActiveState(k == fIdx);
-                canvasPanel.setFrameMode(fIdx);
-            });
-            frameGrid.add(frameBtns[i]);
-        }
-        p.add(frameGrid);
-        return p;
+        p.add(createLabeledRulerBlock("Phơi sáng vùng chọn (Mask EV)", maskExpRuler));
+        p.add(Box.createVerticalStrut(8));
+        p.add(createLabeledRulerBlock("Nhiệt độ vùng chọn (Mask Temp)", maskTempRuler));
+        p.add(Box.createVerticalStrut(8));
+        p.add(createLabeledRulerBlock("Bão hòa vùng chọn (Mask Sat)", maskSatRuler));
+        p.add(Box.createVerticalStrut(8));
+        p.add(createLabeledRulerBlock("Độ mềm biên (Feather)", maskFeatherRuler));
+
+        return createMinimalScrollPane(p);
     }
 
-    private void addAccordionHeader(JPanel parent, String text) {
-        JPanel header = new JPanel(new BorderLayout());
-        header.setBackground(new Color(0x2C, 0x2C, 0x2C));
-        header.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 1, 0, DesktopWidgets.PS_BORDER),
-                BorderFactory.createEmptyBorder(4, 6, 4, 6)));
-        header.setAlignmentX(Component.LEFT_ALIGNMENT);
-        header.setMaximumSize(new Dimension(340, 24));
+    private JPanel createLabeledRulerBlock(String labelText, TickRulerWidget ruler) {
+        JPanel block = new JPanel();
+        block.setOpaque(false);
+        block.setLayout(new BoxLayout(block, BoxLayout.Y_AXIS));
+        block.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel lbl = new JLabel(text);
-        lbl.setFont(DesktopWidgets.FONT_SECTION);
-        lbl.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        header.add(lbl, BorderLayout.WEST);
-
-        parent.add(header);
-        parent.add(Box.createVerticalStrut(4));
-    }
-
-    private DesktopWidgets.SpectrumSlider addSettingSlider(
-            JPanel parent, String key, String label, double min, double max, double defVal, String fmt,
-            DesktopWidgets.SpectrumSlider.ValueListener consumer) {
-        DesktopWidgets.SpectrumSlider slider = new DesktopWidgets.SpectrumSlider(label, min, max, defVal, fmt, v -> {
-            if (!syncingSliders.get()) {
-                consumer.onValueChanged(v);
-                scheduleRender();
-            }
-        });
-        parent.add(slider);
-        settingSliders.put(key, slider);
-        return slider;
+        JLabel lbl = new JLabel(labelText);
+        lbl.setFont(FONT_BOLD);
+        lbl.setForeground(TEXT_PRIMARY);
+        lbl.setAlignmentX(Component.LEFT_ALIGNMENT);
+        block.add(lbl);
+        block.add(Box.createVerticalStrut(4));
+        ruler.setAlignmentX(Component.LEFT_ALIGNMENT);
+        block.add(ruler);
+        return block;
     }
 
     // =========================================================================
-    // 5. THANH TRẠNG THÁI DƯỚI CÙNG CHUẨN PHOTOSHOP CC 2025
+    // HỘP THOẠI KHO 392 CÔNG THỨC FUJI X WEEKLY (GIỐNG TABLET_FUJI_LIBRARY.PNG)
     // =========================================================================
-    private JComponent buildPhotoshopStatusBar() {
-        JPanel status = new JPanel(new BorderLayout(10, 0));
-        status.setBackground(new Color(0x1F, 0x1F, 0x1F));
-        status.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createMatteBorder(1, 0, 0, 0, DesktopWidgets.PS_DIVIDER),
-                BorderFactory.createEmptyBorder(3, 10, 3, 10)));
+    private void showLibraryDialog() {
+        JDialog dlg = new JDialog(frame, "Kho 392 công thức Fuji X Weekly", true);
+        dlg.setSize(740, 680);
+        dlg.setLocationRelativeTo(frame);
 
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        left.setOpaque(false);
+        JPanel root = new JPanel(new BorderLayout(0, 12));
+        root.setBackground(CARD_BG);
+        root.setBorder(new EmptyBorder(20, 22, 20, 22));
 
-        zoomStatusLabel = new JLabel(" 100% ");
-        zoomStatusLabel.setFont(DesktopWidgets.FONT_MONO);
-        zoomStatusLabel.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        zoomStatusLabel.setOpaque(true);
-        zoomStatusLabel.setBackground(new Color(0x14, 0x14, 0x14));
-        zoomStatusLabel.setBorder(BorderFactory.createLineBorder(DesktopWidgets.PS_BORDER, 1));
-        left.add(zoomStatusLabel);
+        JPanel header = new JPanel(new BorderLayout(12, 8));
+        header.setOpaque(false);
 
-        statusLabel = new JLabel("Doc: sRGB IEC61966-2.1 (8-bit)  ·  392 Fuji X Weekly Recipes  ·  LightCraft OkLab Pipeline");
-        statusLabel.setFont(DesktopWidgets.FONT_SMALL);
-        statusLabel.setForeground(DesktopWidgets.TEXT_SECONDARY);
-        left.add(statusLabel);
+        JLabel title = new JLabel("Kho " + catalogRecipes.size() + " công thức Fuji X Weekly");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        title.setForeground(TEXT_PRIMARY);
+        header.add(title, BorderLayout.NORTH);
 
-        JLabel right = new JLabel("Nháy đúp vào thanh trượt bất kỳ để Reset về 0  ·  Cuộn chuột: Zoom  ·  Kéo-thả ảnh/LUT trực tiếp");
-        right.setFont(DesktopWidgets.FONT_SMALL);
-        right.setForeground(DesktopWidgets.TEXT_MUTED);
+        JTextField searchField = new JTextField();
+        searchField.setFont(FONT_UI);
+        searchField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(CARD_BORDER, 1, true),
+                new EmptyBorder(8, 12, 8, 12)
+        ));
 
-        status.add(left, BorderLayout.WEST);
-        status.add(right, BorderLayout.EAST);
-        return status;
-    }
-
-    private void setStatus(String text) {
-        if (statusLabel != null) {
-            statusLabel.setText(text);
+        Set<String> sensors = new LinkedHashSet<>();
+        sensors.add("Tất cả cảm biến");
+        for (Recipe r : catalogRecipes) {
+            if (r.sensors != null && !r.sensors.isEmpty()) sensors.add(r.sensors);
         }
-    }
+        JComboBox<String> sensorBox = new JComboBox<>(sensors.toArray(new String[0]));
+        sensorBox.setFont(FONT_BOLD);
 
-    // =========================================================================
-    // NẠP ẢNH, ÁP DỤNG CÔNG THỨC & KẾT XUẤT ĐA LUỒNG
-    // =========================================================================
-    private void loadBundledSamplePhoto(int index) {
-        List<Recipe> bundled = new ArrayList<>();
-        for (Recipe r : allRecipes) {
-            if (r.sampleAsset != null && !r.sampleAsset.isEmpty()) {
-                bundled.add(r);
-            }
-        }
-        if (!bundled.isEmpty()) {
-            Recipe chosen = bundled.get(Math.abs(index) % bundled.size());
-            BufferedImage img = DesktopWidgets.DesktopFujiSampleLoader.loadResource("/" + chosen.sampleAsset);
-            if (img != null) {
-                canvasPanel.setDocumentName(chosen.name.replace(' ', '_') + ".RAF");
-                setSourceImage(img, "Ảnh mẫu FujiXWeekly · " + chosen.name);
-                applyRecipe(chosen, false);
-                return;
-            }
-        }
-        BufferedImage fallback = createFallbackTestChart(1280, 854);
-        setSourceImage(fallback, "Studio_Sample.RAF");
-    }
+        JPanel filterRow = new JPanel(new BorderLayout(10, 0));
+        filterRow.setOpaque(false);
+        filterRow.add(searchField, BorderLayout.CENTER);
+        filterRow.add(sensorBox, BorderLayout.EAST);
+        header.add(filterRow, BorderLayout.CENTER);
 
-    private static BufferedImage createFallbackTestChart(int w, int h) {
-        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = img.createGraphics();
-        for (int y = 0; y < h; y++) {
-            float t = (float) y / h;
-            g2.setColor(new Color(
-                    Math.round(35 + 180 * (1f - t)),
-                    Math.round(90 + 110 * (1f - Math.abs(t - 0.5f))),
-                    Math.round(140 + 100 * t)));
-            g2.drawLine(0, y, w, y);
-        }
-        g2.dispose();
-        return img;
-    }
+        root.add(header, BorderLayout.NORTH);
 
-    private void setSourceImage(BufferedImage img, String label) {
-        if (img == null) return;
-        this.fullSourceImage = toArgbBufferedImage(img);
-        int[] dims = ExportSizing.dimensions(fullSourceImage.getWidth(), fullSourceImage.getHeight(), 1, false, 1_100_000L);
-        this.previewSourceImage = scaleImage(fullSourceImage, dims[0], dims[1]);
-        this.previewSourcePixels = previewSourceImage.getRGB(
-                0, 0, previewSourceImage.getWidth(), previewSourceImage.getHeight(),
-                null, 0, previewSourceImage.getWidth());
-        canvasPanel.resetView();
-        setStatus("Đang mở: " + label + " (" + fullSourceImage.getWidth() + "x" + fullSourceImage.getHeight() + " px · 8-bit sRGB)");
-        scheduleRender();
-    }
+        JPanel listPanel = new JPanel();
+        listPanel.setOpaque(false);
+        listPanel.setLayout(new BoxLayout(listPanel, BoxLayout.Y_AXIS));
 
-    private static BufferedImage toArgbBufferedImage(BufferedImage src) {
-        if (src.getType() == BufferedImage.TYPE_INT_ARGB) {
-            return src;
-        }
-        BufferedImage copy = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = copy.createGraphics();
-        g2.drawImage(src, 0, 0, null);
-        g2.dispose();
-        return copy;
-    }
-
-    private static BufferedImage scaleImage(BufferedImage src, int w, int h) {
-        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = out.createGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2.drawImage(src, 0, 0, w, h, null);
-        g2.dispose();
-        return out;
-    }
-
-    private void applyRecipe(Recipe r, boolean alsoLoadSamplePhoto) {
-        if (r == null) return;
-        pushUndoState();
-        List<String> notes = new ArrayList<>();
-        Settings mapped = r.adjustments(notes);
-        applyFilmCharacterBias(mapped, r.film);
-        this.settings = mapped;
-        this.activeRecipeName = r.name;
-        syncSlidersFromState();
-
-        if (alsoLoadSamplePhoto) {
-            DesktopWidgets.DesktopFujiSampleLoader.loadRecipeSampleAsync(r, sampleImg -> {
-                if (sampleImg != null) {
-                    canvasPanel.setDocumentName(r.name.replace(' ', '_') + ".RAF");
-                    setSourceImage(sampleImg, "Ảnh mẫu FujiXWeekly · " + r.name);
+        Runnable rebuildList = () -> {
+            listPanel.removeAll();
+            String q = searchField.getText().trim().toLowerCase(Locale.ROOT);
+            String sen = (String) sensorBox.getSelectedItem();
+            int shown = 0;
+            for (Recipe r : catalogRecipes) {
+                if (sen != null && !"Tất cả cảm biến".equals(sen) && !sen.equalsIgnoreCase(r.sensors)) {
+                    continue;
                 }
-            });
-        } else {
-            scheduleRender();
-            setStatus("Preset: " + r.name + "  ·  Film Simulation: " + r.film + "  ·  Cảm biến: " + r.sensors);
-        }
-    }
-
-    private void applyFilmCharacterBias(Settings s, String film) {
-        if (film == null) return;
-        String f = film.toLowerCase(Locale.ROOT);
-        if (f.contains("acros") || f.contains("monochrome") || f.contains("b&w")) {
-            s.color = -4.0;
-        } else if (f.contains("sepia")) {
-            s.color = -3.2;
-            s.temperature = Math.max(s.temperature, 28.0);
-            s.red = Math.max(s.red, 2.5);
-            s.blue = Math.min(s.blue, -3.0);
-        } else if (f.contains("velvia")) {
-            s.color = Math.min(4.0, s.color + 1.5);
-        } else if (f.contains("classic chrome")) {
-            s.color = Math.max(-4.0, s.color - 0.6);
-            s.shadow = Math.min(4.0, s.shadow + 0.5);
-        } else if (f.contains("eterna")) {
-            s.color = Math.max(-4.0, s.color - 1.0);
-            s.highlight = Math.max(-2.0, s.highlight - 0.8);
-        }
-    }
-
-    private void applyQuickFilmSimulation(String filmName) {
-        pushUndoState();
-        Settings s = new Settings();
-        s.film = filmName;
-        applyFilmCharacterBias(s, filmName);
-        this.settings = s;
-        this.activeRecipeName = filmName;
-        syncSlidersFromState();
-        scheduleRender();
-        setStatus("Film Simulation: " + filmName);
-    }
-
-    private void syncSlidersFromState() {
-        syncingSliders.set(true);
-        try {
-            if (settingSliders.containsKey("exposure")) settingSliders.get("exposure").setValue(settings.exposure, false);
-            if (settingSliders.containsKey("highlight")) settingSliders.get("highlight").setValue(settings.highlight, false);
-            if (settingSliders.containsKey("shadow")) settingSliders.get("shadow").setValue(settings.shadow, false);
-            if (settingSliders.containsKey("color")) settingSliders.get("color").setValue(settings.color, false);
-            if (settingSliders.containsKey("temperature")) settingSliders.get("temperature").setValue(settings.temperature, false);
-            if (settingSliders.containsKey("red")) settingSliders.get("red").setValue(settings.red, false);
-            if (settingSliders.containsKey("blue")) settingSliders.get("blue").setValue(settings.blue, false);
-            if (settingSliders.containsKey("colorChrome")) settingSliders.get("colorChrome").setValue(settings.colorChrome, false);
-            if (settingSliders.containsKey("chromeBlue")) settingSliders.get("chromeBlue").setValue(settings.chromeBlue, false);
-            if (settingSliders.containsKey("sharpness")) settingSliders.get("sharpness").setValue(settings.sharpness, false);
-            if (settingSliders.containsKey("clarity")) settingSliders.get("clarity").setValue(settings.clarity, false);
-            if (settingSliders.containsKey("nr")) settingSliders.get("nr").setValue(settings.nr, false);
-            if (settingSliders.containsKey("grain")) settingSliders.get("grain").setValue(settings.grain, false);
-            if (settingSliders.containsKey("grainSize")) settingSliders.get("grainSize").setValue(settings.grainSize, false);
-            if (settingSliders.containsKey("lutAmount")) settingSliders.get("lutAmount").setValue(settings.lutAmount, false);
-
-            int drIdx = settings.dr == 400 ? 2 : (settings.dr == 200 ? 1 : 0);
-            for (int k = 0; k < 3; k++) {
-                if (drButtons[k] != null) drButtons[k].setActiveState(k == drIdx);
+                if (!q.isEmpty()) {
+                    String hay = (r.name + " " + r.film + " " + r.sensors).toLowerCase(Locale.ROOT);
+                    if (!hay.contains(q)) continue;
+                }
+                listPanel.add(createCatalogRowCard(r, dlg));
+                listPanel.add(Box.createVerticalStrut(8));
+                if (++shown >= 90) break;
             }
-        } finally {
-            syncingSliders.set(false);
-        }
-    }
+            listPanel.revalidate();
+            listPanel.repaint();
+        };
 
-    private void scheduleRender() {
-        if (previewSourcePixels == null || previewSourceImage == null) return;
-        if (activeRenderTask != null) {
-            activeRenderTask.cancel(true);
-        }
-        final int w = previewSourceImage.getWidth();
-        final int h = previewSourceImage.getHeight();
-        final int[] srcPx = previewSourcePixels;
-        final Settings snapSettings = settings.copy();
-        final CubeLut snapLut = activeLut;
-
-        activeRenderTask = renderExecutor.submit(() -> {
-            try {
-                int[] step1 = ColorEngine.process(srcPx, w, h, snapSettings, snapLut);
-                int[] step2 = LightCraftEngine.processPixels(step1, w, h, lightCraft);
-                BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-                out.setRGB(0, 0, w, h, step2, 0, w);
-                SwingUtilities.invokeLater(() -> {
-                    canvasPanel.setImages(previewSourceImage, out, snapSettings.film, activeRecipeName);
-                    histogramPanel.setMetaSummary(String.format(Locale.ROOT,
-                            "DR%d  ·  EV %+.1f  ·  %s  ·  %dx%d",
-                            snapSettings.dr, snapSettings.exposure, snapSettings.film,
-                            fullSourceImage != null ? fullSourceImage.getWidth() : w,
-                            fullSourceImage != null ? fullSourceImage.getHeight() : h));
-                    histogramPanel.updateFromPixels(step2, w, h);
-                });
-            } catch (Exception ignored) {
-            }
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { rebuildList.run(); }
+            @Override public void removeUpdate(DocumentEvent e) { rebuildList.run(); }
+            @Override public void changedUpdate(DocumentEvent e) { rebuildList.run(); }
         });
-    }
+        sensorBox.addActionListener(e -> rebuildList.run());
+        rebuildList.run();
 
-    private void runAutoBalance() {
-        if (previewSourcePixels == null || previewSourceImage == null) return;
-        pushUndoState();
-        settings = AutoBalancer.analyze(
-                previewSourcePixels,
-                previewSourceImage.getWidth(),
-                previewSourceImage.getHeight(),
-                settings);
-        syncSlidersFromState();
-        scheduleRender();
-        setStatus(String.format(Locale.ROOT,
-                "Auto-Balance AI hoàn tất: EV %+.1f · Highlight %+.1f · Shadow %+.1f · Temp %+.0f",
-                settings.exposure, settings.highlight, settings.shadow, settings.temperature));
-    }
-
-    private void pushUndoState() {
-        undoStack.add(settings.copy());
-        if (undoStack.size() > 30) {
-            undoStack.remove(0);
-        }
-        redoStack.clear();
-    }
-
-    private void performUndo() {
-        if (undoStack.isEmpty()) {
-            setStatus("Không còn bước Hoàn tác (Undo).");
-            return;
-        }
-        redoStack.add(settings.copy());
-        settings = undoStack.remove(undoStack.size() - 1);
-        syncSlidersFromState();
-        scheduleRender();
-        setStatus("Đã hoàn tác (Undo).");
-    }
-
-    private void performRedo() {
-        if (redoStack.isEmpty()) {
-            setStatus("Không còn bước Làm lại (Redo).");
-            return;
-        }
-        undoStack.add(settings.copy());
-        settings = redoStack.remove(redoStack.size() - 1);
-        syncSlidersFromState();
-        scheduleRender();
-        setStatus("Đã làm lại (Redo).");
-    }
-
-    private void resetAllAdjustments() {
-        pushUndoState();
-        settings = new Settings();
-        lightCraft.resetAll();
-        activeLut = null;
-        activeRecipeName = "Original";
-        syncSlidersFromState();
-        if (toneCurveWidget != null) toneCurveWidget.repaint();
-        if (shadowsWheelWidget != null) {
-            shadowsWheelWidget.repaint();
-            midtonesWheelWidget.repaint();
-            highlightsWheelWidget.repaint();
-        }
-        scheduleRender();
-        setStatus("Đã đặt lại toàn bộ thông số chỉnh sửa về nguyên bản.");
-    }
-
-    private void chooseAndOpenImage() {
-        JFileChooser fc = new JFileChooser();
-        fc.setDialogTitle("Mở tệp hình ảnh vào bàn dựng");
-        fc.setFileFilter(new FileNameExtensionFilter("Hình ảnh (JPG, PNG, BMP, WEBP)", "jpg", "jpeg", "png", "bmp", "webp"));
-        if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            openImageFile(fc.getSelectedFile());
-        }
-    }
-
-    private void openImageFile(File file) {
-        try {
-            BufferedImage img = ImageIO.read(file);
-            if (img == null) {
-                JOptionPane.showMessageDialog(this, "Không đọc được định dạng ảnh này.", "Lỗi mở ảnh", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            canvasPanel.setDocumentName(file.getName());
-            setSourceImage(img, file.getName());
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Lỗi khi đọc ảnh: " + ex.getMessage(), "Lỗi mở ảnh", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void chooseAndLoadCubeLut() {
-        JFileChooser fc = new JFileChooser();
-        fc.setDialogTitle("Chọn tệp LUT 3D (.cube)");
-        fc.setFileFilter(new FileNameExtensionFilter("Adobe 3D LUT (.cube)", "cube"));
-        if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            loadCubeLutFile(fc.getSelectedFile());
-        }
-    }
-
-    private void loadCubeLutFile(File file) {
-        try (InputStreamReader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
-            activeLut = CubeLut.parse(reader);
-            scheduleRender();
-            setStatus("Đã nạp LUT 3D: " + activeLut.title + " (" + activeLut.size + "³) từ " + file.getName());
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Không nạp được LUT .cube: " + ex.getMessage(), "Lỗi LUT", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void showOnlineLutDialog() {
-        String repo = JOptionPane.showInputDialog(this,
-                "Nhập kho GitHub chứa tệp .cube (mặc định: " + OnlineLuts.DEFAULT_REPO + "):",
-                OnlineLuts.DEFAULT_REPO);
-        if (repo == null || repo.trim().isEmpty()) return;
-
-        setStatus("Đang truy vấn danh sách LUT 3D từ GitHub: " + repo + "...");
-        new Thread(() -> {
-            try {
-                JSONArray items = OnlineLuts.discover(repo.trim());
-                if (items.length() == 0) {
-                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Không tìm thấy tệp .cube nào trong kho này."));
-                    return;
-                }
-                String[] names = new String[items.length()];
-                for (int i = 0; i < items.length(); i++) {
-                    JSONObject it = items.getJSONObject(i);
-                    names[i] = it.optString("name") + " (" + (it.optLong("bytes") / 1024) + " KB)";
-                }
-                SwingUtilities.invokeLater(() -> {
-                    String picked = (String) JOptionPane.showInputDialog(
-                            this,
-                            "Chọn LUT 3D (.cube) để tải về và áp dụng:",
-                            "Kho LUT 3D GitHub (" + items.length() + " tệp)",
-                            JOptionPane.PLAIN_MESSAGE,
-                            null,
-                            names,
-                            names[0]);
-                    if (picked != null) {
-                        for (int i = 0; i < names.length; i++) {
-                            if (names[i].equals(picked)) {
-                                downloadAndApplyOnlineLut(items, i);
-                                break;
-                            }
-                        }
-                    }
-                });
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this,
-                        "Lỗi kết nối GitHub LUT: " + ex.getMessage(), "Lỗi tải LUT", JOptionPane.ERROR_MESSAGE));
-            }
-        }, "OnlineLutDiscover").start();
-    }
-
-    private void downloadAndApplyOnlineLut(JSONArray items, int index) {
-        new Thread(() -> {
-            try {
-                JSONObject item = items.getJSONObject(index);
-                File lutDir = new File(System.getProperty("user.home"), ".iro-studio/luts");
-                if (!lutDir.exists()) lutDir.mkdirs();
-                File downloaded = OnlineLuts.download(lutDir, item);
-                SwingUtilities.invokeLater(() -> loadCubeLutFile(downloaded));
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this,
-                        "Lỗi tải tệp LUT: " + ex.getMessage(), "Lỗi tải LUT", JOptionPane.ERROR_MESSAGE));
-            }
-        }, "OnlineLutDownload").start();
-    }
-
-    private void exportFullResolutionImage() {
-        if (fullSourceImage == null) return;
-        JFileChooser fc = new JFileChooser();
-        fc.setDialogTitle("Lưu bức ảnh đã chỉnh sửa");
-        fc.setSelectedFile(new File("IRO-" + activeRecipeName.replaceAll("[^a-zA-Z0-9_-]", "_") + ".jpg"));
-        fc.setFileFilter(new FileNameExtensionFilter("JPEG Image (.jpg)", "jpg", "jpeg"));
-        fc.addChoosableFileFilter(new FileNameExtensionFilter("PNG Image (.png)", "png"));
-        if (fc.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
-
-        File outFile = fc.getSelectedFile();
-        setStatus("Đang kết xuất ảnh chất lượng gốc (" + fullSourceImage.getWidth() + "x" + fullSourceImage.getHeight() + ")...");
-        new Thread(() -> {
-            try {
-                int w = fullSourceImage.getWidth();
-                int h = fullSourceImage.getHeight();
-                int[] srcPx = fullSourceImage.getRGB(0, 0, w, h, null, 0, w);
-                int[] step1 = ColorEngine.process(srcPx, w, h, settings.copy(), activeLut);
-                int[] step2 = LightCraftEngine.processPixels(step1, w, h, lightCraft);
-
-                BufferedImage rendered = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-                rendered.setRGB(0, 0, w, h, step2, 0, w);
-                BufferedImage finalImg = DesktopWidgets.ImageCanvasPanel.renderFramedImage(
-                        rendered, canvasPanel.getFrameMode(), settings.film, activeRecipeName);
-
-                String lower = outFile.getName().toLowerCase(Locale.ROOT);
-                String format = lower.endsWith(".png") ? "png" : "jpg";
-                ImageIO.write(finalImg, format, outFile);
-                SwingUtilities.invokeLater(() -> {
-                    setStatus("Đã xuất ảnh thành công: " + outFile.getAbsolutePath());
-                    JOptionPane.showMessageDialog(this,
-                            "Đã lưu ảnh thành công tại:\n" + outFile.getAbsolutePath(),
-                            "Xuất ảnh hoàn tất", JOptionPane.INFORMATION_MESSAGE);
-                });
-            } catch (Exception ex) {
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this,
-                        "Lỗi khi xuất ảnh: " + ex.getMessage(), "Lỗi xuất ảnh", JOptionPane.ERROR_MESSAGE));
-            }
-        }, "ExportWorker").start();
-    }
-
-    private void showRecipeDetailDialog(Recipe r) {
-        JDialog dlg = new JDialog(this, r.name + " · Fuji X Weekly Recipe", true);
-        dlg.setSize(620, 520);
-        dlg.setLocationRelativeTo(this);
-        dlg.getContentPane().setBackground(DesktopWidgets.PS_PANEL);
-        dlg.setLayout(new BorderLayout(12, 12));
-
-        JPanel top = new JPanel(new BorderLayout(12, 0));
-        top.setBackground(DesktopWidgets.PS_PANEL);
-        top.setBorder(BorderFactory.createEmptyBorder(12, 12, 0, 12));
-
-        BufferedImage sample = DesktopWidgets.DesktopFujiSampleLoader.getCachedForRecipe(r);
-        if (sample != null) {
-            JLabel imgLbl = new JLabel(new ImageIcon(scaleThumbnail(sample, 240, 165)));
-            imgLbl.setBorder(BorderFactory.createLineBorder(DesktopWidgets.PS_BORDER, 1));
-            top.add(imgLbl, BorderLayout.WEST);
-        }
-
-        JTextArea area = new JTextArea(r.description());
-        area.setEditable(false);
-        area.setFont(DesktopWidgets.FONT_MONO);
-        area.setBackground(DesktopWidgets.PS_DARKEST);
-        area.setForeground(DesktopWidgets.TEXT_PRIMARY);
-        area.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        JScrollPane sp = DesktopWidgets.createDarkScrollPane(area);
-        sp.setBorder(BorderFactory.createEmptyBorder(12, 12, 0, 12));
-
-        JPanel bottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 8));
-        bottom.setBackground(DesktopWidgets.PS_PANEL);
-
-        if (r.sourceUrl != null && !r.sourceUrl.isEmpty()) {
-            JButton webBtn = DesktopWidgets.createStudioButton("Mở bài gốc trên fujixweekly.com", false);
-            webBtn.addActionListener(e -> {
-                try {
-                    Desktop.getDesktop().browse(new URI(r.sourceUrl));
-                } catch (Exception ignored) {
-                }
-            });
-            bottom.add(webBtn);
-        }
-
-        JButton loadSampleBtn = DesktopWidgets.createStudioButton("Mở ảnh mẫu này vào bàn dựng", true);
-        loadSampleBtn.addActionListener(e -> {
-            applyRecipe(r, true);
-            dlg.dispose();
-        });
-        bottom.add(loadSampleBtn);
-
-        JButton closeBtn = DesktopWidgets.createStudioButton("Đóng", false);
-        closeBtn.addActionListener(e -> dlg.dispose());
-        bottom.add(closeBtn);
-
-        dlg.add(top, BorderLayout.NORTH);
-        dlg.add(sp, BorderLayout.CENTER);
-        dlg.add(bottom, BorderLayout.SOUTH);
+        root.add(createMinimalScrollPane(listPanel), BorderLayout.CENTER);
+        dlg.setContentPane(root);
         dlg.setVisible(true);
     }
 
-    private void importSettingsJson() {
-        JFileChooser fc = new JFileChooser();
-        fc.setDialogTitle("Nhập tệp JSON thông số màu");
-        fc.setFileFilter(new FileNameExtensionFilter("JSON Recipe / Settings (.json)", "json"));
-        if (fc.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
-        try (FileInputStream in = new FileInputStream(fc.getSelectedFile())) {
-            JSONObject obj = new JSONObject(readStreamUtf8(in));
-            pushUndoState();
-            if (obj.has("rawSettings")) {
-                Recipe r = new Recipe(obj);
-                applyRecipe(r, false);
-            } else {
-                settings = SettingsCodec.decode(obj);
-                syncSlidersFromState();
-                scheduleRender();
+    private JComponent createCatalogRowCard(Recipe r, JDialog parentDlg) {
+        RoundedCardPanel row = new RoundedCardPanel(20, SURFACE_SOFT, CARD_BORDER);
+        row.setLayout(new BorderLayout(14, 0));
+        row.setBorder(new EmptyBorder(10, 12, 10, 14));
+        row.setMaximumSize(new Dimension(900, 86));
+        row.setPreferredSize(new Dimension(650, 86));
+
+        JLabel thumbLbl = new JLabel();
+        thumbLbl.setPreferredSize(new Dimension(88, 64));
+        DesktopFujiSampleLoader.loadRecipeSampleAsync(r, img -> {
+            if (img != null) {
+                BufferedImage scaled = new BufferedImage(88, 64, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g2 = scaled.createGraphics();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g2.setClip(new java.awt.geom.RoundRectangle2D.Float(0, 0, 88, 64, 14, 14));
+                g2.drawImage(img, 0, 0, 88, 64, null);
+                g2.dispose();
+                thumbLbl.setIcon(new javax.swing.ImageIcon(scaled));
             }
-            setStatus("Đã nhập thông số JSON từ: " + fc.getSelectedFile().getName());
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Tệp JSON không hợp lệ: " + ex.getMessage(), "Lỗi nhập JSON", JOptionPane.ERROR_MESSAGE);
+        });
+        row.add(thumbLbl, BorderLayout.WEST);
+
+        Settings adj = r.adjustments(null);
+        JPanel info = new JPanel(new GridLayout(3, 1, 0, 2));
+        info.setOpaque(false);
+        JLabel name = new JLabel(r.name);
+        name.setFont(FONT_BOLD);
+        name.setForeground(TEXT_PRIMARY);
+
+        JLabel sub1 = new JLabel(r.sensors + " • Base: " + r.film + " • DR" + adj.dr);
+        sub1.setFont(FONT_SMALL);
+        sub1.setForeground(TEXT_SECONDARY);
+
+        JLabel sub2 = new JLabel("WB " + adj.wb + " (R" + (adj.red >= 0 ? "+" : "") + (int) adj.red
+                + " B" + (adj.blue >= 0 ? "+" : "") + (int) adj.blue + ") • H" + adj.highlight + " S" + adj.shadow);
+        sub2.setFont(FONT_SMALL);
+        sub2.setForeground(TEXT_MUTED);
+
+        info.add(name);
+        info.add(sub1);
+        info.add(sub2);
+        row.add(info, BorderLayout.CENTER);
+
+        PillButton applyBtn = new PillButton("Áp dụng", true, false);
+        applyBtn.addActionListener(e -> {
+            boolean exists = false;
+            for (Recipe ex : activeRecipes) {
+                if (ex.id.equals(r.id)) {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists) {
+                activeRecipes.add(0, r);
+                rebuildFilmGridCards();
+            }
+            applyRecipeSelection(r);
+            parentDlg.dispose();
+        });
+        JPanel btnWrap = new JPanel(new GridBagLayout());
+        btnWrap.setOpaque(false);
+        btnWrap.add(applyBtn);
+        row.add(btnWrap, BorderLayout.EAST);
+
+        return row;
+    }
+
+    // =========================================================================
+    // ĐỒNG BỘ TRẠNG THÁI, XỬ LÝ ẢNH & PHÍM TẮT
+    // =========================================================================
+    private void syncUiFromState() {
+        suppressEvents = true;
+        String filmName = currentSettings.film != null ? currentSettings.film : "Classic Chrome";
+        String recName = currentRecipe != null ? currentRecipe.name : "Custom";
+        topRecipeBadgeBtn.setText(filmName + " • " + recName);
+        selectParameter(selectedParamIndex);
+        syncHslRulers();
+        if (toneCurveWidget != null) toneCurveWidget.repaint();
+        if (shadowWheel != null) shadowWheel.repaint();
+        if (midtoneWheel != null) midtoneWheel.repaint();
+        if (highlightWheel != null) highlightWheel.repaint();
+        for (FilmRecipeCard c : filmCards) {
+            c.setSelected(currentRecipe != null && c.recipe.id.equals(currentRecipe.id));
+        }
+        suppressEvents = false;
+    }
+
+    private void triggerPreviewRender() {
+        if (previewSourcePixels == null || previewW < 1 || previewH < 1) return;
+        final int gen = renderGeneration.incrementAndGet();
+        final Settings snapSettings = currentSettings.copy();
+        final int[] srcPx = previewSourcePixels;
+        final int w = previewW;
+        final int h = previewH;
+        renderExecutor.submit(() -> {
+            if (gen != renderGeneration.get()) return;
+            long t0 = System.currentTimeMillis();
+            int[] outPx = ColorEngine.process(srcPx, w, h, snapSettings, activeCubeLut);
+            if (!lightCraftState.isIdentity()) {
+                outPx = LightCraftEngine.processPixels(outPx, w, h, lightCraftState);
+            }
+            BufferedImage outImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+            outImg.setRGB(0, 0, w, h, outPx, 0, w);
+            final int[] histPx = outPx;
+            final long elapsed = System.currentTimeMillis() - t0;
+            SwingUtilities.invokeLater(() -> {
+                if (gen != renderGeneration.get()) return;
+                String recName = currentRecipe != null ? currentRecipe.name : snapSettings.film;
+                canvasPanel.setImages(previewSourceImage, outImg, snapSettings.film, recName);
+                histogramPanel.updateFromPixels(histPx, w, h);
+                bottomStatusLabel.setText(currentPhotoName + " (" + fullSourceImage.getWidth() + "×"
+                        + fullSourceImage.getHeight() + " px)  •  Màu phim: " + recName
+                        + "  •  DR" + snapSettings.dr + "  •  Render: " + elapsed + " ms");
+            });
+        });
+    }
+
+    private void loadBuiltInSamplePhoto(int index) {
+        String[] samples = {
+                "/fujixweekly/kodachrome-64.jpg",
+                "/fujixweekly/pacific-blues.jpg",
+                "/fujixweekly/vintage-kodachrome.jpg",
+                "/fujixweekly/kodak-portra-400-v2.jpg",
+                "/fujixweekly/reggies-portra.jpg",
+                "/fujixweekly/fujicolor-superia-100.jpg",
+                "/fujixweekly/1970s-summer.jpg",
+                "/fujixweekly/ilford-hp5-plus.jpg"
+        };
+        currentSampleIndex = ((index % samples.length) + samples.length) % samples.length;
+        String resPath = samples[currentSampleIndex];
+        BufferedImage bi = DesktopFujiSampleLoader.loadResource(resPath);
+        if (bi != null) {
+            currentPhotoName = resPath.substring(resPath.lastIndexOf('/') + 1);
+            setSourceBufferedImage(bi);
+            return;
+        }
+        // Nếu tên file khác, lấy bất kỳ sampleAsset nào từ catalogRecipes
+        for (Recipe r : catalogRecipes) {
+            BufferedImage cached = DesktopFujiSampleLoader.getCachedForRecipe(r);
+            if (cached != null) {
+                currentPhotoName = r.name + ".jpg";
+                setSourceBufferedImage(cached);
+                return;
+            }
+        }
+        BufferedImage fallback = new BufferedImage(1280, 854, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = fallback.createGraphics();
+        g2.setColor(new Color(0x3B, 0x59, 0x78));
+        g2.fillRect(0, 0, 1280, 854);
+        g2.dispose();
+        setSourceBufferedImage(fallback);
+    }
+
+    private void setSourceBufferedImage(BufferedImage img) {
+        fullSourceImage = toRgbImage(img);
+        previewSourceImage = scaleDownIfNeeded(fullSourceImage, 1500);
+        previewW = previewSourceImage.getWidth();
+        previewH = previewSourceImage.getHeight();
+        previewSourcePixels = previewSourceImage.getRGB(0, 0, previewW, previewH, null, 0, previewW);
+        thumbSourceImage = scaleDownIfNeeded(fullSourceImage, 240);
+        canvasPanel.resetView();
+        recipeThumbCache.clear();
+        refreshFilmRecipeCardsAsync();
+        triggerPreviewRender();
+    }
+
+    private static BufferedImage toRgbImage(BufferedImage src) {
+        if (src.getType() == BufferedImage.TYPE_INT_RGB) return src;
+        BufferedImage rgb = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = rgb.createGraphics();
+        g2.drawImage(src, 0, 0, null);
+        g2.dispose();
+        return rgb;
+    }
+
+    private static BufferedImage scaleDownIfNeeded(BufferedImage src, int maxEdge) {
+        int w = src.getWidth();
+        int h = src.getHeight();
+        int longest = Math.max(w, h);
+        if (longest <= maxEdge) return toRgbImage(src);
+        double s = maxEdge / (double) longest;
+        int nw = Math.max(1, (int) Math.round(w * s));
+        int nh = Math.max(1, (int) Math.round(h * s));
+        BufferedImage scaled = new BufferedImage(nw, nh, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = scaled.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.drawImage(src, 0, 0, nw, nh, null);
+        g2.dispose();
+        return scaled;
+    }
+
+    private void openImageDialog() {
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Chọn ảnh để chỉnh sửa trong IRO Studio");
+        fc.setFileFilter(new FileNameExtensionFilter("Tệp hình ảnh (JPG, PNG, WEBP, BMP)", "jpg", "jpeg", "png", "webp", "bmp"));
+        if (fc.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
+            File f = fc.getSelectedFile();
+            try {
+                BufferedImage bi = ImageIO.read(f);
+                if (bi != null) {
+                    currentPhotoName = f.getName();
+                    setSourceBufferedImage(bi);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Không thể đọc ảnh: " + ex.getMessage());
+            }
         }
     }
 
-    private void exportSettingsJson() {
+    private void exportImageDialog() {
+        if (fullSourceImage == null) return;
         JFileChooser fc = new JFileChooser();
-        fc.setDialogTitle("Xuất tệp JSON thông số màu");
-        fc.setSelectedFile(new File("iro-settings.json"));
-        if (fc.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) return;
-        try (FileOutputStream out = new FileOutputStream(fc.getSelectedFile())) {
-            JSONObject json = SettingsCodec.encode(settings);
-            out.write(json.toString(2).getBytes(StandardCharsets.UTF_8));
-            setStatus("Đã xuất JSON: " + fc.getSelectedFile().getAbsolutePath());
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Không lưu được JSON: " + ex.getMessage(), "Lỗi xuất JSON", JOptionPane.ERROR_MESSAGE);
+        fc.setDialogTitle("Xuất ảnh chất lượng cao");
+        String recId = currentRecipe != null ? currentRecipe.id : "custom";
+        fc.setSelectedFile(new File("IRO_" + recId + "_" + currentPhotoName));
+        if (fc.showSaveDialog(frame) == JFileChooser.APPROVE_OPTION) {
+            File out = fc.getSelectedFile();
+            if (!out.getName().toLowerCase(Locale.ROOT).endsWith(".jpg")
+                    && !out.getName().toLowerCase(Locale.ROOT).endsWith(".png")) {
+                out = new File(out.getAbsolutePath() + ".jpg");
+            }
+            final File target = out;
+            final Settings snapSettings = currentSettings.copy();
+            final String recName = currentRecipe != null ? currentRecipe.name : snapSettings.film;
+            bottomStatusLabel.setText("Đang kết xuất ảnh độ phân giải gốc...");
+            renderExecutor.submit(() -> {
+                try {
+                    int w = fullSourceImage.getWidth();
+                    int h = fullSourceImage.getHeight();
+                    int[] px = fullSourceImage.getRGB(0, 0, w, h, null, 0, w);
+                    int[] outPx = ColorEngine.process(px, w, h, snapSettings, activeCubeLut);
+                    if (!lightCraftState.isIdentity()) {
+                        outPx = LightCraftEngine.processPixels(outPx, w, h, lightCraftState);
+                    }
+                    BufferedImage rgb = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+                    rgb.setRGB(0, 0, w, h, outPx, 0, w);
+                    rgb = ImageCanvasPanel.renderFramedImage(rgb, canvasPanel.getFrameMode(), snapSettings.film, recName);
+                    String ext = target.getName().toLowerCase(Locale.ROOT).endsWith(".png") ? "png" : "jpg";
+                    ImageIO.write(rgb, ext, target);
+                    SwingUtilities.invokeLater(() -> bottomStatusLabel.setText("Đã lưu ảnh tại: " + target.getAbsolutePath()));
+                } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(frame, "Lỗi xuất ảnh: " + ex.getMessage()));
+                }
+            });
+        }
+    }
+
+    private void runAutoBalance() {
+        if (previewSourcePixels == null) return;
+        Settings localProposed = AutoBalancer.analyze(previewSourcePixels, previewW, previewH, currentSettings);
+        currentSettings = AutoBalanceGuard.protect(previewSourcePixels, previewW, previewH, localProposed);
+        syncUiFromState();
+        pushHistorySnapshot();
+        triggerPreviewRender();
+        bottomStatusLabel.setText(String.format(Locale.US,
+                "Tự động cân bằng tự nhiên (AutoBalancer + Guard): EV %+.1f, Highlight %+.1f, Shadow %+.1f, Temp %+.0f",
+                currentSettings.exposure, currentSettings.highlight, currentSettings.shadow, currentSettings.temperature));
+    }
+
+    private void resetAllAdjustments() {
+        currentSettings = new Settings();
+        if (currentRecipe != null) {
+            currentSettings.film = currentRecipe.film;
+        }
+        lightCraftState.resetAll();
+        activeCubeLut = null;
+        syncUiFromState();
+        pushHistorySnapshot();
+        triggerPreviewRender();
+    }
+
+    private void pushHistorySnapshot() {
+        try {
+            String json = SettingsCodec.encode(currentSettings).toString();
+            if (!undoStack.isEmpty() && undoStack.get(undoStack.size() - 1).equals(json)) return;
+            undoStack.add(json);
+            if (undoStack.size() > 40) undoStack.remove(0);
+            redoStack.clear();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void undo() {
+        if (undoStack.size() <= 1) return;
+        try {
+            String cur = undoStack.remove(undoStack.size() - 1);
+            redoStack.add(cur);
+            String prev = undoStack.get(undoStack.size() - 1);
+            currentSettings = SettingsCodec.decode(new JSONObject(prev));
+            syncUiFromState();
+            triggerPreviewRender();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void redo() {
+        if (redoStack.isEmpty()) return;
+        try {
+            String next = redoStack.remove(redoStack.size() - 1);
+            undoStack.add(next);
+            currentSettings = SettingsCodec.decode(new JSONObject(next));
+            syncUiFromState();
+            triggerPreviewRender();
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void importCubeLutDialog() {
+        JFileChooser fc = new JFileChooser();
+        fc.setDialogTitle("Chọn tệp 3D LUT (.cube)");
+        fc.setFileFilter(new FileNameExtensionFilter("3D LUT (.cube)", "cube"));
+        if (fc.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
+            File f = fc.getSelectedFile();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(f), StandardCharsets.UTF_8))) {
+                activeCubeLut = CubeLut.parse(reader);
+                bottomStatusLabel.setText("Đã nạp 3D LUT: " + f.getName());
+                triggerPreviewRender();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Không thể đọc tệp .cube: " + ex.getMessage());
+            }
+        }
+    }
+
+    private void copySettingsJson() {
+        try {
+            String json = SettingsCodec.encode(currentSettings).toString(2);
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(json), null);
+            bottomStatusLabel.setText("Đã sao chép JSON công thức vào Clipboard.");
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void importSettingsJsonDialog() {
+        String input = JOptionPane.showInputDialog(frame, "Dán chuỗi JSON công thức IRO vào đây:");
+        if (input != null && !input.trim().isEmpty()) {
+            try {
+                currentSettings = SettingsCodec.decode(new JSONObject(input.trim()));
+                syncUiFromState();
+                pushHistorySnapshot();
+                triggerPreviewRender();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Chuỗi JSON không hợp lệ: " + ex.getMessage());
+            }
         }
     }
 
     private void setupKeyboardShortcuts() {
-        JComponent root = getRootPane();
-        bindKey(root, KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK), "open", this::chooseAndOpenImage);
-        bindKey(root, KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK), "save", this::exportFullResolutionImage);
-        bindKey(root, KeyStroke.getKeyStroke(KeyEvent.VK_B, KeyEvent.CTRL_DOWN_MASK), "autobalance", this::runAutoBalance);
-        bindKey(root, KeyStroke.getKeyStroke(KeyEvent.VK_Z, KeyEvent.CTRL_DOWN_MASK), "undo", this::performUndo);
-        bindKey(root, KeyStroke.getKeyStroke(KeyEvent.VK_Y, KeyEvent.CTRL_DOWN_MASK), "redo", this::performRedo);
-    }
-
-    private static void bindKey(JComponent root, KeyStroke ks, String name, Runnable action) {
-        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(ks, name);
-        root.getActionMap().put(name, new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                action.run();
-            }
+        JComponent root = (JComponent) frame.getContentPane();
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK), "open");
+        root.getActionMap().put("open", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { openImageDialog(); }
+        });
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_S, KeyEvent.CTRL_DOWN_MASK), "save");
+        root.getActionMap().put("save", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { exportImageDialog(); }
+        });
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_Z, KeyEvent.CTRL_DOWN_MASK), "undo");
+        root.getActionMap().put("undo", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { undo(); }
+        });
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_Y, KeyEvent.CTRL_DOWN_MASK), "redo");
+        root.getActionMap().put("redo", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { redo(); }
+        });
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_B, KeyEvent.CTRL_DOWN_MASK), "auto");
+        root.getActionMap().put("auto", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { runAutoBalance(); }
         });
     }
 
-    @SuppressWarnings("unchecked")
-    private void setupDragAndDrop() {
-        setDropTarget(new DropTarget(this, DnDConstants.ACTION_COPY, new DropTargetAdapter() {
-            @Override
-            public void drop(DropTargetDropEvent dtde) {
-                try {
-                    dtde.acceptDrop(DnDConstants.ACTION_COPY);
-                    Object data = dtde.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
-                    if (data instanceof List) {
-                        List<File> files = (List<File>) data;
-                        for (File f : files) {
-                            String low = f.getName().toLowerCase(Locale.ROOT);
-                            if (low.endsWith(".cube")) {
-                                loadCubeLutFile(f);
-                            } else if (low.endsWith(".jpg") || low.endsWith(".jpeg") || low.endsWith(".png")
-                                    || low.endsWith(".bmp") || low.endsWith(".webp")) {
-                                openImageFile(f);
-                            }
-                        }
-                    }
-                } catch (Exception ignored) {
-                }
+    private void loadBundledCatalogRecipes() {
+        catalogRecipes.clear();
+        try (InputStream in = IroDesktopApp.class.getResourceAsStream("/recipes.json")) {
+            InputStream stream = in;
+            if (stream == null) {
+                File local = new File("app/src/main/assets/recipes.json");
+                if (local.isFile()) stream = new FileInputStream(local);
             }
-        }, true));
-    }
-
-    public static void main(String[] args) {
-        System.setProperty("awt.useSystemAAFontSettings", "on");
-        System.setProperty("swing.aatext", "true");
-        try {
-            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+            if (stream != null) {
+                StringBuilder sb = new StringBuilder();
+                try (BufferedReader br = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = br.readLine()) != null) sb.append(line).append('\n');
+                }
+                JSONArray arr = new JSONArray(sb.toString());
+                // Ưu tiên các công thức có sẵn sampleAsset đóng gói ở đầu danh sách
+                List<Recipe> withSample = new ArrayList<>();
+                List<Recipe> others = new ArrayList<>();
+                for (int i = 0; i < arr.length(); i++) {
+                    try {
+                        Recipe r = new Recipe(arr.getJSONObject(i));
+                        if (r.sampleAsset != null && !r.sampleAsset.isEmpty()) {
+                            withSample.add(r);
+                        } else {
+                            others.add(r);
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+                catalogRecipes.addAll(withSample);
+                catalogRecipes.addAll(others);
+            }
         } catch (Exception ignored) {
         }
-
-        String screenshotOut = null;
-        int initialTab = 0;
-        for (int i = 0; i < args.length; i++) {
-            if ("--screenshot".equals(args[i]) && i + 1 < args.length) {
-                screenshotOut = args[++i];
-            } else if ("--tab".equals(args[i]) && i + 1 < args.length) {
-                initialTab = Integer.parseInt(args[++i]);
-            }
-        }
-        final String snapTarget = screenshotOut;
-        final int tabToShow = initialTab;
-
-        SwingUtilities.invokeLater(() -> {
-            IroDesktopApp app = new IroDesktopApp();
-            app.setVisible(true);
-            if (!app.recipeListModel.isEmpty()) {
-                app.recipeList.setSelectedIndex(0);
-            }
-            if (tabToShow > 0) {
-                app.switchInspectorTab(tabToShow);
-            }
-
-            if (snapTarget != null) {
-                Timer timer = new Timer(1600, e -> {
-                    try {
-                        BufferedImage shot = new BufferedImage(app.getWidth(), app.getHeight(), BufferedImage.TYPE_INT_RGB);
-                        Graphics2D g2 = shot.createGraphics();
-                        app.paint(g2);
-                        g2.dispose();
-                        File out = new File(snapTarget);
-                        if (out.getParentFile() != null) out.getParentFile().mkdirs();
-                        ImageIO.write(shot, "png", out);
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    } finally {
-                        System.exit(0);
-                    }
-                });
-                timer.setRepeats(false);
-                timer.start();
-            }
-        });
     }
 }

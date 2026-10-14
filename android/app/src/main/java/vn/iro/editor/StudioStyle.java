@@ -271,6 +271,26 @@ final class StudioStyle {
                     c.drawPath(arrow, p);
                     break;
                 }
+                case "rotate_left": {
+                    // Xoay 90 độ ngược chiều kim đồng hồ
+                    c.drawArc(new RectF(4f, 4f, 20f, 20f), -45f, -270f, false, p);
+                    Path arrow = new Path();
+                    arrow.moveTo(12f, 2.5f);
+                    arrow.lineTo(7.5f, 6f);
+                    arrow.lineTo(12.5f, 8.5f);
+                    c.drawPath(arrow, p);
+                    break;
+                }
+                case "rotate_right": {
+                    // Xoay 90 độ theo chiều kim đồng hồ
+                    c.drawArc(new RectF(4f, 4f, 20f, 20f), -135f, 270f, false, p);
+                    Path arrow = new Path();
+                    arrow.moveTo(12f, 2.5f);
+                    arrow.lineTo(16.5f, 6f);
+                    arrow.lineTo(11.5f, 8.5f);
+                    c.drawPath(arrow, p);
+                    break;
+                }
                 case "wand": {
                     // wand.and.stars (Tự động cân bằng ảnh)
                     c.drawLine(4f, 20f, 16f, 8f, p);

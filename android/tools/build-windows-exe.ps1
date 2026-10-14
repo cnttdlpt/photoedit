@@ -65,6 +65,7 @@ try {
 
     Write-Host "[1/5] Compiling shared Android ColorEngine + LightCraftEngine + Desktop Studio UI..."
     $sharedNames = @(
+        "AutoBalanceGuard.java",
         "AutoBalancer.java",
         "ColorEngine.java",
         "CubeLut.java",

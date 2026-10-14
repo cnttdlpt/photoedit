@@ -265,6 +265,8 @@ public class MainActivity extends Activity {
     private TextView compareOriginBadge;
     private TextView statusLabel;
     private TextView canvasRecipeChip;
+    private TextView aiRecommendedBadge;
+    private String aiRecommendedFilm = null;
     private View undoButton;
     private View redoButton;
     private View railAutoBalanceCircle;
@@ -921,10 +923,23 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
 
+        aiRecommendedBadge = text("✦ Gợi ý Film", 11.5f, Color.WHITE);
+        aiRecommendedBadge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        aiRecommendedBadge.setPadding(dp(12), dp(7), dp(12), dp(7));
+        aiRecommendedBadge.setBackground(StudioStyle.warmAmberPill(dp(18)));
+        aiRecommendedBadge.setVisibility(View.GONE);
+        aiRecommendedBadge.setOnClickListener(v -> applyRecommendedFilm(aiRecommendedFilm));
+        MotionStudio.attachExpressiveTouch(aiRecommendedBadge, 0.96f);
+        LinearLayout.LayoutParams aiLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        aiLp.leftMargin = dp(8);
+        topBar.addView(aiRecommendedBadge, aiLp);
+
         View topSpacerLeft = new View(this);
         topBar.addView(topSpacerLeft, new LinearLayout.LayoutParams(0, 1, 1f));
 
-        // Cụm nút Hoàn tác (Undo) / Làm lại (Redo) / Giữ xem Gốc ở giữa
+        // Cụm nút Hoàn tác (Undo) / Làm lại (Redo) / Xoay 90° / Giữ xem Gốc ở giữa
         LinearLayout historyPill = row();
         historyPill.setPadding(dp(4), dp(4), dp(4), dp(4));
         historyPill.setBackground(StudioStyle.liquidGlassCard(dp(22)));
@@ -938,6 +953,18 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams redoLp = new LinearLayout.LayoutParams(dp(36), dp(36));
         redoLp.leftMargin = dp(6);
         historyPill.addView(redoButton, redoLp);
+
+        View rotateLeftBtn = createCircleIconButton("rotate_left", StudioStyle.INK, dp(36), () -> rotatePhoto(false));
+        rotateLeftBtn.setContentDescription("Xoay 90° trái");
+        LinearLayout.LayoutParams rotLeftLp = new LinearLayout.LayoutParams(dp(36), dp(36));
+        rotLeftLp.leftMargin = dp(6);
+        historyPill.addView(rotateLeftBtn, rotLeftLp);
+
+        View rotateRightBtn = createCircleIconButton("rotate_right", StudioStyle.INK, dp(36), () -> rotatePhoto(true));
+        rotateRightBtn.setContentDescription("Xoay 90° phải");
+        LinearLayout.LayoutParams rotRightLp = new LinearLayout.LayoutParams(dp(36), dp(36));
+        rotRightLp.leftMargin = dp(6);
+        historyPill.addView(rotateRightBtn, rotRightLp);
 
         TextView holdComparePill = text("Giữ xem Gốc", 11.5f, StudioStyle.INK);
         holdComparePill.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
@@ -2907,7 +2934,8 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Tự động cân bằng ảnh bằng {@link AutoBalancer} (tương đương {@code EditorModel.autoBalance()} trên iOS).
+     * Tự động cân bằng ảnh thông minh qua Gemini AI hoặc bộ cân bằng tự nhiên nội bộ có bảo vệ
+     * (tương đương {@code EditorModel.autoBalance()} và {@code AutoBalanceGuard.protect()} trên iOS).
      */
     private void performAutoBalance() {
         if (preview == null) {
@@ -2915,14 +2943,180 @@ public class MainActivity extends Activity {
             return;
         }
         recordUndo();
-        settings = AutoBalancer.analyze(preview, settings);
+        final String apiKey = GeminiAutoService.getApiKey(this);
+        if (!apiKey.isEmpty()) {
+            if (statusLabel != null) {
+                statusLabel.setText("Gemini AI đang phân tích ngữ cảnh ảnh…");
+            }
+            final Settings baseline = AutoBalancer.analyze(preview, settings);
+            executor.execute(() -> {
+                try {
+                    int maxEdge = 384;
+                    int pw = preview.getWidth();
+                    int ph = preview.getHeight();
+                    double scale = Math.min(1.0, (double) maxEdge / Math.max(pw, ph));
+                    int sw = Math.max(1, (int) Math.round(pw * scale));
+                    int sh = Math.max(1, (int) Math.round(ph * scale));
+                    Bitmap small = Bitmap.createScaledBitmap(preview, sw, sh, true);
+                    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                    small.compress(Bitmap.CompressFormat.JPEG, 78, baos);
+                    byte[] jpegBytes = baos.toByteArray();
+
+                    int[] smPx = new int[sw * sh];
+                    small.getPixels(smPx, 0, sw, 0, 0, sw, sh);
+                    long sr = 0, sg = 0, sb = 0, scnt = 0;
+                    for (int p : smPx) {
+                        if (((p >>> 24) & 255) >= 16) {
+                            sr += (p >>> 16) & 255;
+                            sg += (p >>> 8) & 255;
+                            sb += p & 255;
+                            scnt++;
+                        }
+                    }
+                    if (small != preview) small.recycle();
+                    int avgR = scnt > 0 ? (int) (sr / scnt) : 128;
+                    int avgG = scnt > 0 ? (int) (sg / scnt) : 128;
+                    int avgB = scnt > 0 ? (int) (sb / scnt) : 128;
+
+                    GeminiAutoService.GeminiAutoResult aiRes = GeminiAutoService.analyzeSync(
+                            apiKey,
+                            GeminiAutoService.getSelectedModel(this),
+                            jpegBytes,
+                            avgR, avgG, avgB,
+                            baseline
+                    );
+
+                    runOnUiThread(() -> {
+                        if (dead || preview == null) return;
+                        Settings aiProposal = aiRes.appliedSettings(new Settings(), baseline);
+                        Settings protectedSettings = AutoBalanceGuard.protect(preview, aiProposal);
+                        settings = protectedSettings;
+                        settings.lutAmount = 0.0;
+                        activeLut = null;
+                        currentRecipe = null;
+                        recipeNotes.clear();
+                        lightCraftState.resetAll();
+                        isAutoBalanced = true;
+                        isComparing = false;
+                        aiRecommendedFilm = aiRes.recommendedFilm;
+                        if (aiRecommendedBadge != null) {
+                            if (aiRecommendedFilm != null && !aiRecommendedFilm.trim().isEmpty()) {
+                                aiRecommendedBadge.setText("✦ Gợi ý: " + aiRecommendedFilm);
+                                aiRecommendedBadge.setVisibility(View.VISIBLE);
+                            } else {
+                                aiRecommendedBadge.setVisibility(View.GONE);
+                            }
+                        }
+                        syncAllUiControls();
+                        MotionStudio.popBadge(activeParamValueBadge);
+                        persist();
+                        requestRenderImmediate();
+                        message("Gemini AI (" + aiRes.sceneType + "): " + aiRes.summary);
+                    });
+                    return;
+                } catch (Exception ex) {
+                    DebugLogger.e(DebugLogger.TAG_AUTOBALANCE, "Gemini AI fallback: " + ex.getMessage(), ex);
+                }
+                runOnUiThread(this::applyLocalProtectedAutoBalance);
+            });
+            return;
+        }
+
+        applyLocalProtectedAutoBalance();
+    }
+
+    private void applyLocalProtectedAutoBalance() {
+        if (preview == null) return;
+        Settings localProposed = AutoBalancer.analyze(preview, settings);
+        Settings protectedSettings = AutoBalanceGuard.protect(preview, localProposed);
+        settings = protectedSettings;
+        settings.lutAmount = 0.0;
+        activeLut = null;
         isAutoBalanced = true;
         isComparing = false;
+        if (aiRecommendedBadge != null) {
+            aiRecommendedBadge.setVisibility(View.GONE);
+        }
         syncAllUiControls();
         MotionStudio.popBadge(activeParamValueBadge);
         persist();
         requestRenderImmediate();
-        message("Đã tự động cân bằng ánh sáng và màu sắc");
+        message("Đã tự động cân bằng tự nhiên (AutoBalancer + Guard)");
+    }
+
+    private void rotatePhoto(boolean clockwise) {
+        if (preview == null) {
+            message("Mở ảnh trước khi xoay");
+            return;
+        }
+        recordUndo();
+        android.graphics.Matrix matrix = new android.graphics.Matrix();
+        matrix.postRotate(clockwise ? 90f : -90f);
+        Bitmap rotatedPreview = Bitmap.createBitmap(preview, 0, 0, preview.getWidth(), preview.getHeight(), matrix, true);
+        if (rotatedPreview != preview) {
+            preview = rotatedPreview;
+        }
+        if (frameSource != null) {
+            Bitmap rotatedFrame = Bitmap.createBitmap(frameSource, 0, 0, frameSource.getWidth(), frameSource.getHeight(), matrix, true);
+            if (rotatedFrame != frameSource) {
+                frameSource = rotatedFrame;
+            }
+        }
+        frameVersion++;
+        framePreview = null;
+        if (inlineFilterSession != null) {
+            closeThumbnails(inlineFilterSession);
+        }
+        inlineFilterSession = thumbnailSession();
+        syncAllUiControls();
+        requestRenderImmediate();
+        message(clockwise ? "Đã xoay 90° theo chiều kim đồng hồ" : "Đã xoay 90° ngược chiều kim đồng hồ");
+    }
+
+    private void applyRecommendedFilm(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) return;
+        Recipe found = null;
+        String q = keyword.trim().toLowerCase(Locale.ROOT);
+        for (Recipe r : recipes) {
+            if (r.name.toLowerCase(Locale.ROOT).contains(q) || r.film.toLowerCase(Locale.ROOT).contains(q)) {
+                found = r;
+                break;
+            }
+        }
+        if (found != null) {
+            applyRecipe(found);
+            message("Đã áp dụng công thức " + found.name);
+        } else {
+            recordUndo();
+            settings.film = keyword.trim();
+            settings.lutAmount = 100.0;
+            currentRecipe = null;
+            recipeNotes.clear();
+            loadBoundLut();
+            syncAllUiControls();
+            requestRenderImmediate();
+            message("Đã áp dụng giả lập màu phim: " + keyword.trim());
+        }
+    }
+
+    private void showGeminiConfigDialog() {
+        final android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("Nhập Google Gemini API Key");
+        input.setText(GeminiAutoService.getApiKey(this));
+        input.setSingleLine(true);
+        input.setPadding(dp(16), dp(12), dp(16), dp(12));
+
+        new AlertDialog.Builder(this)
+                .setTitle("Cấu hình Gemini AI Auto-Balance")
+                .setMessage("Nhập Gemini API Key từ Google AI Studio (aistudio.google.com). Nếu để trống, ứng dụng sẽ tự động dùng bộ cân bằng tự nhiên AutoBalancer trên thiết bị.")
+                .setView(input)
+                .setPositiveButton("Lưu", (d, w) -> {
+                    String key = input.getText().toString().trim();
+                    GeminiAutoService.setApiKey(this, key);
+                    message(key.isEmpty() ? "Đã chuyển về AutoBalancer nội bộ" : "Đã lưu Gemini API Key thành công");
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
     }
 
     private void applyOriginalLook(boolean resetFrameAlso) {
@@ -2994,7 +3188,10 @@ public class MainActivity extends Activity {
 
     private void showMore() {
         String[] actions = {
-                "✦ Tự động cân bằng ảnh",
+                "✦ Tự động cân bằng ảnh (AI / Guard)",
+                "↷ Xoay 90° sang phải (Clockwise)",
+                "↶ Xoay 90° sang trái (Counter-Clockwise)",
+                "Cấu hình Gemini AI Key…",
                 "Mở ảnh mới từ Thư viện",
                 "Mở ảnh từ Tệp tin",
                 "Đặt lại ảnh gốc",
@@ -3013,21 +3210,24 @@ public class MainActivity extends Activity {
                 .setItems(actions, (d, which) -> {
                     switch (which) {
                         case 0: performAutoBalance(); break;
-                        case 1: choose(OPEN_PHOTO, "image/*"); break;
-                        case 2: chooseDocumentOnly(OPEN_PHOTO, "image/*"); break;
-                        case 3: applyOriginalLook(true); break;
-                        case 4: confirmClosePhoto(); break;
-                        case 5: showLutOptions(); break;
-                        case 6: showOnlineLuts(); break;
-                        case 7:
+                        case 1: rotatePhoto(true); break;
+                        case 2: rotatePhoto(false); break;
+                        case 3: showGeminiConfigDialog(); break;
+                        case 4: choose(OPEN_PHOTO, "image/*"); break;
+                        case 5: chooseDocumentOnly(OPEN_PHOTO, "image/*"); break;
+                        case 6: applyOriginalLook(true); break;
+                        case 7: confirmClosePhoto(); break;
+                        case 8: showLutOptions(); break;
+                        case 9: showOnlineLuts(); break;
+                        case 10:
                             if (currentRecipe == null) message("Chưa chọn recipe");
                             else showRecipe(currentRecipe);
                             break;
-                        case 8: editRecipe(); break;
-                        case 9: saveRecipe(); break;
-                        case 10: choose(OPEN_RECIPE, "*/*"); break;
-                        case 11: editPhotoFrame(); break;
-                        case 12: showHelpDialog(); break;
+                        case 11: editRecipe(); break;
+                        case 12: saveRecipe(); break;
+                        case 13: choose(OPEN_RECIPE, "*/*"); break;
+                        case 14: editPhotoFrame(); break;
+                        case 15: showHelpDialog(); break;
                     }
                 })
                 .show();

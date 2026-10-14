@@ -1,48 +1,51 @@
 package vn.iro.editor;
 
 import android.graphics.Bitmap;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 
 /**
- * Bộ phân tích và tự động cân bằng ảnh thông minh (Auto-Balance Image Analysis).
- * Chuyển đổi trực tiếp từ {@code AutoBalancer} trong {@code ios/IRO/Core/ColorEngine.swift} (dòng 148–255).
+ * Bộ phân tích và tự động cân bằng ảnh thông minh (Conservative Natural Auto-Balancer).
+ * Đồng bộ chính xác 100% với thuật toán mới nhất từ {@code ios/IRO/Core/ColorEngine.swift}.
  *
- * <p>Cơ chế hoạt động (để theo dõi và debug):
- * <ol>
- *     <li><b>Lấy mẫu thống kê (Sub-sampling):</b> Lấy tối đa ~10.000 điểm ảnh không trong suốt
- *         ({@code alpha > 0}) trải đều trên toàn bức ảnh để phân tích tức thì mà không gây trễ giao diện.</li>
- *     <li><b>Phân vị độ chói (Luminance Percentiles):</b> Tính độ chói cảm nhận Rec.709 cho từng mẫu,
- *         sắp xếp mảng để tìm trung vị ({@code medianL}), phân vị 5% vùng tối ({@code p5}) và phân vị 95% vùng sáng ({@code p95}).</li>
- *     <li><b>Tự động Phơi sáng (Exposure):</b> Đưa độ chói trung vị về mức mục tiêu {@code 120.0} (midtone hài hòa),
- *         giới hạn an toàn trong đoạn {@code [-1.8, +1.8]} EV.</li>
- *     <li><b>Tối ưu Tương phản động (Highlight & Shadow):</b>
- *         <ul>
- *             <li>Nếu vùng sáng bị gắt ({@code p95 > 240}): hạ {@code highlight = -1.0} để cứu chi tiết bầu trời/vùng sáng.</li>
- *             <li>Nếu ảnh thiếu sáng phẳng ({@code p95 < 180 && medianL < 110}): nâng {@code highlight = +0.5}.</li>
- *             <li>Nếu vùng tối bị bệt ({@code p5 < 20 && medianL < 130}): đặt {@code shadow = -1.0} (trong {@link ColorEngine},
- *                 giá trị âm nâng chi tiết vùng tối).</li>
- *             <li>Nếu vùng tối bị mờ đục/thiếu chiều sâu ({@code p5 > 50}): đặt {@code shadow = +0.5} để làm sâu sắc đen.</li>
- *         </ul>
- *     </li>
- *     <li><b>Cân bằng trắng tương đối (Temperature):</b> So sánh độ lệch trung bình kênh Đỏ và Xanh dương
- *         ({@code rbDelta = avgR - avgB}). Nếu ảnh quá ám vàng/đỏ ({@code > 14}) thì giảm nhiệt độ;
- *         nếu quá ám xanh lạnh ({@code < -14}) thì tăng nhiệt độ ấm lên.</li>
- *     <li><b>Độ đậm màu & Độ nét:</b> Tăng {@code color = +1.0} nếu ảnh gốc nhợt nhạt ({@code avgSat < 0.22}),
- *         đồng thời thêm độ trong trẻo nhẹ ({@code clarity = 1.0}, {@code sharpness = 1.0}).</li>
- * </ol>
+ * <p>Nguyên tắc thiết kế:
+ * <ul>
+ *     <li><b>Đo sáng tuyến tính (Linear Light):</b> Tính độ chói chuẩn Rec. 709 trong không gian ánh sáng tuyến tính
+ *         thay vì gamma phi tuyến, giúp dự đoán độ bù sáng chính xác mà không làm bệt chi tiết.</li>
+ *     <li><b>Bảo vệ vùng sáng (Highlight Headroom):</b> Giới hạn bù sáng dựa theo phân vị 95% đỉnh kênh màu
+ *         để không làm cháy sáng các vùng mây trời hay đèn chiếu.</li>
+ *     <li><b>Nhận diện High-Key:</b> Nếu bức ảnh có nền trắng chủ đạo (High-Key, phân vị 5% độ chói >= 180),
+ *         giữ nguyên Highlight = 0 để tránh kéo xỉn phông nền trắng.</li>
+ *     <li><b>Cân bằng trắng theo mẫu trung tính (Neutral Midtone Log-Ratio):</b> Chỉ lấy mẫu độ lệch R/B
+ *         từ các điểm ảnh gần trung tính (độ bão hòa <= 0.18 và độ chói 0.06..0.8), loại bỏ hoàn toàn
+ *         nhiễu từ vật thể màu rực rỡ như hoa đỏ hay bầu trời xanh.</li>
+ *     <li><b>Bảo toàn ý đồ sáng tạo:</b> Không tự ý tăng bão hòa màu, độ nét hay độ trong (Color, Sharpness, Clarity)
+ *         nhằm tôn trọng tối đa màu sắc nguyên bản của người chụp.</li>
+ * </ul>
  */
 public final class AutoBalancer {
+
+    private static final double[] LINEAR_LUT = new double[256];
+
+    static {
+        for (int i = 0; i < 256; i++) {
+            double v = i / 255.0;
+            LINEAR_LUT[i] = v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        }
+    }
 
     private AutoBalancer() {
     }
 
+    private static double linear(int byteVal) {
+        return LINEAR_LUT[byteVal & 255];
+    }
+
     /**
      * Phân tích trực tiếp trên đối tượng {@link Bitmap} của Android và trả về bộ {@link Settings} đã tối ưu.
-     *
-     * @param bitmap       Ảnh nguồn đang mở (thường là ảnh preview).
-     * @param baseSettings Thông số hiện tại (để giữ lại tên {@code film}, {@code lutAmount}, {@code dr}...).
-     * @return Bản sao {@link Settings} mới với các thông số đã được cân bằng tự động.
      */
     public static Settings analyze(Bitmap bitmap, Settings baseSettings) {
         if (bitmap == null || bitmap.getWidth() < 1 || bitmap.getHeight() < 1) {
@@ -57,13 +60,7 @@ public final class AutoBalancer {
 
     /**
      * Phân tích mảng điểm ảnh ARGB_8888 và tính toán bộ thông số {@link Settings} cân bằng tự động.
-     * Tương đương 100% với hàm {@code AutoBalancer.analyze(_:baseSettings:)} trên iOS.
-     *
-     * @param pixels       Mảng điểm ảnh {@code 0xAARRGGBB}.
-     * @param width        Chiều rộng ảnh.
-     * @param height       Chiều cao ảnh.
-     * @param baseSettings Bộ thông số nền (nếu {@code null} sẽ khởi tạo {@link Settings} mặc định).
-     * @return Bộ {@link Settings} đã được tối ưu hóa.
+     * Tương đương 100% với hàm {@code ColorEngine.analyze(_:baseSettings:)} trên iOS.
      */
     public static Settings analyze(int[] pixels, int width, int height, Settings baseSettings) {
         Settings adjusted = baseSettings != null ? baseSettings.copy() : new Settings();
@@ -72,104 +69,97 @@ public final class AutoBalancer {
             return adjusted;
         }
 
-        // Bước nhảy lấy mẫu để thu thập tối đa khoảng 10.000 điểm ảnh
         int sampleStep = Math.max(1, totalPixels / 10000);
-        double[] luminanceBuffer = new double[totalPixels / sampleStep + 2];
-        int validCount = 0;
+        int maxSamples = totalPixels / sampleStep + 2;
 
-        double sumR = 0.0;
-        double sumB = 0.0;
-        double sumSat = 0.0;
+        double[] luminances = new double[maxSamples];
+        double[] channelPeaks = new double[maxSamples];
+        double[] encodedLuminances = new double[maxSamples];
+        List<Double> neutralLogRatios = new ArrayList<>();
+
+        int sampleCount = 0;
 
         for (int idx = 0; idx < totalPixels; idx += sampleStep) {
             int p = pixels[idx];
             int alpha = (p >>> 24) & 255;
-            // Bỏ qua các điểm ảnh trong suốt (viền đệm không chứa nội dung ảnh)
-            if (alpha == 0) {
-                continue;
+            if (alpha < 16) {
+                continue; // Bỏ qua viền đệm trong suốt
             }
 
-            double r = (p >>> 16) & 255;
-            double g = (p >>> 8) & 255;
-            double b = p & 255;
+            int r = (p >>> 16) & 255;
+            int g = (p >>> 8) & 255;
+            int b = p & 255;
 
-            // Độ chói cảm nhận theo chuẩn Rec. 709
-            double lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-            luminanceBuffer[validCount++] = lum;
+            double lr = linear(r);
+            double lg = linear(g);
+            double lb = linear(b);
 
-            sumR += r;
-            sumB += b;
+            double luminance = 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+            luminances[sampleCount] = luminance;
+            channelPeaks[sampleCount] = Math.max(lr, Math.max(lg, lb));
+            encodedLuminances[sampleCount] = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            sampleCount++;
 
-            double maxC = Math.max(r, Math.max(g, b));
-            double minC = Math.min(r, Math.min(g, b));
-            if (maxC > 0.0) {
-                sumSat += (maxC - minC) / maxC;
+            int maxC = Math.max(r, Math.max(g, b));
+            int minC = Math.min(r, Math.min(g, b));
+            double saturation = maxC > 0 ? (double) (maxC - minC) / maxC : 0.0;
+
+            // Điểm ảnh gần trung tính, vùng trung tính giúp đo cân bằng trắng không bị ảnh hưởng bởi hoa/trời
+            if (saturation <= 0.18 && luminance > 0.06 && luminance < 0.8 && lr > 0.0 && lb > 0.0) {
+                neutralLogRatios.add(Math.log(lr / lb));
             }
         }
 
-        if (validCount == 0) {
+        if (sampleCount == 0) {
             return adjusted;
         }
 
-        // Sắp xếp mảng độ chói để lấy trung vị (median), phân vị 5% (p5) và phân vị 95% (p95)
-        Arrays.sort(luminanceBuffer, 0, validCount);
-        double medianL = luminanceBuffer[validCount / 2];
-        double p5 = luminanceBuffer[(int) (validCount * 0.05)];
-        double p95 = luminanceBuffer[(int) (validCount * 0.95)];
+        Arrays.sort(luminances, 0, sampleCount);
+        Arrays.sort(channelPeaks, 0, sampleCount);
+        Arrays.sort(encodedLuminances, 0, sampleCount);
 
-        double avgR = sumR / validCount;
-        double avgB = sumB / validCount;
-        double avgSat = sumSat / validCount;
+        double median = luminances[sampleCount / 2];
+        double p95 = channelPeaks[(int) (sampleCount * 0.95)];
+        double encodedMedian = encodedLuminances[sampleCount / 2];
+        double encodedP5 = encodedLuminances[(int) (sampleCount * 0.05)];
+        double encodedP95 = encodedLuminances[(int) (sampleCount * 0.95)];
+        boolean isHighKey = encodedP5 >= 180.0;
 
-        // 1. Phơi sáng (Exposure): đưa độ chói trung vị về khoảng 120.0
-        double targetMedian = 120.0;
-        double expDiff = (targetMedian - medianL) / 48.0;
-        adjusted.exposure = Math.round(Math.max(-1.8, Math.min(1.8, expDiff)) * 10.0) / 10.0;
+        // 1. Phơi sáng trong không gian tuyến tính: EV = log2(target / median)
+        double ln2 = Math.log(2.0);
+        double targetL = 0.14;
+        double exposure = Math.max(0.0, Math.min(1.2, Math.log(targetL / Math.max(median, 0.0001)) / ln2));
+        if (exposure > 0.0 && p95 > 0.0) {
+            // Bảo vệ không để vùng sáng vượt quá mức 0.90 trong ánh sáng tuyến tính
+            exposure = Math.min(exposure, Math.max(0.0, Math.log(0.90 / p95) / ln2));
+        }
+        // Làm tròn về số thập phân 1 chữ số
+        adjusted.exposure = Math.floor(exposure * 10.0) / 10.0;
 
-        // 2. Vùng sáng (Highlight) & Vùng tối (Shadow)
-        if (p95 > 240.0) {
-            adjusted.highlight = -1.0; // Cứu chi tiết vùng sáng gắt / bầu trời cháy sáng
-        } else if (p95 < 180.0 && medianL < 110.0) {
-            adjusted.highlight = 0.5;  // Làm tươi vùng sáng bị xỉn
+        // 2. Vùng sáng (Highlight)
+        if (isHighKey) {
+            adjusted.highlight = 0.0;
+        } else if (encodedP95 >= 254.0) {
+            adjusted.highlight = -0.5;
+        } else if (encodedP95 < 180.0 && encodedMedian < 110.0) {
+            adjusted.highlight = 0.5;
         } else {
             adjusted.highlight = 0.0;
         }
 
-        if (p5 < 20.0 && medianL < 130.0) {
-            adjusted.shadow = -1.0;    // Giá trị âm nâng vùng tối bị bệt trong ColorEngine
-        } else if (p5 > 50.0) {
-            adjusted.shadow = 0.5;     // Giá trị dương làm sâu lại vùng tối bị bạc màu
-        } else {
-            adjusted.shadow = 0.0;
-        }
+        // 3. Vùng tối (Shadow): nâng sáng vùng tối bị chìm sâu (giá trị âm mở sáng trong ColorEngine)
+        adjusted.shadow = encodedP5 < 40.0 ? -0.5 : 0.0;
 
-        // 3. Cân bằng trắng / Nhiệt độ màu tương đối (Temperature)
-        double rbDelta = avgR - avgB;
-        if (rbDelta > 14.0) {
-            double tempShift = -Math.min(30.0, (rbDelta - 14.0) * 0.8);
-            adjusted.temperature = Math.round(tempShift);
-        } else if (rbDelta < -14.0) {
-            double tempShift = Math.min(30.0, (-rbDelta - 14.0) * 0.8);
-            adjusted.temperature = Math.round(tempShift);
-        } else {
-            adjusted.temperature = 0.0;
+        // 4. Nhiệt độ màu (Temperature): tỉ lệ R/B dựa trên log ratio mẫu trung tính
+        if (neutralLogRatios.size() >= Math.max(1, sampleCount / 20)) {
+            Collections.sort(neutralLogRatios);
+            double ratio = neutralLogRatios.get(neutralLogRatios.size() / 2);
+            adjusted.temperature = Math.max(-15.0, Math.min(15.0, Math.round(-ratio / 0.004)));
         }
-
-        // 4. Độ đậm màu (Color / Saturation)
-        if (avgSat < 0.22) {
-            adjusted.color = 1.0;
-        } else {
-            adjusted.color = 0.0;
-        }
-
-        // 5. Độ trong (Clarity) & Độ sắc nét (Sharpness): tăng nhẹ độ chi tiết (+1.0)
-        adjusted.clarity = 1.0;
-        adjusted.sharpness = 1.0;
 
         DebugLogger.d(DebugLogger.TAG_AUTOBALANCE, String.format(Locale.ROOT,
-                "Phân tích %d mẫu: medianL=%.1f, p5=%.1f, p95=%.1f, rbDelta=%.1f, avgSat=%.2f -> EV=%+.1f, Hi=%+.1f, Sh=%+.1f, Temp=%+.0f, Col=%+.1f",
-                validCount, medianL, p5, p95, rbDelta, avgSat,
-                adjusted.exposure, adjusted.highlight, adjusted.shadow, adjusted.temperature, adjusted.color));
+                "AutoBalancer: %d mẫu (highKey=%b) -> EV=%+.1f, Hi=%+.1f, Sh=%+.1f, Temp=%+.0f",
+                sampleCount, isHighKey, adjusted.exposure, adjusted.highlight, adjusted.shadow, adjusted.temperature));
 
         return adjusted;
     }

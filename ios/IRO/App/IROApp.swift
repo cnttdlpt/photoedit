@@ -12,5 +12,6 @@ struct IROApp: App {
                 .tint(Studio.accent)
                 .task { await editor.start() }
         }
+        .defaultSize(width: 1280, height: 820)
     }
 }

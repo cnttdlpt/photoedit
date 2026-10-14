@@ -79,14 +79,18 @@ def configuration_list(key, common):
                     settings[signing_key] = previous[signing_key]
         if key == 'project':
             settings.update({'SWIFT_OPTIMIZATION_LEVEL': '-Onone' if name == 'Debug' else '-O', 'DEBUG_INFORMATION_FORMAT': 'dwarf' if name == 'Debug' else 'dwarf-with-dsym', 'ENABLE_TESTABILITY': 'YES' if name == 'Debug' else 'NO', 'SWIFT_ACTIVE_COMPILATION_CONDITIONS': 'DEBUG' if name == 'Debug' else '', 'ONLY_ACTIVE_ARCH': 'YES' if name == 'Debug' else 'NO'})
+        if key == 'project':
+            previous = existing_objects.get(ident(key + name), {}).get('buildSettings', {})
+            if 'SWIFT_OPTIMIZATION_LEVEL' in previous:
+                settings['SWIFT_OPTIMIZATION_LEVEL'] = previous['SWIFT_OPTIMIZATION_LEVEL']
         body = ' '.join(f'{k} = {quote(v)};' for k, v in settings.items())
         configurations.append(add(key + name, f'isa = XCBuildConfiguration; buildSettings = {{{body}}}; name = {name};'))
     return add(key + 'config', f'isa = XCConfigurationList; buildConfigurations = {array(configurations)}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;')
 
 
 project_config = configuration_list('project', {'CLANG_ENABLE_MODULES': 'YES', 'CLANG_ENABLE_OBJC_ARC': 'YES', 'IPHONEOS_DEPLOYMENT_TARGET': '17.0', 'SDKROOT': 'iphoneos', 'SWIFT_VERSION': '5.0', 'SWIFT_STRICT_CONCURRENCY': 'targeted', 'ENABLE_USER_SCRIPT_SANDBOXING': 'YES'})
-app_config = configuration_list('app', {'PRODUCT_NAME': '$(TARGET_NAME)', 'PRODUCT_BUNDLE_IDENTIFIER': 'vn.iro.editor.ios', 'INFOPLIST_FILE': os.path.relpath(SOURCE / 'Resources/Info.plist', ROOT), 'GENERATE_INFOPLIST_FILE': 'NO', 'CODE_SIGN_STYLE': 'Automatic', 'TARGETED_DEVICE_FAMILY': '1,2', 'SUPPORTED_PLATFORMS': 'iphoneos iphonesimulator', 'SUPPORTS_MACCATALYST': 'NO', 'ASSETCATALOG_COMPILER_APPICON_NAME': 'AppIcon', 'LD_RUNPATH_SEARCH_PATHS': '$(inherited) @executable_path/Frameworks', 'SWIFT_EMIT_LOC_STRINGS': 'YES'})
-test_config = configuration_list('test', {'PRODUCT_NAME': '$(TARGET_NAME)', 'PRODUCT_BUNDLE_IDENTIFIER': 'vn.iro.editor.ios.tests', 'GENERATE_INFOPLIST_FILE': 'YES', 'CODE_SIGN_STYLE': 'Automatic', 'TARGETED_DEVICE_FAMILY': '1,2', 'SUPPORTED_PLATFORMS': 'iphoneos iphonesimulator', 'TEST_HOST': '$(BUILT_PRODUCTS_DIR)/IRO.app/IRO', 'BUNDLE_LOADER': '$(TEST_HOST)', 'LD_RUNPATH_SEARCH_PATHS': '$(inherited) @executable_path/Frameworks @loader_path/Frameworks'})
+app_config = configuration_list('app', {'PRODUCT_NAME': '$(TARGET_NAME)', 'PRODUCT_BUNDLE_IDENTIFIER': 'vn.iro.editor.ios', 'INFOPLIST_FILE': os.path.relpath(SOURCE / 'Resources/Info.plist', ROOT), 'GENERATE_INFOPLIST_FILE': 'NO', 'CODE_SIGN_STYLE': 'Automatic', 'TARGETED_DEVICE_FAMILY': '1,2,6', 'SUPPORTS_MACCATALYST': 'YES', 'DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER': 'NO', 'SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD': 'YES', 'MACOSX_DEPLOYMENT_TARGET': '14.0', 'ASSETCATALOG_COMPILER_APPICON_NAME': 'AppIcon', 'LD_RUNPATH_SEARCH_PATHS': '$(inherited) @executable_path/Frameworks', 'SWIFT_EMIT_LOC_STRINGS': 'YES'})
+test_config = configuration_list('test', {'PRODUCT_NAME': '$(TARGET_NAME)', 'PRODUCT_BUNDLE_IDENTIFIER': 'vn.iro.editor.ios.tests', 'GENERATE_INFOPLIST_FILE': 'YES', 'CODE_SIGN_STYLE': 'Automatic', 'TARGETED_DEVICE_FAMILY': '1,2,6', 'SUPPORTS_MACCATALYST': 'YES', 'MACOSX_DEPLOYMENT_TARGET': '14.0', 'TEST_HOST': '$(BUILT_PRODUCTS_DIR)/IRO.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/IRO', 'BUNDLE_LOADER': '$(TEST_HOST)', 'LD_RUNPATH_SEARCH_PATHS': '$(inherited) @executable_path/Frameworks @loader_path/Frameworks'})
 app_target = add('app-target', f'isa = PBXNativeTarget; buildConfigurationList = {app_config}; buildPhases = {array(app_phases)}; buildRules = (); dependencies = (); name = IRO; productName = IRO; productReference = {app_product}; productType = "com.apple.product-type.application";')
 proxy = add('proxy', f'isa = PBXContainerItemProxy; containerPortal = {ident("project-root")}; proxyType = 1; remoteGlobalIDString = {app_target}; remoteInfo = IRO;')
 dependency = add('dependency', f'isa = PBXTargetDependency; target = {app_target}; targetProxy = {proxy};')

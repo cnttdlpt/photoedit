@@ -79,6 +79,25 @@ final class ImagingTests: XCTestCase {
         XCTAssertEqual(PhotoIO.readMetadata(url: exported), PhotoInfo())
     }
 
+    func testExportAppliesLightCraftButOmitsMaskOverlay() throws {
+        let original = try solid(width: 24, height: 16)
+        let source = try fixture(original, name: "lightcraft-source")
+        var settings = Settings(); settings.exposure = 0.3
+        var state = LightCraftState()
+        state.paramShadows = 25
+        state.maskMode = .radial
+        state.maskExposure = 0.5
+        state.showMaskOverlay = true
+        let base = try ColorEngine.render(original, settings: settings)
+        let expected = try LightCraftEngine.render(base, state: state, includeMaskOverlay: false)
+        XCTAssertNotEqual(expected, base)
+        XCTAssertNotEqual(expected, try LightCraftEngine.render(base, state: state, includeMaskOverlay: true))
+        let destination = folder.appendingPathComponent("lightcraft-export.png")
+        _ = try PhotoIO.export(sourceURL: source, settings: settings, lut: nil, lightCraft: state,
+            size: .original, format: .png, info: PhotoInfo(), frameStyle: 0, destinationURL: destination)
+        XCTAssertEqual(try PhotoIO.decodePreview(url: destination), expected)
+    }
+
     func testAlphaIsStraightInEngineAndPNGButJPEGFlattensToWhite() throws {
         let image = try RasterImage(width: 2, height: 1, pixels: [200, 100, 50, 128, 12, 34, 56, 255])
         let png = folder.appendingPathComponent("alpha.png")

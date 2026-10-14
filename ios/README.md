@@ -1,15 +1,15 @@
-# IRO cho iPhone và iPad
+# IRO cho iPhone, iPad và Mac
 
-Bản iOS native bằng **SwiftUI + Swift**, chuyển từ phần cốt lõi Java của `android/`. Yêu cầu iOS 17 trở lên. Không dùng WebView, CocoaPods hay thư viện bên ngoài.
+Bản iOS native bằng **SwiftUI + Swift**, chuyển từ phần cốt lõi Java của `android/`. Yêu cầu iOS 17 trở lên hoặc macOS 14 trở lên qua Mac Catalyst. Không dùng WebView, CocoaPods hay thư viện bên ngoài.
 
 ## Mở và chạy
 
 1. Mở `ios/IRO.xcodeproj` trong Xcode.
-2. Chọn scheme **IRO** và một **iPhone Simulator**, bấm **Run** (`⌘R`).
+2. Chọn scheme **IRO** và một **iPhone Simulator** hoặc **My Mac (Mac Catalyst)**, bấm **Run** (`⌘R`).
 3. Để cài lên iPhone thật: kết nối iPhone, chọn thiết bị đó, vào target **IRO → Signing & Capabilities**, chọn **Team** Apple của bạn; đổi Bundle Identifier nếu cần. Bật Developer Mode trên iPhone nếu Xcode yêu cầu, rồi bấm Run.
 4. Phát hành qua TestFlight/App Store cần tài khoản và cấu hình ký của chủ ứng dụng. Dự án chưa được ký phân phối hoặc phát hành.
 
-Xcode phải hoàn tất bước cài đặt lần đầu, chấp nhận điều khoản Apple và cài iOS Simulator runtime. Không cần API key. Xcode project đã có sẵn, không cần chạy script sinh project để mở.
+Xcode phải hoàn tất bước cài đặt lần đầu, chấp nhận điều khoản Apple và cài iOS Simulator runtime. Chỉnh ảnh và Auto nội bộ chạy offline. Auto AI dùng cấu hình Gemini trong ứng dụng. Xcode project đã có sẵn, không cần chạy script sinh project để mở.
 
 ### Debug trên iPhone đã kết nối
 
@@ -21,6 +21,7 @@ Nếu app đang mở sẵn, dùng **Debug → Attach to Process → IRO**. Devel
 
 - Giao diện studio tiếng Việt, nền xanh than và điểm nhấn xanh kem theo bản Android; hỗ trợ iPhone/iPad.
 - Mở ảnh bằng bộ chọn Ảnh của iOS hoặc Tệp; giữ một bản sao ảnh nguồn trong vùng riêng của ứng dụng, giữ ảnh và thông số gần nhất khi mở lại.
+- **Auto màu:** cân bằng tự nhiên từ ảnh gốc, thay các lớp LUT/recipe/LightCraft trước đó trong một bước Hoàn tác. AI trả thông số tuyệt đối; kết quả được render mẫu để kiểm tra độ sáng chủ thể và clipping trước khi áp. Auto không tự kéo toàn ảnh tối đi; kết quả cũ bị bỏ nếu bạn đổi ảnh hoặc chỉnh tiếp. Film gợi ý chỉ áp LUT đã gắn đúng film và giữ phần cân bằng, không chọn recipe tùy ý.
 - Bộ xử lý màu Swift chuyển trực tiếp từ Java: EV tuyến tính, WB Red/Blue và nhiệt độ tương đối, LUT, tone/color, DR, Color Chrome/Blue, grain, NR, sharpness, clarity. Công việc xử lý chạy ngoài luồng giao diện và hủy preview cũ khi kéo thanh chỉnh.
 - Thư viện **392 recipe**: dữ liệu `recipes.json` (391 mục) và `sample-recipe.json` được sao chép nguyên từ Android. Tìm theo tên/film, lọc cảm biến/IR/video, xem nguồn và ghi chú, sửa bản riêng, nhập/xuất JSON tương thích Android.
 - LUT 3D `.cube` kích thước 2–65, DOMAIN_MIN/MAX, nội suy trilinear, chỉnh cường độ, gắn theo film và lưu offline. Thumbnail chạy trên ảnh đang mở; recipe chưa có LUT hiện ảnh gốc và nhãn báo rõ.
@@ -36,7 +37,7 @@ Recipe là thông số máy ảnh, không phải LUT hoặc mô phỏng chính t
 
 Khung chuyển từ Canvas Android sang CoreGraphics/UIKit; bố cục/ID được giữ nhưng font hệ thống, khử răng cưa và nội suy có thể khác giữa hai nền tảng. Không khẳng định toàn bộ file ảnh xuất giống từng byte với Android.
 
-Ảnh không được gửi tới dịch vụ mạng của IRO. Chỉ phần LUT dùng GitHub HTTPS. Dữ liệu app nằm trong Application Support; có thể nằm trong bản sao lưu hệ thống theo cài đặt iOS của người dùng. Bộ chọn Ảnh không yêu cầu đọc toàn bộ thư viện; quyền thêm ảnh chỉ hỏi khi bấm Lưu vào Ảnh.
+Chỉnh ảnh thủ công và Auto nội bộ xử lý trên thiết bị. Khi dùng **Auto AI**, bản JPEG thu nhỏ tối đa 384 px cùng số liệu RGB được gửi tới Google Gemini. Trong Cài đặt Gemini, xóa key và bấm Lưu để dùng Auto nội bộ. Phần LUT dùng GitHub HTTPS. Dữ liệu app nằm trong Application Support; có thể nằm trong bản sao lưu hệ thống theo cài đặt iOS của người dùng. Bộ chọn Ảnh không yêu cầu đọc toàn bộ thư viện; quyền thêm ảnh chỉ hỏi khi bấm Lưu vào Ảnh.
 
 ## Mã nguồn
 
@@ -68,4 +69,4 @@ Bộ cốt lõi có thể chạy riêng bằng Command Line Tools, không cần 
 bash ios/Tests/run-core-checks.sh
 ```
 
-Bộ kiểm tra riêng đã đạt **45 checks**, gồm **8 fixture pixel khớp mã Java Android**, giải mã/áp dụng toàn bộ 391 recipe, biên giá trị, nội suy LUT, kích thước xuất và hủy xử lý. Fixture tham chiếu được sinh từ `AndroidParityFixture.java`. 20 kiểm tra Java gốc cũng đạt. Xem `VALIDATION.md` để biết kết quả build và XCTest gần nhất.
+Bộ kiểm tra riêng có các regression đo sáng, cân bằng trắng và LightCraft; xem `VALIDATION.md` để biết số kiểm tra gần nhất. Bộ ban đầu đạt **45 checks**, gồm **8 fixture pixel khớp mã Java Android**, giải mã/áp dụng toàn bộ 391 recipe, biên giá trị, nội suy LUT, kích thước xuất và hủy xử lý. Fixture tham chiếu được sinh từ `AndroidParityFixture.java`. 20 kiểm tra Java gốc cũng đạt. Xem `VALIDATION.md` để biết kết quả build và XCTest gần nhất.

@@ -142,16 +142,46 @@ final class CoreTests: XCTestCase {
         XCTAssertLessThan(processed.value, totalPixels, "Cancellation must stop unfinished batches")
     }
 
-    func testAutoBalanceLiftsDarkShadowsAndDeepensWashedOutShadows() throws {
-        for (gray, shouldLift) in [(UInt8(8), true), (UInt8(80), false)] {
-            let source = try RasterImage(width: 1, height: 1, pixels: [gray, gray, gray, 255])
+    func testAutoBalanceLiftsDarkShadowsWithoutDeepeningNormalShadows() throws {
+        for (values, shouldLift): ([UInt8], Bool) in [([8], true), ([80, 160, 220], false)] {
+            let source = try RasterImage(width: values.count, height: 1, pixels: values.flatMap { [$0, $0, $0, 255] })
             let balanced = AutoBalancer.analyze(source)
             var withoutShadow = balanced; withoutShadow.shadow = 0
             let result = try ColorEngine.render(source, settings: balanced).pixels[0]
             let reference = try ColorEngine.render(source, settings: withoutShadow).pixels[0]
             if shouldLift { XCTAssertGreaterThan(result, reference) }
-            else { XCTAssertLessThan(result, reference) }
+            else { XCTAssertEqual(result, reference) }
         }
+    }
+
+    func testAutoBalanceDoesNotDarkenSubjectsAgainstBrightBackgrounds() throws {
+        let fixtures: [[UInt8]] = [
+            Array(repeating: 60, count: 25) + Array(repeating: 210, count: 75),
+            Array(repeating: 120, count: 15) + Array(repeating: 225, count: 85),
+            Array(repeating: 80, count: 30) + Array(repeating: 160, count: 50) + Array(repeating: 220, count: 20),
+            Array(repeating: 25, count: 35) + Array(repeating: 250, count: 65)
+        ]
+        for values in fixtures {
+            let source = try RasterImage(width: values.count, height: 1, pixels: values.flatMap { [$0, $0, $0, 255] })
+            let settings = AutoBalancer.analyze(source)
+            let rendered = try ColorEngine.render(source, settings: settings)
+            XCTAssertGreaterThanOrEqual(settings.exposure, 0, "A bright background must not reduce the subject's exposure")
+            XCTAssertLessThanOrEqual(settings.shadow, 0, "Auto must not deepen shadows")
+            XCTAssertEqual(settings.highlight, 0, "Detailed bright regions are not clipped whites")
+            XCTAssertTrue(zip(rendered.pixels, source.pixels).allSatisfy { $0 >= $1 },
+                          "Mixed bright scenes must preserve both subject and background brightness")
+        }
+    }
+
+    func testAutoBalanceOnlyRestrainsHighlightsWithClippingEvidence() throws {
+        let source = try RasterImage(width: 2, height: 1, pixels: [25, 25, 25, 255, 255, 255, 255, 255])
+        let settings = AutoBalancer.analyze(source)
+        XCTAssertEqual(settings.exposure, 0)
+        XCTAssertEqual(settings.highlight, -0.5)
+        let rendered = try ColorEngine.render(source, settings: settings)
+        XCTAssertGreaterThan(rendered.pixels[0], source.pixels[0], "Highlight restraint must not darken the shadow subject")
+        XCTAssertLessThan(rendered.pixels[4], 255)
+        XCTAssertGreaterThanOrEqual(rendered.pixels[4], 250)
     }
 
     func testAutoBalanceIgnoresInvisiblePixelsAndPreservesUnrelatedSettings() throws {
@@ -167,6 +197,69 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(AutoBalancer.analyze(empty, baseSettings: base), base)
         var malformed = visible; malformed.pixels.removeLast()
         XCTAssertEqual(AutoBalancer.analyze(malformed, baseSettings: base), base)
+    }
+
+    func testAutoBalanceProtectsHighlightsWhenLiftingDarkMidtones() throws {
+        let pixels: [UInt8] = Array(repeating: [UInt8(40), 40, 40, 255], count: 90).flatMap { $0 }
+            + Array(repeating: [UInt8(240), 240, 240, 255], count: 10).flatMap { $0 }
+        let source = try RasterImage(width: 100, height: 1, pixels: pixels)
+        let settings = AutoBalancer.analyze(source)
+        XCTAssertLessThanOrEqual(settings.exposure, 0.1)
+        let rendered = try ColorEngine.render(source, settings: settings)
+        XCTAssertLessThan(rendered.pixels[90 * 4], 255, "Auto exposure must not clip existing highlight detail")
+        let blue = try RasterImage(width: 1, height: 1, pixels: [0, 0, 220, 255])
+        let blueSettings = AutoBalancer.analyze(blue)
+        XCTAssertLessThanOrEqual(blueSettings.exposure, 0.4)
+        XCTAssertLessThan(try ColorEngine.render(blue, settings: blueSettings).pixels[2], 255,
+                          "Highlight protection must also protect individual color channels")
+    }
+
+    func testAutoBalanceUsesLinearEVAndKeepsHealthyMidtones() throws {
+        let dark = try RasterImage(width: 1, height: 1, pixels: [80, 80, 80, 255])
+        let settings = AutoBalancer.analyze(dark)
+        // sRGB 80 is about 0.0802 linear; a 0.8 EV gain reaches 0.1397.
+        XCTAssertEqual(settings.exposure, 0.8, accuracy: 0.0001)
+        let midtone = try RasterImage(width: 1, height: 1, pixels: [145, 145, 145, 255])
+        XCTAssertEqual(try ColorEngine.render(midtone, settings: AutoBalancer.analyze(midtone)), midtone)
+        for value: UInt8 in [225, 250] {
+            let highKey = try RasterImage(width: 1, height: 1, pixels: [value, value, value, 255])
+            XCTAssertEqual(try ColorEngine.render(highKey, settings: AutoBalancer.analyze(highKey)), highKey)
+        }
+    }
+
+    func testAutoBalanceDoesNotConfuseSubjectColorWithWhiteBalance() throws {
+        var base = Settings(); base.temperature = 7; base.clarity = -1.5
+        base.sharpness = -1; base.color = -0.5
+        for rgb: [UInt8] in [[220, 50, 30], [30, 80, 220], [80, 200, 50]] {
+            let image = try RasterImage(width: 1, height: 1, pixels: rgb + [255])
+            let settings = AutoBalancer.analyze(image, baseSettings: base)
+            XCTAssertEqual(settings.temperature, base.temperature)
+            XCTAssertEqual(settings.clarity, base.clarity)
+            XCTAssertEqual(settings.sharpness, base.sharpness)
+            XCTAssertEqual(settings.color, base.color)
+        }
+        let warmNeutral = try RasterImage(width: 1, height: 1, pixels: [150, 140, 130, 255])
+        let corrected = AutoBalancer.analyze(warmNeutral)
+        XCTAssertLessThan(corrected.temperature, 0)
+        XCTAssertGreaterThanOrEqual(corrected.temperature, -15)
+    }
+
+    func testLightCraftMovedCurveEndpointsStayActiveAfterAddingPoint() throws {
+        var state = LightCraftState()
+        state.masterCurve = [CurvePoint(x: 0.2, y: 0.2), CurvePoint(x: 0.5, y: 0.5), CurvePoint(x: 0.8, y: 0.8)]
+        XCTAssertFalse(state.isIdentity)
+        let source = try RasterImage(width: 2, height: 1, pixels: [0, 0, 0, 73, 255, 255, 255, 200])
+        let output = try LightCraftEngine.render(source, state: state)
+        XCTAssertEqual(output.pixels, [51, 51, 51, 73, 204, 204, 204, 200])
+    }
+
+    func testLightCraftOverlayIsPreviewOnly() throws {
+        let source = try fixtureImage()
+        var state = LightCraftState(); state.maskMode = .radial; state.showMaskOverlay = true
+        XCTAssertNotEqual(try LightCraftEngine.render(source, state: state), source)
+        XCTAssertEqual(try LightCraftEngine.render(source, state: state, includeMaskOverlay: false), source)
+        var malformed = source; malformed.pixels.removeLast()
+        XCTAssertThrowsError(try LightCraftEngine.render(malformed, state: LightCraftState()))
     }
 
     func testSettingsJSONDefaultsValidationAndRoundTrip() throws {

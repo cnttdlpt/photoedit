@@ -55,7 +55,11 @@ enum PhotoIO {
 
     private static func availableMemoryBytes() -> UInt64 {
         let reported = UInt64(os_proc_available_memory())
-        #if targetEnvironment(simulator)
+        #if targetEnvironment(macCatalyst)
+        if reported == 0 {
+            return max(ProcessInfo.processInfo.physicalMemory / 2, 4 * 1_024 * 1_024 * 1_024)
+        }
+        #elseif targetEnvironment(simulator)
         // Simulator processes have no iOS jetsam allowance and may report zero even for a 2 px image.
         // Use a conservative host allowance after subtracting this process's resident footprint.
         // This fallback is never compiled into a device build.
@@ -69,6 +73,10 @@ enum PhotoIO {
             }
             guard result == KERN_SUCCESS else { return 0 }
             return simulatorMemoryHeadroom(physical: ProcessInfo.processInfo.physicalMemory, resident: UInt64(info.resident_size))
+        }
+        #else
+        if reported == 0 && ProcessInfo.processInfo.isiOSAppOnMac {
+            return max(ProcessInfo.processInfo.physicalMemory / 2, 4 * 1_024 * 1_024 * 1_024)
         }
         #endif
         return reported
@@ -130,8 +138,9 @@ enum PhotoIO {
     }
 
     /// The original source is reopened for every export, never the 1280 px preview.
-    static func export(sourceURL: URL, settings: Settings, lut: CubeLut?, size: ExportSize,
-                       format: ExportFormat, info: PhotoInfo, frameStyle: Int,
+    static func export(sourceURL: URL, settings: Settings, lut: CubeLut?,
+                       lightCraft: LightCraftState = LightCraftState(),
+                       size: ExportSize, format: ExportFormat, info: PhotoInfo, frameStyle: Int,
                        destinationURL: URL) throws -> (width: Int, height: Int) {
         try autoreleasepool {
             let source = try source(url: sourceURL)
@@ -142,13 +151,14 @@ enum PhotoIO {
             let reserve: UInt64 = 48 * 1024 * 1024
             guard available > reserve else { throw PhotoIOError.insufficientMemory }
             let usable = (available - reserve) * 2 / 3
-            let bytesPerSourcePixel = UInt64(64 + (frameStyle > 0 ? 48 : 24) * size.scale * size.scale)
+            let bytesPerSourcePixel = UInt64(24 + (frameStyle > 0 ? 16 : 12) * size.scale * size.scale)
             let pixelBudget = Int(min(usable / bytesPerSourcePixel, UInt64(Int.max)))
             guard pixelBudget > 0 else { throw PhotoIOError.insufficientMemory }
             let target = try ExportSizing.dimensions(width: original.width, height: original.height,
                 scale: size.scale, fullSize: size != .standard, pixelBudget: pixelBudget)
             var output = try ColorEngine.render(decode(source: source, width: target.width, height: target.height,
                 exactSource: size != .standard), settings: settings, lut: lut)
+            output = try LightCraftEngine.render(output, state: lightCraft, includeMaskOverlay: false)
             if size.scale == 2 {
                 output = try resized(output, width: target.width * 2, height: target.height * 2)
             }
@@ -203,6 +213,87 @@ enum PhotoIO {
         if scale == 1 { return image }
         return try resized(image, width: max(1, Int(floor(Double(image.width) * scale))),
                            height: max(1, Int(floor(Double(image.height) * scale))))
+    }
+
+    /// Xoay ảnh RasterImage 90 độ (theo chiều kim đồng hồ hoặc ngược chiều).
+    static func rotated90(_ image: RasterImage, clockwise: Bool = true) throws -> RasterImage {
+        let w = image.width, h = image.height
+        var rotatedPixels = [UInt8](repeating: 0, count: w * h * 4)
+        let pixels = image.pixels
+        if clockwise {
+            // (x, y) -> (h - 1 - y, x)
+            for y in 0..<h {
+                let row = y * w
+                for x in 0..<w {
+                    let srcIdx = (row + x) * 4
+                    let dstX = h - 1 - y
+                    let dstY = x
+                    let dstIdx = (dstY * h + dstX) * 4
+                    rotatedPixels[dstIdx]     = pixels[srcIdx]
+                    rotatedPixels[dstIdx + 1] = pixels[srcIdx + 1]
+                    rotatedPixels[dstIdx + 2] = pixels[srcIdx + 2]
+                    rotatedPixels[dstIdx + 3] = pixels[srcIdx + 3]
+                }
+            }
+        } else {
+            // (x, y) -> (y, w - 1 - x)
+            for y in 0..<h {
+                let row = y * w
+                for x in 0..<w {
+                    let srcIdx = (row + x) * 4
+                    let dstX = y
+                    let dstY = w - 1 - x
+                    let dstIdx = (dstY * h + dstX) * 4
+                    rotatedPixels[dstIdx]     = pixels[srcIdx]
+                    rotatedPixels[dstIdx + 1] = pixels[srcIdx + 1]
+                    rotatedPixels[dstIdx + 2] = pixels[srcIdx + 2]
+                    rotatedPixels[dstIdx + 3] = pixels[srcIdx + 3]
+                }
+            }
+        }
+        return try RasterImage(width: h, height: w, pixels: rotatedPixels)
+    }
+
+    /// Xoay tệp ảnh gốc trên đĩa lưu trữ 90 độ mà không làm mất chất lượng EXIF / độ phân giải cao.
+    static func rotateFile(url: URL, clockwise: Bool = true) throws {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let img = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            throw PhotoIOError.unreadable
+        }
+        let w = img.width, h = img.height
+        guard let ctx = CGContext(
+            data: nil,
+            width: h,
+            height: w,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+        ) else {
+            throw PhotoIOError.allocation
+        }
+
+        if clockwise {
+            ctx.translateBy(x: CGFloat(h), y: 0)
+            ctx.rotate(by: .pi / 2)
+        } else {
+            ctx.translateBy(x: 0, y: CGFloat(w))
+            ctx.rotate(by: -.pi / 2)
+        }
+        ctx.draw(img, in: CGRect(x: 0, y: 0, width: w, height: h))
+
+        guard let rotatedCG = ctx.makeImage(),
+              let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else {
+            throw PhotoIOError.encoding
+        }
+        let options: [CFString: Any] = [
+            kCGImageDestinationLossyCompressionQuality: 0.96,
+            kCGImagePropertyOrientation: 1
+        ]
+        CGImageDestinationAddImage(dest, rotatedCG, options as CFDictionary)
+        guard CGImageDestinationFinalize(dest) else {
+            throw PhotoIOError.encoding
+        }
     }
 
     private static func raster(_ image: CGImage, width: Int, height: Int) throws -> RasterImage {
@@ -280,5 +371,98 @@ enum PhotoIO {
         if info.date.count >= 10 { info.date = info.date.prefix(10).replacingOccurrences(of: ":", with: ".") + info.date.dropFirst(10) }
         info.author = text(tiff[kCGImagePropertyTIFFArtist])
         return info.sanitized()
+    }
+
+    /// Generates the 1280×860 Golden Hour + Mountain Ridge + Color Chart studio sample image matching Android.
+    static func generateStudioSample() throws -> (Data, PhotoInfo) {
+        let w = 1280, h = 860
+        let raster = try canvas(width: w, height: h) { ctx in
+            let rect = CGRect(x: 0, y: 0, width: w, height: h)
+            // 1. Warm Sunset / Golden Hour Sky Gradient
+            let skyColors = [
+                UIColor(red: 28/255, green: 52/255, blue: 88/255, alpha: 1).cgColor,
+                UIColor(red: 74/255, green: 98/255, blue: 138/255, alpha: 1).cgColor,
+                UIColor(red: 214/255, green: 132/255, blue: 92/255, alpha: 1).cgColor,
+                UIColor(red: 246/255, green: 192/255, blue: 120/255, alpha: 1).cgColor,
+                UIColor(red: 252/255, green: 224/255, blue: 168/255, alpha: 1).cgColor
+            ] as CFArray
+            let skyLocs: [CGFloat] = [0.0, 0.28, 0.56, 0.78, 1.0]
+            if let grad = CGGradient(colorsSpace: colorSpace, colors: skyColors, locations: skyLocs) {
+                ctx.drawLinearGradient(grad, start: CGPoint(x: 0, y: 0), end: CGPoint(x: 0, y: h), options: [])
+            } else {
+                ctx.setFillColor(UIColor(red: 214/255, green: 132/255, blue: 92/255, alpha: 1).cgColor)
+                ctx.fill(rect)
+            }
+
+            // 2. Warm Glowing Sun
+            let sunCenter = CGPoint(x: CGFloat(w) * 0.68, y: CGFloat(h) * 0.42)
+            let sunColors = [
+                UIColor(red: 1, green: 250/255, blue: 225/255, alpha: 1).cgColor,
+                UIColor(red: 1, green: 210/255, blue: 135/255, alpha: 0.78).cgColor,
+                UIColor(red: 1, green: 160/255, blue: 90/255, alpha: 0).cgColor
+            ] as CFArray
+            let sunLocs: [CGFloat] = [0.0, 0.35, 1.0]
+            if let sunGrad = CGGradient(colorsSpace: colorSpace, colors: sunColors, locations: sunLocs) {
+                ctx.drawRadialGradient(sunGrad, startCenter: sunCenter, startRadius: 0, endCenter: sunCenter, endRadius: CGFloat(w) * 0.24, options: [])
+            }
+
+            // 3. Far Mountain Ridge
+            let farRidge = UIBezierPath()
+            farRidge.move(to: CGPoint(x: 0, y: CGFloat(h) * 0.66))
+            farRidge.addLine(to: CGPoint(x: CGFloat(w) * 0.22, y: CGFloat(h) * 0.50))
+            farRidge.addLine(to: CGPoint(x: CGFloat(w) * 0.46, y: CGFloat(h) * 0.61))
+            farRidge.addLine(to: CGPoint(x: CGFloat(w) * 0.74, y: CGFloat(h) * 0.46))
+            farRidge.addLine(to: CGPoint(x: CGFloat(w), y: CGFloat(h) * 0.58))
+            farRidge.addLine(to: CGPoint(x: CGFloat(w), y: CGFloat(h)))
+            farRidge.addLine(to: CGPoint(x: 0, y: CGFloat(h)))
+            farRidge.close()
+            UIColor(red: 62/255, green: 56/255, blue: 78/255, alpha: 1).setFill()
+            farRidge.fill()
+
+            // 4. Near Mountain Ridge
+            let nearRidge = UIBezierPath()
+            nearRidge.move(to: CGPoint(x: 0, y: CGFloat(h) * 0.74))
+            nearRidge.addLine(to: CGPoint(x: CGFloat(w) * 0.32, y: CGFloat(h) * 0.59))
+            nearRidge.addLine(to: CGPoint(x: CGFloat(w) * 0.61, y: CGFloat(h) * 0.71))
+            nearRidge.addLine(to: CGPoint(x: CGFloat(w) * 0.88, y: CGFloat(h) * 0.60))
+            nearRidge.addLine(to: CGPoint(x: CGFloat(w), y: CGFloat(h) * 0.68))
+            nearRidge.addLine(to: CGPoint(x: CGFloat(w), y: CGFloat(h)))
+            nearRidge.addLine(to: CGPoint(x: 0, y: CGFloat(h)))
+            nearRidge.close()
+            UIColor(red: 32/255, green: 36/255, blue: 52/255, alpha: 1).setFill()
+            nearRidge.fill()
+
+            // 5. Subtle Color Reference Swatches at Bottom-Left
+            let swatches: [UIColor] = [
+                UIColor(red: 216/255, green: 92/255, blue: 74/255, alpha: 1),
+                UIColor(red: 232/255, green: 168/255, blue: 76/255, alpha: 1),
+                UIColor(red: 92/255, green: 164/255, blue: 116/255, alpha: 1),
+                UIColor(red: 76/255, green: 138/255, blue: 196/255, alpha: 1),
+                UIColor(red: 198/255, green: 148/255, blue: 122/255, alpha: 1),
+                UIColor(red: 238/255, green: 236/255, blue: 230/255, alpha: 1)
+            ]
+            let startX: CGFloat = 44
+            let startY: CGFloat = CGFloat(h) - 72
+            for (idx, swatchColor) in swatches.enumerated() {
+                let r = CGRect(x: startX + CGFloat(idx) * 38, y: startY, width: 30, height: 30)
+                let rounded = UIBezierPath(roundedRect: r, cornerRadius: 6)
+                swatchColor.setFill()
+                rounded.fill()
+            }
+        }
+        let uiImg = try uiImage(raster)
+        guard let jpegData = uiImg.jpegData(compressionQuality: 0.96) else {
+            throw PhotoIOError.encoding
+        }
+        let sampleInfo = PhotoInfo(
+            camera: "FUJIFILM X-T5",
+            focal: "35 mm",
+            aperture: "f/2.0",
+            shutter: "1/500 s",
+            iso: "ISO 160",
+            date: "2026.10.12",
+            author: "IRO STUDIO"
+        )
+        return (jpegData, sampleInfo)
     }
 }

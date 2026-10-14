@@ -8,6 +8,30 @@ private struct EditorSession: Codable {
     var photoName: String?
     var info: PhotoInfo
     var frameStyle: Int
+    var lightCraft: LightCraftState
+
+    init(settings: Settings, recipe: Recipe?, photoName: String?, info: PhotoInfo, frameStyle: Int, lightCraft: LightCraftState = LightCraftState()) {
+        self.settings = settings
+        self.recipe = recipe
+        self.photoName = photoName
+        self.info = info
+        self.frameStyle = frameStyle
+        self.lightCraft = lightCraft
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case settings, recipe, photoName, info, frameStyle, lightCraft
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        settings = try c.decode(Settings.self, forKey: .settings)
+        recipe = try c.decodeIfPresent(Recipe.self, forKey: .recipe)
+        photoName = try c.decodeIfPresent(String.self, forKey: .photoName)
+        info = try c.decode(PhotoInfo.self, forKey: .info)
+        frameStyle = try c.decode(Int.self, forKey: .frameStyle)
+        lightCraft = try c.decodeIfPresent(LightCraftState.self, forKey: .lightCraft) ?? LightCraftState()
+    }
 }
 
 enum EditorFailure: LocalizedError {
@@ -17,18 +41,28 @@ enum EditorFailure: LocalizedError {
 
 /// CPU and disk work are serialized away from the main actor; cancelled previews stop before the next job.
 actor ImageWorker {
-    func thumbnail(_ source: RasterImage, settings: Settings?, lut: CubeLut?, info: PhotoInfo, style: Int) throws -> UIImage {
+    func automaticSettings(_ source: RasterImage, proposed: Settings) throws -> Settings {
+        try AutoBalanceGuard.protect(source, proposed: proposed)
+    }
+
+    func thumbnail(_ source: RasterImage, settings: Settings?, lut: CubeLut?, lightCraft: LightCraftState? = nil, info: PhotoInfo, style: Int) throws -> UIImage {
         try Task.checkCancellation()
         var small = (source.width <= 192 && source.height <= 192) ? source : try PhotoIO.resized(source, maxDimension: 192)
         if let settings { small = try ColorEngine.render(small, settings: settings, lut: lut) }
         try Task.checkCancellation()
+        if let lightCraft { small = try LightCraftEngine.render(small, state: lightCraft, includeMaskOverlay: false) }
+        try Task.checkCancellation()
         return try PhotoIO.uiImage(PhotoFrame.render(small, info: info, style: style))
     }
-    func preview(_ source: RasterImage, settings: Settings, lut: CubeLut?, info: PhotoInfo, style: Int) throws -> UIImage {
+
+    func preview(_ source: RasterImage, settings: Settings, lut: CubeLut?, lightCraft: LightCraftState, info: PhotoInfo, style: Int) throws -> (UIImage, RgbHistogramData) {
         try Task.checkCancellation()
-        let colored = try ColorEngine.render(source, settings: settings, lut: lut)
+        var colored = try ColorEngine.render(source, settings: settings, lut: lut)
         try Task.checkCancellation()
-        return try PhotoIO.uiImage(PhotoFrame.render(colored, info: info, style: style))
+        colored = try LightCraftEngine.render(colored, state: lightCraft, includeMaskOverlay: true)
+        let hist = RgbHistogramData.analyze(colored)
+        try Task.checkCancellation()
+        return (try PhotoIO.uiImage(PhotoFrame.render(colored, info: info, style: style)), hist)
     }
 
     func open(_ url: URL) throws -> (RasterImage, UIImage, PhotoInfo) {
@@ -51,8 +85,8 @@ actor ImageWorker {
         return url
     }
 
-    func export(source: URL, settings: Settings, lut: CubeLut?, size: ExportSize, format: ExportFormat, info: PhotoInfo, style: Int, destination: URL) throws -> (Int, Int) {
-        let dimensions = try PhotoIO.export(sourceURL: source, settings: settings, lut: lut, size: size, format: format, info: info, frameStyle: style, destinationURL: destination)
+    func export(source: URL, settings: Settings, lut: CubeLut?, lightCraft: LightCraftState, size: ExportSize, format: ExportFormat, info: PhotoInfo, style: Int, destination: URL) throws -> (Int, Int) {
+        let dimensions = try PhotoIO.export(sourceURL: source, settings: settings, lut: lut, lightCraft: lightCraft, size: size, format: format, info: info, frameStyle: style, destinationURL: destination)
         return (dimensions.width, dimensions.height)
     }
 }
@@ -64,11 +98,27 @@ struct UndoState: Equatable {
     let photoInfo: PhotoInfo
     let notes: [String]
     let isAutoBalanced: Bool
+    let lightCraft: LightCraftState
+    let aiAutoInsight: GeminiAutoResult?
+
+    init(settings: Settings, recipe: Recipe?, frameStyle: Int, photoInfo: PhotoInfo, notes: [String], isAutoBalanced: Bool, lightCraft: LightCraftState = LightCraftState(), aiAutoInsight: GeminiAutoResult? = nil) {
+        self.settings = settings
+        self.recipe = recipe
+        self.frameStyle = frameStyle
+        self.photoInfo = photoInfo
+        self.notes = notes
+        self.isAutoBalanced = isAutoBalanced
+        self.lightCraft = lightCraft
+        self.aiAutoInsight = aiAutoInsight
+    }
 }
 
 @MainActor
 final class EditorModel: ObservableObject {
     @Published var settings = Settings()
+    @Published var lightCraft = LightCraftState()
+    @Published var histogram = RgbHistogramData()
+    @Published var previewSize = CGSize(width: 4, height: 3)
     @Published var recipe: Recipe?
     @Published var notes: [String] = []
     @Published var recipes: [Recipe] = []
@@ -95,6 +145,8 @@ final class EditorModel: ObservableObject {
     @Published var undoStack: [UndoState] = []
     @Published var redoStack: [UndoState] = []
     @Published var isAutoBalanced = false
+    @Published var isAutoAnalyzing = false
+    @Published var aiAutoInsight: GeminiAutoResult?
 
     var canUndo: Bool { !undoStack.isEmpty }
     var canRedo: Bool { !redoStack.isEmpty }
@@ -102,6 +154,7 @@ final class EditorModel: ObservableObject {
     private(set) var activeLUT: CubeLut?
     private var sourceURL: URL?
     private var preview: RasterImage?
+    private var interactivePreview: RasterImage?
     private var thumbnailBase: RasterImage?
     private var store: LibraryStore?
     private var online: OnlineLUTService?
@@ -109,6 +162,7 @@ final class EditorModel: ObservableObject {
     private let thumbnailWorker = ImageWorker()
     private var thumbnails: [String: UIImage] = [:]
     private var renderTask: Task<Void, Never>?
+    private var needsImmediateFullRender = false
     private var renderRevision = 0
     private var editRevision = 0
     private var lutRevision = 0
@@ -117,10 +171,14 @@ final class EditorModel: ObservableObject {
     private var lastStoredRepository: String?
     private let applicationDirectory: URL?
     private let boundLUTLoader: (@MainActor (String) async throws -> CubeLut?)?
+    private let autoAnalyzer: (@MainActor (Data, RgbHistogramData, Settings) async throws -> GeminiAutoResult)?
+    private var autoAnalysisID: UUID?
 
-    init(applicationDirectory: URL? = nil, boundLUTLoader: (@MainActor (String) async throws -> CubeLut?)? = nil) {
+    init(applicationDirectory: URL? = nil, boundLUTLoader: (@MainActor (String) async throws -> CubeLut?)? = nil,
+         autoAnalyzer: (@MainActor (Data, RgbHistogramData, Settings) async throws -> GeminiAutoResult)? = nil) {
         self.applicationDirectory = applicationDirectory
         self.boundLUTLoader = boundLUTLoader
+        self.autoAnalyzer = autoAnalyzer
     }
 
     private func loadBoundLUT(for film: String) async throws -> CubeLut? {
@@ -150,10 +208,14 @@ final class EditorModel: ObservableObject {
                     let session = try JSONDecoder().decode(EditorSession.self, from: Data(contentsOf: sessionURL))
                     settings = try session.settings.validated(); recipe = session.recipe
                     photoInfo = session.info; frameStyle = min(30, max(0, session.frameStyle))
+                    lightCraft = session.lightCraft
                     if let name = session.photoName, name == URL(fileURLWithPath: name).lastPathComponent {
                         let url = dir.appendingPathComponent(name)
                         let loaded = try await worker.open(url)
                         sourceURL = url; preview = loaded.0; originalImage = loaded.1
+                        previewSize = CGSize(width: loaded.0.width, height: loaded.0.height)
+                        histogram = RgbHistogramData.analyze(loaded.0)
+                        interactivePreview = try? PhotoIO.resized(loaded.0, maxDimension: 640)
                         thumbnailBase = try? PhotoIO.resized(loaded.0, maxDimension: 192)
                     }
                 } catch { status = "Không khôi phục được phiên trước. Bạn có thể mở ảnh mới." }
@@ -189,39 +251,107 @@ final class EditorModel: ObservableObject {
         do {
             let lut = try await loadBoundLUT(for: film)
             guard settings.film == film, revision == lutRevision else { return }
-            activeLUT = lut; changed(invalidateLookRequest: false)
+            activeLUT = lut; changed(immediate: true, invalidateLookRequest: false)
         } catch {
             guard settings.film == film, revision == lutRevision else { return }
-            activeLUT = nil; show(error); changed(invalidateLookRequest: false)
+            activeLUT = nil; show(error); changed(immediate: true, invalidateLookRequest: false)
         }
     }
 
     func changed(immediate: Bool = false, invalidateLookRequest: Bool = true) {
         exportedURL = nil; exportedDimensions = ""
         if invalidateLookRequest { editRevision += 1 }
-        persist()
+        if immediate {
+            persist()
+        }
         renderPreview(immediate: immediate)
     }
 
     private func renderPreview(immediate: Bool) {
         renderRevision += 1
-        let revision = renderRevision
-        renderTask?.cancel()
-        guard let preview else { isRendering = false; return }
-        let settings = settings, lut = activeLUT, info = photoInfo, style = frameStyle
+        if immediate {
+            needsImmediateFullRender = true
+        }
+        guard preview != nil else {
+            renderTask?.cancel()
+            renderTask = nil
+            isRendering = false
+            return
+        }
         isRendering = true
-        renderTask = Task {
+        if renderTask == nil {
+            renderTask = Task { [weak self] in
+                await self?.runRenderLoop()
+            }
+        }
+    }
+
+    private func runRenderLoop() async {
+        defer {
+            renderTask = nil
+            isRendering = false
+        }
+        while !Task.isCancelled {
+            guard let preview else { return }
+            let revision = renderRevision
+            let immediateFull = needsImmediateFullRender
+            needsImmediateFullRender = false
+            let settings = self.settings
+            let lut = self.activeLUT
+            let lc = self.lightCraft
+            let info = self.photoInfo
+            let style = self.frameStyle
+            let useFast = !immediateFull && (interactivePreview != nil)
+            let sourceRaster = (useFast ? interactivePreview : nil) ?? preview
+
             do {
-                if !immediate {
-                    try await Task.sleep(for: .milliseconds(120))
-                }
-                let image = try await worker.preview(preview, settings: settings, lut: lut, info: info, style: style)
-                try Task.checkCancellation()
-                guard revision == renderRevision else { return }
-                editedImage = image; isRendering = false
+                let (image, hist) = try await worker.preview(
+                    sourceRaster,
+                    settings: settings,
+                    lut: lut,
+                    lightCraft: lc,
+                    info: info,
+                    style: style
+                )
+                if Task.isCancelled { return }
+                editedImage = image
+                histogram = hist
                 status = "\(preview.width) × \(preview.height) xem trước · \(style == 0 ? "Không khung" : PhotoFrame.styles[style])"
+
+                if renderRevision != revision {
+                    continue
+                }
+
+                if useFast && (sourceRaster.width != preview.width || sourceRaster.height != preview.height) {
+                    try? await Task.sleep(for: .milliseconds(35))
+                    if Task.isCancelled { return }
+                    if renderRevision != revision {
+                        continue
+                    }
+                    let (fullImage, fullHist) = try await worker.preview(
+                        preview,
+                        settings: settings,
+                        lut: lut,
+                        lightCraft: lc,
+                        info: info,
+                        style: style
+                    )
+                    if Task.isCancelled { return }
+                    if renderRevision == revision {
+                        editedImage = fullImage
+                        histogram = fullHist
+                    } else {
+                        continue
+                    }
+                }
+
+                persist()
+                if renderRevision == revision {
+                    break
+                }
             } catch {
-                if revision == renderRevision { isRendering = false; show(error) }
+                if !(error is CancellationError) { show(error) }
+                break
             }
         }
     }
@@ -230,7 +360,7 @@ final class EditorModel: ObservableObject {
     private func persist() -> Bool {
         guard ready, let directory else { return false }
         do {
-            let session = EditorSession(settings: settings, recipe: recipe, photoName: sourceURL?.lastPathComponent, info: photoInfo, frameStyle: frameStyle)
+            let session = EditorSession(settings: settings, recipe: recipe, photoName: sourceURL?.lastPathComponent, info: photoInfo, frameStyle: frameStyle, lightCraft: lightCraft)
             try JSONEncoder().encode(session).write(to: directory.appendingPathComponent("session.json"), options: .atomic)
             return true
         } catch { status = "Chưa lưu được phiên chỉnh sửa: \(error.localizedDescription)"; return false }
@@ -243,6 +373,28 @@ final class EditorModel: ObservableObject {
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else { throw EditorFailure.message("Không đọc được ảnh đã chọn.") }
             try await acceptPhoto(data)
+        } catch { show(error) }
+    }
+
+    func openStudioSample(filmKeyword: String? = nil, defaultFrameStyle: Int = 0) async {
+        guard !busy else { return }
+        editRevision += 1
+        isLoading = true; defer { isLoading = false }
+        do {
+            let (data, sampleInfo) = try PhotoIO.generateStudioSample()
+            try await acceptPhoto(data, overrideInfo: sampleInfo)
+            if defaultFrameStyle > 0 {
+                frameStyle = min(PhotoFrame.styles.count - 1, defaultFrameStyle)
+                changed(immediate: true)
+            }
+            if let keyword = filmKeyword, !keyword.isEmpty {
+                let q = keyword.lowercased()
+                let firstToken = q.components(separatedBy: " ").first ?? q
+                if let match = recipes.first(where: { $0.name.lowercased().contains(q) || $0.film.lowercased().contains(q) })
+                    ?? recipes.first(where: { $0.name.lowercased().contains(firstToken) || $0.film.lowercased().contains(firstToken) }) {
+                    await apply(match)
+                }
+            }
         } catch { show(error) }
     }
 
@@ -275,29 +427,37 @@ final class EditorModel: ObservableObject {
         } catch { show(error) }
     }
 
-    private func acceptPhoto(_ data: Data) async throws {
+    private func acceptPhoto(_ data: Data, overrideInfo: PhotoInfo? = nil) async throws {
         guard let directory else { throw EditorFailure.message("Thư viện chưa sẵn sàng.") }
         let url = try await worker.savePhoto(data, directory: directory)
         do {
             let loaded = try await worker.open(url)
             let previous = sourceURL
-            sourceURL = url; preview = loaded.0; originalImage = loaded.1; photoInfo = loaded.2
+            sourceURL = url; preview = loaded.0; originalImage = loaded.1
+            photoInfo = overrideInfo ?? loaded.2
+            previewSize = CGSize(width: loaded.0.width, height: loaded.0.height)
+            histogram = RgbHistogramData.analyze(loaded.0)
+            interactivePreview = try? PhotoIO.resized(loaded.0, maxDimension: 640)
             thumbnailBase = try? PhotoIO.resized(loaded.0, maxDimension: 192)
             thumbnails.removeAll(); thumbnailVersion += 1
             undoStack.removeAll()
             redoStack.removeAll()
             isAutoBalanced = false
+            autoAnalysisID = nil
+            isAutoAnalyzing = false
+            aiAutoInsight = nil
             editedImage = nil; exportedURL = nil
             // Resolve the current film again after closing or replacing a photo.
             await updateBoundLUT()
-            changed()
+            changed(immediate: true)
             if persist(), let previous, previous != url { try? FileManager.default.removeItem(at: previous) }
         } catch { try? FileManager.default.removeItem(at: url); throw error }
     }
 
     private var undoState: UndoState {
         UndoState(settings: settings, recipe: recipe, frameStyle: frameStyle,
-                  photoInfo: photoInfo, notes: notes, isAutoBalanced: isAutoBalanced)
+                  photoInfo: photoInfo, notes: notes, isAutoBalanced: isAutoBalanced,
+                  lightCraft: lightCraft, aiAutoInsight: aiAutoInsight)
     }
 
     func recordUndo() {
@@ -314,6 +474,8 @@ final class EditorModel: ObservableObject {
         lutRevision += 1
         settings = state.settings; recipe = state.recipe; frameStyle = state.frameStyle
         photoInfo = state.photoInfo; notes = state.notes; isAutoBalanced = state.isAutoBalanced
+        lightCraft = state.lightCraft
+        aiAutoInsight = state.aiAutoInsight
         activeLUT = lut
         changed(immediate: true)
     }
@@ -345,11 +507,184 @@ final class EditorModel: ObservableObject {
     }
 
     func autoBalance() async {
-        guard !busy, let preview else { return }
+        guard !busy, !isAutoAnalyzing, let preview else { return }
+        editRevision += 1
+        let revision = editRevision
+        if autoAnalyzer != nil || GeminiAutoService.hasAPIKey {
+            let requestID = UUID()
+            autoAnalysisID = requestID
+            isAutoAnalyzing = true
+            let previousStatus = status
+            status = "✨ Gemini AI đang phân tích ngữ cảnh & ánh sáng…"
+            defer {
+                // Closing/opening a photo can start another analysis before this one returns.
+                if autoAnalysisID == requestID {
+                    autoAnalysisID = nil
+                    isAutoAnalyzing = false
+                }
+            }
+            do {
+                let small = (try? PhotoIO.resized(preview, maxDimension: 384)) ?? preview
+                let uiImg = try PhotoIO.uiImage(small)
+                guard let jpegData = uiImg.jpegData(compressionQuality: 0.78) else {
+                    throw GeminiAutoError.invalidResponse("Không mã hóa được ảnh thu nhỏ.")
+                }
+                let baseline = AutoBalancer.analyze(preview)
+                let hist = RgbHistogramData.analyze(small)
+                let result: GeminiAutoResult
+                if let autoAnalyzer {
+                    result = try await autoAnalyzer(jpegData, hist, baseline)
+                } else {
+                    result = try await GeminiAutoService.analyze(
+                        jpegData: jpegData,
+                        histogram: hist,
+                        fallbackBaseline: baseline
+                    )
+                }
+                guard revision == editRevision, autoAnalysisID == requestID else { return }
+                try Task.checkCancellation()
+                _ = try await applyAutomaticBalance(source: preview, revision: revision,
+                                      settings: result.appliedSettings(base: Settings(), baseline: baseline),
+                                      lightCraft: result.appliedLightCraft(base: LightCraftState()), insight: result)
+                return
+            } catch {
+                // A newer edit, import, close or export supersedes both AI and local fallback.
+                guard revision == editRevision, autoAnalysisID == requestID else { return }
+                if error is CancellationError || (error as? URLError)?.code == .cancelled || Task.isCancelled {
+                    status = previousStatus
+                    return
+                }
+                // Offline or API error: fall back gracefully to local AutoBalancer
+                status = previousStatus
+                do {
+                    if try await applyAutomaticBalance(source: preview, revision: revision, settings: AutoBalancer.analyze(preview)) {
+                        show(EditorFailure.message("Đã dùng Auto nội bộ (Gemini AI: \(error.localizedDescription))"))
+                    }
+                } catch {
+                    if revision == editRevision && !Task.isCancelled { show(error) }
+                }
+                return
+            }
+        }
+
+        do {
+            _ = try await applyAutomaticBalance(source: preview, revision: revision, settings: AutoBalancer.analyze(preview))
+        } catch {
+            if revision == editRevision && !Task.isCancelled { show(error) }
+        }
+    }
+
+    private func applyAutomaticBalance(source: RasterImage, revision: Int, settings newSettings: Settings, lightCraft newLightCraft: LightCraftState = LightCraftState(), insight: GeminiAutoResult? = nil) async throws -> Bool {
+        let protected = try await worker.automaticSettings(source, proposed: newSettings)
+        guard revision == editRevision else { return false }
+        try Task.checkCancellation()
         recordUndo()
-        settings = AutoBalancer.analyze(preview, baseSettings: settings)
+        lutRevision += 1
+        settings = protected
+        // Auto analyzes the original pixels, so prior LUTs, recipes and masks must not stack on it.
+        // Store the bypass as well so an Original LUT cannot reappear after restoring the session.
+        settings.lutAmount = 0
+        activeLUT = nil
+        recipe = nil
+        notes = []
+        lightCraft = newLightCraft
+        aiAutoInsight = insight
+        if protected != newSettings {
+            aiAutoInsight?.summary = "Cân bằng màu tự nhiên, giữ độ sáng chủ thể và hạn chế cháy vùng sáng."
+        }
         isAutoBalanced = true
         changed(immediate: true)
+        return true
+    }
+
+    /// Xoay ảnh 90 độ theo chiều kim đồng hồ (cập nhật canvas và tệp gốc).
+    func rotateClockwise() async {
+        guard !busy, let currentPreview = preview else { return }
+        recordUndo()
+        editRevision += 1
+        let revision = editRevision
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let rotated = try PhotoIO.rotated90(currentPreview, clockwise: true)
+            guard revision == editRevision else { return }
+            preview = rotated
+            previewSize = CGSize(width: rotated.width, height: rotated.height)
+            originalImage = try PhotoIO.uiImage(rotated)
+            interactivePreview = try? PhotoIO.resized(rotated, maxDimension: 640)
+            thumbnailBase = try? PhotoIO.resized(rotated, maxDimension: 192)
+            histogram = RgbHistogramData.analyze(rotated)
+            
+            if let sourceURL {
+                try? PhotoIO.rotateFile(url: sourceURL, clockwise: true)
+            }
+            changed(immediate: true)
+        } catch {
+            show(error)
+        }
+    }
+
+    /// Xoay ảnh 90 độ ngược chiều kim đồng hồ (cập nhật canvas và tệp gốc).
+    func rotateCounterClockwise() async {
+        guard !busy, let currentPreview = preview else { return }
+        recordUndo()
+        editRevision += 1
+        let revision = editRevision
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let rotated = try PhotoIO.rotated90(currentPreview, clockwise: false)
+            guard revision == editRevision else { return }
+            preview = rotated
+            previewSize = CGSize(width: rotated.width, height: rotated.height)
+            originalImage = try PhotoIO.uiImage(rotated)
+            interactivePreview = try? PhotoIO.resized(rotated, maxDimension: 640)
+            thumbnailBase = try? PhotoIO.resized(rotated, maxDimension: 192)
+            histogram = RgbHistogramData.analyze(rotated)
+            
+            if let sourceURL {
+                try? PhotoIO.rotateFile(url: sourceURL, clockwise: false)
+            }
+            changed(immediate: true)
+        } catch {
+            show(error)
+        }
+    }
+
+    func applyRecommendedFilm(_ keyword: String) async {
+        guard !busy else { return }
+        func normalized(_ value: String) -> String {
+            let words = value.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            let joined = words.joined(separator: " ")
+            switch joined {
+            case "classic neg": return "classic negative"
+            case "nostalgic negative": return "nostalgic neg"
+            default: return joined
+            }
+        }
+        let q = normalized(keyword)
+        guard !q.isEmpty else { return }
+        let candidates = Array(filmBindings.keys).sorted() + recipes.map(\.film)
+        let film = candidates.first(where: { normalized($0) == q }) ?? keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        editRevision += 1
+        lutRevision += 1
+        let revision = editRevision
+        do {
+            let lut = try await loadBoundLUT(for: film)
+            guard revision == editRevision else { return }
+            guard let lut else {
+                throw EditorFailure.message("Film \(film) chưa được gắn LUT. Hãy gắn LUT của film này trong Thư viện LUT.")
+            }
+            recordUndo()
+            lutRevision += 1
+            settings.film = film
+            settings.lutAmount = 100
+            activeLUT = lut
+            recipe = nil
+            notes = []
+            isAutoBalanced = false
+            changed(immediate: true)
+        } catch { if revision == editRevision { show(error) } }
     }
 
     func apply(_ chosen: Recipe) async {
@@ -387,8 +722,10 @@ final class EditorModel: ObservableObject {
             recordUndo()
             lutRevision += 1
             settings = newSettings; recipe = nil; notes = []; activeLUT = lut
+            lightCraft.resetAll()
             if resetFrame { frameStyle = 0 }
             isAutoBalanced = false
+            aiAutoInsight = nil
             changed(immediate: true)
         } catch { if revision == editRevision { show(error) } }
     }
@@ -400,7 +737,7 @@ final class EditorModel: ObservableObject {
         recordUndo()
         frameStyle = style
         photoInfo = info
-        changed()
+        changed(immediate: true)
     }
 
     func clearPhoto() {
@@ -408,13 +745,18 @@ final class EditorModel: ObservableObject {
         editRevision += 1
         lutRevision += 1
         renderTask?.cancel()
+        renderTask = nil
         renderRevision += 1
         undoStack.removeAll()
         redoStack.removeAll()
         isAutoBalanced = false
+        autoAnalysisID = nil
+        isAutoAnalyzing = false
+        aiAutoInsight = nil
         let previous = sourceURL
         sourceURL = nil
         preview = nil
+        interactivePreview = nil
         originalImage = nil
         editedImage = nil
         exportedURL = nil
@@ -426,6 +768,8 @@ final class EditorModel: ObservableObject {
         photoInfo = PhotoInfo()
         frameStyle = 0
         settings = Settings()
+        lightCraft = LightCraftState()
+        histogram = RgbHistogramData()
         recipe = nil
         notes = []
         isRendering = false
@@ -497,10 +841,10 @@ final class EditorModel: ObservableObject {
             if needsPreview { renderPreview(immediate: true) }
         }
         renderRevision += 1
-        renderTask?.cancel(); isRendering = false
+        renderTask?.cancel(); renderTask = nil; isRendering = false
         let destination = FileManager.default.temporaryDirectory.appendingPathComponent("IRO-\(UUID().uuidString).\(format.fileExtension)")
         do {
-            let result = try await worker.export(source: source, settings: settings, lut: activeLUT, size: size, format: format, info: photoInfo, style: frameStyle, destination: destination)
+            let result = try await worker.export(source: source, settings: settings, lut: activeLUT, lightCraft: lightCraft, size: size, format: format, info: photoInfo, style: frameStyle, destination: destination)
             guard revision == editRevision, bindingRevision == lutRevision, source == sourceURL else {
                 throw EditorFailure.message("Thiết lập màu đã thay đổi trong lúc xuất. Hãy tạo lại ảnh xuất.")
             }
@@ -545,6 +889,6 @@ final class EditorModel: ObservableObject {
 
     func frameThumbnail(style: Int, info: PhotoInfo) async -> UIImage? {
         guard let source = thumbnailBase ?? preview else { return nil }
-        return try? await thumbnailWorker.thumbnail(source, settings: settings, lut: activeLUT, info: info, style: style)
+        return try? await thumbnailWorker.thumbnail(source, settings: settings, lut: activeLUT, lightCraft: lightCraft, info: info, style: style)
     }
 }

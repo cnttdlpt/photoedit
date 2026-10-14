@@ -64,45 +64,58 @@ public enum ColorEngine {
         let cbFactor = s.chromeBlue * 0.04
         let grainSize = Int(max(1, s.grainSize))
 
+        // Precompute per-byte gamma LUTs (256 entries each) to eliminate 3 * w * h calls to pow(_, 1/2.4).
+        let rGammaLUT: [Double] = (0...255).map { gamma(max(0, linearLUT[$0] * ev * rExpFactor)) }
+        let gGammaLUT: [Double] = (0...255).map { gamma(max(0, linearLUT[$0] * ev)) }
+        let bGammaLUT: [Double] = (0...255).map { gamma(max(0, linearLUT[$0] * ev * bExpFactor)) }
+
         // Workers cover disjoint pixel ranges, so concurrent pointer writes are safe.
         try pixels.withUnsafeBufferPointer { inBuf in
             try output.withUnsafeMutableBufferPointer { outBuf in
                 guard let inPtr = inBuf.baseAddress, let outPtr = outBuf.baseAddress else { return }
-                try forEachPixelBatch(count: w * h) { range in
-                    let firstRow = range.lowerBound / w
-                    let lastRow = (range.upperBound - 1) / w
-                    for y in firstRow...lastRow {
-                        let gy = UInt32(truncatingIfNeeded: y / grainSize)
-                        let gyHash = gy &* 668_265_263
-                        let firstX = y == firstRow ? range.lowerBound % w : 0
-                        let endX = y == lastRow ? (range.upperBound - 1) % w + 1 : w
-                        for x in firstX..<endX {
-                            let offset = (y * w + x) * 4
-                            // Linearise via lookup table to avoid pow(_, 2.4) per pixel.
-                            // Multiplication order: (linearLUT * ev) * expFactor — identical to original.
-                            var r = gamma(max(0, linearLUT[Int(inPtr[offset    ])] * ev * rExpFactor))
-                            var g = gamma(max(0, linearLUT[Int(inPtr[offset + 1])] * ev))
-                            var b = gamma(max(0, linearLUT[Int(inPtr[offset + 2])] * ev * bExpFactor))
-                            if let lut {
-                                let mapped = lut.sample(r, g, b)
-                                r += (mapped.red   - r) * s.lutAmount / 100
-                                g += (mapped.green - g) * s.lutAmount / 100
-                                b += (mapped.blue  - b) * s.lutAmount / 100
+                try rGammaLUT.withUnsafeBufferPointer { rLutBuf in
+                    try gGammaLUT.withUnsafeBufferPointer { gLutBuf in
+                        try bGammaLUT.withUnsafeBufferPointer { bLutBuf in
+                            guard let rLut = rLutBuf.baseAddress, let gLut = gLutBuf.baseAddress, let bLut = bLutBuf.baseAddress else { return }
+                            try forEachPixelBatch(count: w * h) { range in
+                                let firstRow = range.lowerBound / w
+                                let lastRow = (range.upperBound - 1) / w
+                                for y in firstRow...lastRow {
+                                    let gy = UInt32(truncatingIfNeeded: y / grainSize)
+                                    let gyHash = gy &* 668_265_263
+                                    let firstX = y == firstRow ? range.lowerBound % w : 0
+                                    let endX = y == lastRow ? (range.upperBound - 1) % w + 1 : w
+                                    for x in firstX..<endX {
+                                        let offset = (y * w + x) * 4
+                                        var r = rLut[Int(inPtr[offset    ])]
+                                        var g = gLut[Int(inPtr[offset + 1])]
+                                        var b = bLut[Int(inPtr[offset + 2])]
+                                        if let lut {
+                                            let mapped = lut.sample(r, g, b)
+                                            r += (mapped.red   - r) * s.lutAmount / 100
+                                            g += (mapped.green - g) * s.lutAmount / 100
+                                            b += (mapped.blue  - b) * s.lutAmount / 100
+                                        }
+                                        let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+                                        let cLum = clamp(luminance)
+                                        let invLum = 1 - cLum
+                                        let shadow = invLum * invLum
+                                        let high = cLum * cLum
+                                        let chroma = max(r, max(g, b)) - min(r, min(g, b))
+                                        let blueWeight = max(0, b - max(r, g))
+                                        let tone = tonHigh * high - tonShad * shadow - tonDR * (high * cLum)
+                                        let gx = UInt32(truncatingIfNeeded: x / grainSize)
+                                        // Java int overflow and unsigned right shifts are intentional here.
+                                        var hash = (gx &* 374_761_393 &+ gyHash) ^ 0x5a1f1234
+                                        hash = (hash ^ (hash >> 13)) &* 1_274_126_177
+                                        let noise = (Double((hash >> 8) & 65_535) / 65_535 - 0.5) * s.grain / 255
+                                        outPtr[offset    ] = byte(luminance + (r - luminance) * colorFactor + tone - ccFactor * chroma - cbFactor * blueWeight + noise)
+                                        outPtr[offset + 1] = byte(luminance + (g - luminance) * colorFactor + tone - ccFactor * chroma - cbFactor * blueWeight + noise)
+                                        outPtr[offset + 2] = byte(luminance + (b - luminance) * colorFactor + tone - ccFactor * chroma - cbFactor * blueWeight + noise)
+                                        // Alpha channel is already present via the initial `output = pixels` copy.
+                                    }
+                                }
                             }
-                            let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
-                            let shadow = pow(1 - clamp(luminance), 2), high = pow(clamp(luminance), 2)
-                            let chroma = max(r, max(g, b)) - min(r, min(g, b))
-                            let blueWeight = max(0, b - max(r, g))
-                            let tone = tonHigh * high - tonShad * shadow - tonDR * pow(clamp(luminance), 3)
-                            let gx = UInt32(truncatingIfNeeded: x / grainSize)
-                            // Java int overflow and unsigned right shifts are intentional here.
-                            var hash = (gx &* 374_761_393 &+ gyHash) ^ 0x5a1f1234
-                            hash = (hash ^ (hash >> 13)) &* 1_274_126_177
-                            let noise = (Double((hash >> 8) & 65_535) / 65_535 - 0.5) * s.grain / 255
-                            outPtr[offset    ] = byte(luminance + (r - luminance) * colorFactor + tone - ccFactor * chroma - cbFactor * blueWeight + noise)
-                            outPtr[offset + 1] = byte(luminance + (g - luminance) * colorFactor + tone - ccFactor * chroma - cbFactor * blueWeight + noise)
-                            outPtr[offset + 2] = byte(luminance + (b - luminance) * colorFactor + tone - ccFactor * chroma - cbFactor * blueWeight + noise)
-                            // Alpha channel is already present via the initial `output = pixels` copy.
                         }
                     }
                 }
@@ -147,108 +160,94 @@ public enum ColorEngine {
 
 // MARK: - Auto-Balance Image Analysis
 public enum AutoBalancer {
-    /// Analyzes the raw pixel data of a RasterImage and returns optimized, balanced Settings.
+    private static func linear(_ byte: UInt8) -> Double {
+        let value = Double(byte) / 255
+        return value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+    }
+
+    /// Conservative local correction of the unedited source. It cannot infer a
+    /// scene's intended mood, so avoid turning every scene into middle gray or
+    /// treating a dominant subject color as a white-balance reference.
     public static func analyze(_ image: RasterImage, baseSettings: Settings = Settings()) -> Settings {
         let totalPixels = image.width * image.height
         guard totalPixels > 0, image.pixels.count == totalPixels * 4 else { return baseSettings }
-        
         let sampleStep = max(1, totalPixels / 10000)
-        let pixels = image.pixels
-        
-        var luminanceValues: [Double] = []
-        luminanceValues.reserveCapacity(totalPixels / sampleStep + 1)
-        
-        var sumR: Double = 0
-        var sumB: Double = 0
-        var count: Double = 0
-        var sumSat: Double = 0
+        var luminances: [Double] = []
+        var channelPeaks: [Double] = []
+        var encodedLuminances: [Double] = []
+        var neutralLogRatios: [Double] = []
+        luminances.reserveCapacity(totalPixels / sampleStep + 1)
 
-        var idx = 0
-        let totalByteCount = pixels.count
-        while idx + 3 < totalByteCount {
-            // Transparent padding is not visible content and must not drive exposure/WB.
-            guard pixels[idx + 3] > 0 else { idx += sampleStep * 4; continue }
-            let r = Double(pixels[idx])
-            let g = Double(pixels[idx + 1])
-            let b = Double(pixels[idx + 2])
-            
-            // Rec. 709 perceived luminance
-            let lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-            luminanceValues.append(lum)
-            
-            sumR += r
-            sumB += b
-            
-            let maxC = max(r, max(g, b))
-            let minC = min(r, min(g, b))
-            if maxC > 0 {
-                sumSat += (maxC - minC) / maxC
+        for pixel in stride(from: 0, to: totalPixels, by: sampleStep) {
+            let idx = pixel * 4
+            guard image.pixels[idx + 3] >= 16 else { continue }
+            let r = Double(image.pixels[idx])
+            let g = Double(image.pixels[idx + 1])
+            let b = Double(image.pixels[idx + 2])
+            let lr = linear(image.pixels[idx])
+            let lg = linear(image.pixels[idx + 1])
+            let lb = linear(image.pixels[idx + 2])
+            let luminance = 0.2126 * lr + 0.7152 * lg + 0.0722 * lb
+            luminances.append(luminance)
+            channelPeaks.append(max(lr, max(lg, lb)))
+            encodedLuminances.append(0.2126 * r + 0.7152 * g + 0.0722 * b)
+
+            let maxC = max(r, max(g, b)), minC = min(r, min(g, b))
+            let saturation = maxC > 0 ? (maxC - minC) / maxC : 0
+            // Midtone, nearly neutral pixels offer evidence of a cast. Red
+            // flowers, blue skies, and clipped highlights do not.
+            if saturation <= 0.18, luminance > 0.06, luminance < 0.8, lr > 0, lb > 0 {
+                neutralLogRatios.append(log(lr / lb))
             }
-            
-            count += 1
-            idx += sampleStep * 4
         }
-        
-        guard count > 0, !luminanceValues.isEmpty else { return baseSettings }
-        
-        luminanceValues.sort()
-        let medianL = luminanceValues[luminanceValues.count / 2]
-        let p5 = luminanceValues[Int(Double(luminanceValues.count) * 0.05)]
-        let p95 = luminanceValues[Int(Double(luminanceValues.count) * 0.95)]
-        
-        let avgR = sumR / count
-        let avgB = sumB / count
-        let avgSat = sumSat / count
-        
+        guard !luminances.isEmpty else { return baseSettings }
+        luminances.sort()
+        channelPeaks.sort()
+        encodedLuminances.sort()
+        let median = luminances[luminances.count / 2]
+        let p95 = channelPeaks[Int(Double(channelPeaks.count) * 0.95)]
+        let encodedMedian = encodedLuminances[encodedLuminances.count / 2]
+        let encodedP5 = encodedLuminances[Int(Double(encodedLuminances.count) * 0.05)]
+        let encodedP95 = encodedLuminances[Int(Double(encodedLuminances.count) * 0.95)]
+        let isHighKey = encodedP5 >= 180
         var adjusted = baseSettings
-        
-        // 1. Exposure: target median luminance around 120 (pleasing midtone)
-        let targetMedian: Double = 120.0
-        let expDiff = (targetMedian - medianL) / 48.0
-        adjusted.exposure = round(max(-1.8, min(1.8, expDiff)) * 10) / 10
-        
-        // 2. Highlights & Shadows (Dynamic range optimization)
-        if p95 > 240.0 {
-            adjusted.highlight = -1.0 // Recover blown-out skies/highlights
-        } else if p95 < 180.0 && medianL < 110.0 {
-            adjusted.highlight = 0.5 // Brighten flat highlights
-        } else {
-            adjusted.highlight = 0.0
+
+        // Exposure is a power-of-two gain in linear light in ColorEngine.
+        // A bright background can dominate the median while the subject is
+        // already dark. A high median alone is never evidence of overexposure:
+        // only lift dark midtones, and protect the existing highlight headroom.
+        var exposure = max(0, min(1.2, log2(0.14 / max(median, 0.0001))))
+        if exposure > 0, p95 > 0 {
+            // Leave room for the subsequent highlight/shadow tone adjustments.
+            exposure = min(exposure, max(0, log2(0.90 / p95)))
         }
-        
-        if p5 < 20.0 && medianL < 130.0 {
-            adjusted.shadow = -1.0 // Negative shadow values lift blacks in ColorEngine.
-        } else if p5 > 50.0 {
-            adjusted.shadow = 0.5 // Positive shadow values deepen washed-out shadows.
+        adjusted.exposure = (exposure * 10).rounded(.towardZero) / 10
+
+        if isHighKey {
+            adjusted.highlight = 0
+        } else if encodedP95 >= 254 {
+            // Restrain genuinely clipped whites without pulling down global
+            // exposure or treating detailed, bright backgrounds as blown out.
+            adjusted.highlight = -0.5
+        } else if encodedP95 < 180 && encodedMedian < 110 {
+            adjusted.highlight = 0.5
         } else {
-            adjusted.shadow = 0.0
+            adjusted.highlight = 0
         }
-        
-        // 3. White Balance / Temperature
-        let rbDelta = avgR - avgB
-        if rbDelta > 14.0 {
-            let tempShift = -min(30.0, (rbDelta - 14.0) * 0.8)
-            adjusted.temperature = round(tempShift)
-        } else if rbDelta < -14.0 {
-            let tempShift = min(30.0, (-rbDelta - 14.0) * 0.8)
-            adjusted.temperature = round(tempShift)
-        } else {
-            adjusted.temperature = 0.0
+        // Lift dark subjects even against bright backgrounds. Automatic
+        // balancing must not add contrast by deepening the user's shadows.
+        adjusted.shadow = encodedP5 < 40 ? -0.5 : 0
+
+        // Temperature changes the linear R/B ratio by exp(temperature * 0.004).
+        // Require neutral coverage, and use its median so colored outliers do
+        // not set the correction. Without evidence, retain the user's WB.
+        if neutralLogRatios.count >= max(1, luminances.count / 20) {
+            neutralLogRatios.sort()
+            let ratio = neutralLogRatios[neutralLogRatios.count / 2]
+            adjusted.temperature = max(-15, min(15, (-ratio / 0.004).rounded()))
         }
-        
-        // 4. Color / Saturation
-        if avgSat < 0.22 {
-            adjusted.color = 1.0
-        } else if avgSat > 0.55 {
-            adjusted.color = 0.0
-        } else {
-            adjusted.color = 0.0
-        }
-        
-        // 5. Clarity & Sharpness: subtle crispness (+1.0)
-        adjusted.clarity = 1.0
-        adjusted.sharpness = 1.0
-        
+        // Color, clarity and sharpness are creative choices, not evidence of
+        // exposure or white-balance errors. Preserve the existing values.
         return adjusted
     }
 }

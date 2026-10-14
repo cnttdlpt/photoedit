@@ -133,14 +133,36 @@ enum PortableCoreChecks {
         catch is CancellationError { checks += 1 }
         try check(began && processed.value > 0 && processed.value < 1_000_000, "cancellation during worker execution stops unfinished pixel batches")
 
-        for (value, shouldLift) in [(UInt8(8), true), (UInt8(80), false)] {
-            let image = try RasterImage(width: 1, height: 1, pixels: [value, value, value, 255])
+        for (values, shouldLift): ([UInt8], Bool) in [([8], true), ([80, 160, 220], false)] {
+            let image = try RasterImage(width: values.count, height: 1, pixels: values.flatMap { [$0, $0, $0, 255] })
             let balanced = AutoBalancer.analyze(image)
             var withoutShadow = balanced; withoutShadow.shadow = 0
             let result = try ColorEngine.render(image, settings: balanced).pixels[0]
             let reference = try ColorEngine.render(image, settings: withoutShadow).pixels[0]
-            try check(shouldLift ? result > reference : result < reference, "auto balance \(shouldLift ? "lifts crushed" : "deepens washed-out") shadows")
+            try check(shouldLift ? result > reference : result == reference, "auto balance \(shouldLift ? "lifts crushed" : "preserves normal") shadows")
         }
+        let mixedBrightnessFixtures: [[UInt8]] = [
+            Array(repeating: 60, count: 25) + Array(repeating: 210, count: 75),
+            Array(repeating: 120, count: 15) + Array(repeating: 225, count: 85),
+            Array(repeating: 80, count: 30) + Array(repeating: 160, count: 50) + Array(repeating: 220, count: 20),
+            Array(repeating: 25, count: 35) + Array(repeating: 250, count: 65)
+        ]
+        for values in mixedBrightnessFixtures {
+            let image = try RasterImage(width: values.count, height: 1, pixels: values.flatMap { [$0, $0, $0, 255] })
+            let correction = AutoBalancer.analyze(image)
+            let rendered = try ColorEngine.render(image, settings: correction)
+            try check(correction.exposure >= 0 && correction.shadow <= 0 && correction.highlight == 0,
+                      "auto balance does not mistake bright backgrounds for overexposure")
+            try check(zip(rendered.pixels, image.pixels).allSatisfy { $0 >= $1 },
+                      "auto balance preserves brightness of subjects in mixed bright scenes")
+        }
+        let clippedWhites = try RasterImage(width: 2, height: 1, pixels: [25, 25, 25, 255, 255, 255, 255, 255])
+        let clippedCorrection = AutoBalancer.analyze(clippedWhites)
+        let clippedResult = try ColorEngine.render(clippedWhites, settings: clippedCorrection)
+        try check(clippedCorrection.exposure == 0 && clippedCorrection.highlight == -0.5,
+                  "auto balance restrains genuinely clipped whites without lowering exposure")
+        try check(clippedResult.pixels[0] > 25 && (250..<255).contains(clippedResult.pixels[4]),
+                  "clipped-white restraint preserves shadow subjects and keeps whites bright")
         var base = Settings(); base.film = "Acros"; base.lutAmount = 42; base.grain = 18; base.dr = 400
         let opaque: [UInt8] = [100, 100, 100, 255]
         let visible = try RasterImage(width: 1, height: 1, pixels: opaque)
@@ -152,6 +174,35 @@ enum PortableCoreChecks {
         try check(AutoBalancer.analyze(empty, baseSettings: base) == base, "transparent image leaves settings unchanged")
         var malformed = visible; malformed.pixels.removeLast()
         try check(AutoBalancer.analyze(malformed, baseSettings: base) == base, "auto balance safely rejects malformed pixel buffer")
+
+        let highContrast = try RasterImage(width: 100, height: 1, pixels:
+            Array(repeating: [UInt8(40), 40, 40, 255], count: 90).flatMap { $0 }
+            + Array(repeating: [UInt8(240), 240, 240, 255], count: 10).flatMap { $0 })
+        let protected = AutoBalancer.analyze(highContrast)
+        try check(protected.exposure <= 0.1, "auto exposure respects existing highlight headroom")
+        try check(ColorEngine.render(highContrast, settings: protected).pixels[360] < 255, "auto exposure does not clip highlight detail")
+        let blueHighlight = try RasterImage(width: 1, height: 1, pixels: [0, 0, 220, 255])
+        let blueCorrection = AutoBalancer.analyze(blueHighlight)
+        try check(blueCorrection.exposure <= 0.4 && ColorEngine.render(blueHighlight, settings: blueCorrection).pixels[2] < 255,
+                  "auto exposure protects individual color-channel highlights")
+        let darkGray = try RasterImage(width: 1, height: 1, pixels: [80, 80, 80, 255])
+        try check(abs(AutoBalancer.analyze(darkGray).exposure - 0.8) < 0.0001, "auto exposure derives EV from linear light")
+        let healthyGray = try RasterImage(width: 1, height: 1, pixels: [145, 145, 145, 255])
+        try check(ColorEngine.render(healthyGray, settings: AutoBalancer.analyze(healthyGray)) == healthyGray, "auto balance preserves healthy midtones")
+        for value: UInt8 in [225, 250] {
+            let highKey = try RasterImage(width: 1, height: 1, pixels: [value, value, value, 255])
+            try check(ColorEngine.render(highKey, settings: AutoBalancer.analyze(highKey)) == highKey, "auto balance preserves intentional high-key scenes")
+        }
+        var creativeBase = Settings(); creativeBase.temperature = 7; creativeBase.clarity = -1.5
+        creativeBase.sharpness = -1; creativeBase.color = -0.5
+        for rgb: [UInt8] in [[220, 50, 30], [30, 80, 220], [80, 200, 50]] {
+            let dominantColor = try RasterImage(width: 1, height: 1, pixels: rgb + [255])
+            let correction = AutoBalancer.analyze(dominantColor, baseSettings: creativeBase)
+            try check(correction.temperature == 7, "dominant subject color is not mistaken for white balance")
+            try check(correction.color == -0.5 && correction.sharpness == -1 && correction.clarity == -1.5, "auto balance preserves creative detail and saturation")
+        }
+        let warmNeutral = try RasterImage(width: 1, height: 1, pixels: [150, 140, 130, 255])
+        try check((-15..<0).contains(AutoBalancer.analyze(warmNeutral).temperature), "neutral-pixel evidence produces a restrained WB correction")
 
         var impulse = Array(repeating: UInt8(0), count: 3 * 3 * 4)
         for index in stride(from: 3, to: impulse.count, by: 4) { impulse[index] = 255 }
@@ -171,7 +222,44 @@ enum PortableCoreChecks {
         var largeHash: UInt64 = 0xcbf29ce484222325
         for byte in try ColorEngine.render(largeImage, settings: detail).pixels { largeHash = (largeHash ^ UInt64(byte)) &* 0x100000001b3 }
         try check(String(format: "%016llx", largeHash) == "d047abccb0d854d5", "parallel render matches Android across pixel batch and row boundaries")
-        print("PASS: \(checks) portable Swift core checks, including 9 exact Android RGBA parity fixtures")
+
+        // LightCraft Engine & Histogram Checks
+        let neutralLC = LightCraftState()
+        try check(neutralLC.isIdentity, "default LightCraftState is identity")
+        try check(try LightCraftEngine.render(source, state: neutralLC) == source, "neutral LightCraft preserves RGBA bytes")
+        var dummySettings = Settings()
+        for preset in LightCraftEngine.presets {
+            var presetState = LightCraftState()
+            preset.apply(to: &presetState, settings: &dummySettings)
+            try check(!presetState.isIdentity, "LightCraft preset \(preset.id) is active")
+            let renderedPreset = try LightCraftEngine.render(source, state: presetState)
+            try check(renderedPreset.width == source.width && renderedPreset.height == source.height && renderedPreset != source, "LightCraft preset \(preset.id) transforms image")
+        }
+        var maskState = LightCraftState()
+        maskState.maskMode = .radial
+        maskState.maskExposure = 1.0
+        let maskedRender = try LightCraftEngine.render(source, state: maskState, includeMaskOverlay: false)
+        try check(maskedRender != source, "LightCraft radial mask transforms image")
+        let hist = RgbHistogramData.analyze(source)
+        try check(hist.r.count == 64 && hist.g.count == 64 && hist.b.count == 64, "RgbHistogramData computes 64 bins")
+        try check(decoder.decode(LightCraftState.self, from: JSONEncoder().encode(maskState)) == maskState, "LightCraftState Codable round-trip")
+        maskState.maskExposure = 0; maskState.showMaskOverlay = true
+        try check(LightCraftEngine.render(source, state: maskState) != source, "mask overlay is visible in preview")
+        try check(LightCraftEngine.render(source, state: maskState, includeMaskOverlay: false) == source, "mask overlay never appears in export")
+        var curveState = LightCraftState()
+        curveState.masterCurve = [CurvePoint(x: 0.2, y: 0.2), CurvePoint(x: 0.5, y: 0.5), CurvePoint(x: 0.8, y: 0.8)]
+        let endpoints = try RasterImage(width: 2, height: 1, pixels: [0, 0, 0, 73, 255, 255, 255, 200])
+        try check(!curveState.isIdentity, "moved curve endpoints remain active after adding a point")
+        try check(LightCraftEngine.render(endpoints, state: curveState).pixels == [51, 51, 51, 73, 204, 204, 204, 200], "curve endpoint clipping preserves alpha")
+        try rejects("malformed neutral LightCraft buffer") { _ = try LightCraftEngine.render(malformed, state: neutralLC) }
+        let cancelledLightCraft = Task.detached {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try LightCraftEngine.render(source, state: neutralLC)
+        }
+        do { _ = try await cancelledLightCraft.value; throw Failed(description: "FAIL: cancelled neutral LightCraft render completed") }
+        catch is CancellationError { checks += 1 }
+
+        print("PASS: \(checks) portable Swift core checks, including 9 exact Android RGBA parity fixtures & LightCraft darkroom checks")
     }
 }
 #endif

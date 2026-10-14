@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct FrameEditorView: View {
     @EnvironmentObject var editor: EditorModel
@@ -86,14 +87,31 @@ private struct FrameTile: View {
     }
 }
 
+struct ExportedImageDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.jpeg, .png] }
+    var data: Data
+    init(url: URL?) {
+        self.data = (url.flatMap { try? Data(contentsOf: $0) }) ?? Data()
+    }
+    init(configuration: ReadConfiguration) throws {
+        self.data = configuration.file.regularFileContents ?? Data()
+    }
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: data)
+    }
+}
+
 struct ExportView: View {
     @EnvironmentObject var editor: EditorModel
     @Environment(\.dismiss) private var dismiss
     @State private var size: ExportSize = .double
     @State private var format: ExportFormat = .jpeg100
     @State private var showShare = false
+    @State private var showFileSaver = false
+    @State private var exportDoc = ExportedImageDocument(url: nil)
     @State private var saving = false
     @State private var saved = false
+    @State private var savedFile = false
     @State private var initialized = false
 
     var body: some View {
@@ -115,6 +133,7 @@ struct ExportView: View {
                 Section {
                     Button {
                         saved = false
+                        savedFile = false
                         Task { await editor.export(size: size, format: format) }
                     } label: {
                         HStack {
@@ -126,12 +145,18 @@ struct ExportView: View {
                 }
                 if let url = editor.exportedURL {
                     Section("Đã tạo · \(editor.exportedDimensions)") {
-                        Button { showShare = true } label: { Label("Chia sẻ / Lưu vào Tệp", systemImage: "square.and.arrow.up") }
+                        Button {
+                            exportDoc = ExportedImageDocument(url: url)
+                            showFileSaver = true
+                        } label: {
+                            Label(savedFile ? "Đã lưu vào Finder / Tệp" : "Lưu vào Finder / Tệp…", systemImage: savedFile ? "checkmark.circle" : "folder.badge.plus")
+                        }
                         Button {
                             saving = true
                             Task { saved = await editor.saveToPhotos(); saving = false }
                         } label: { Label(saved ? "Đã lưu vào Ảnh" : "Lưu vào Ảnh", systemImage: saved ? "checkmark.circle" : "photo.badge.plus") }
                             .disabled(saving || saved)
+                        Button { showShare = true } label: { Label("Chia sẻ…", systemImage: "square.and.arrow.up") }
                         Text(url.lastPathComponent).font(.caption2).foregroundStyle(.secondary)
                     }
                 }
@@ -140,19 +165,38 @@ struct ExportView: View {
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Xong") { dismiss() }.disabled(editor.isExporting || saving) } }
                 .interactiveDismissDisabled(editor.isExporting || saving)
                 .sheet(isPresented: $showShare) { if let url = editor.exportedURL { ShareSheet(url: url) } }
+                .fileExporter(
+                    isPresented: $showFileSaver,
+                    document: exportDoc,
+                    contentType: format == .png ? .png : .jpeg,
+                    defaultFilename: editor.exportedURL?.deletingPathExtension().lastPathComponent ?? "IRO-export"
+                ) { result in
+                    switch result {
+                    case .success: savedFile = true
+                    case .failure(let error): editor.show(error)
+                    }
+                }
                 .onAppear {
                     guard !initialized else { return }
-                    initialized = true; editor.exportedURL = nil; saved = false
+                    initialized = true; editor.exportedURL = nil; saved = false; savedFile = false
                 }
-                .onChange(of: size) { _, _ in editor.exportedURL = nil; saved = false }
-                .onChange(of: format) { _, _ in editor.exportedURL = nil; saved = false }
+                .onChange(of: size) { _, _ in editor.exportedURL = nil; saved = false; savedFile = false }
+                .onChange(of: format) { _, _ in editor.exportedURL = nil; saved = false; savedFile = false }
         }
     }
 }
 
 struct ShareSheet: UIViewControllerRepresentable {
     let url: URL
-    func makeUIViewController(context: Context) -> UIActivityViewController { UIActivityViewController(activityItems: [url], applicationActivities: nil) }
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let popover = vc.popoverPresentationController {
+            popover.sourceView = vc.view
+            popover.sourceRect = CGRect(x: 160, y: 120, width: 1, height: 1)
+            popover.permittedArrowDirections = []
+        }
+        return vc
+    }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 

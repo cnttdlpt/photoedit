@@ -933,3 +933,182 @@ $('export').onclick = async () => {
 loadStoredLuts();
 sync();
 demo();
+
+
+// === MATERIAL DESIGN 3 EXPRESSIVE UX & ANIMATION ENGINE (RIPPLE, THEME, TABS & TICK RULER) ===
+
+function attachMd3Ripples() {
+  document.querySelectorAll('button').forEach(btn => {
+    if (btn.dataset.md3RippleAttached) return;
+    btn.dataset.md3RippleAttached = '1';
+    btn.addEventListener('pointerdown', ev => {
+      const rect = btn.getBoundingClientRect();
+      const ripple = document.createElement('span');
+      const size = Math.max(rect.width, rect.height);
+      ripple.className = 'md3-ripple';
+      ripple.style.width = ripple.style.height = `${size}px`;
+      ripple.style.left = `${ev.clientX - rect.left - size / 2}px`;
+      ripple.style.top = `${ev.clientY - rect.top - size / 2}px`;
+      btn.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 540);
+    });
+  });
+}
+
+function triggerCanvasSpringPop() {
+  canvas.classList.remove('canvas-pop');
+  void canvas.offsetWidth;
+  canvas.classList.add('canvas-pop');
+  setTimeout(() => canvas.classList.remove('canvas-pop'), 240);
+}
+
+// Chuyển đổi giao diện M3 Dark Darkroom <-> M3 Warm Porcelain (đồng bộ StudioStyle.java)
+if ($('themeToggleBtn')) {
+  $('themeToggleBtn').onclick = () => {
+    document.body.classList.toggle('theme-porcelain');
+    const isLight = document.body.classList.contains('theme-porcelain');
+    drawTickRuler();
+    toast(isLight ? 'Đã chuyển sang giao diện M3 Warm Porcelain (Sáng).' : 'Đã chuyển sang giao diện M3 Darkroom (Tối).');
+  };
+}
+
+// M3 Segmented Category Tabs kèm hiệu ứng Staggered Cascade
+if ($('categoryTabs')) {
+  const allGroups = [...document.querySelectorAll('.control-group')];
+  $('categoryTabs').querySelectorAll('.md3-tab').forEach(tab => {
+    tab.onclick = () => {
+      $('categoryTabs').querySelectorAll('.md3-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const cat = tab.dataset.cat;
+      allGroups.forEach((grp, idx) => {
+        const show = cat === 'all' || Number(cat) === idx;
+        grp.style.display = show ? 'flex' : 'none';
+        if (show) {
+          grp.style.animation = 'none';
+          void grp.offsetWidth;
+          grp.style.animation = `md3CascadeIn 320ms cubic-bezier(0.05, 0.7, 0.1, 1) ${idx * 45}ms both`;
+        }
+      });
+    };
+  });
+}
+
+// Thanh trượt thước chia vạch độ chính xác cao chuẩn M3 Expressive (Web TickRulerView)
+const rulerCanvas = $('tickRulerCanvas');
+const rulerCtx = rulerCanvas ? rulerCanvas.getContext('2d') : null;
+let activeRulerControl = ['exposure', 'Bù sáng · EV', -3, 3, 1 / 3];
+let rulerDragging = false, rulerStartX = 0, rulerStartVal = 0;
+
+function bindControlToTickRuler(ctrl) {
+  activeRulerControl = ctrl;
+  document.querySelectorAll('.control').forEach(c => c.classList.remove('focused-control'));
+  const inputEl = $(ctrl[0]);
+  if (inputEl && inputEl.closest('.control')) {
+    inputEl.closest('.control').classList.add('focused-control');
+  }
+  drawTickRuler();
+}
+
+for (const [, list] of groups) {
+  for (const ctrl of list) {
+    if (!Array.isArray(ctrl[2])) {
+      const el = $(ctrl[0]);
+      if (el) {
+        el.addEventListener('focus', () => bindControlToTickRuler(ctrl));
+        el.addEventListener('pointerdown', () => bindControlToTickRuler(ctrl));
+        el.addEventListener('input', () => {
+          const outBadge = $(ctrl[0] + 'Value');
+          if (outBadge) {
+            outBadge.classList.add('pulse');
+            setTimeout(() => outBadge.classList.remove('pulse'), 180);
+          }
+          drawTickRuler();
+        });
+      }
+    }
+  }
+}
+
+function drawTickRuler() {
+  if (!rulerCtx || !activeRulerControl) return;
+  const [key, label, min, max, step] = activeRulerControl;
+  const val = Number(settings[key] || 0);
+  if ($('rulerLabel')) $('rulerLabel').textContent = `M3 TICK RULER · ${label.toUpperCase()}`;
+  if ($('rulerValue')) {
+    $('rulerValue').textContent = key === 'exposure'
+      ? (val >= 0 ? '+' : '') + val.toFixed(2) + ' EV'
+      : (val >= 0 ? '+' : '') + Math.round(val * 100) / 100;
+  }
+
+  const w = rulerCanvas.width, h = rulerCanvas.height;
+  rulerCtx.clearRect(0, 0, w, h);
+  const centerX = w * 0.5, centerY = h * 0.54;
+  const tickSpacing = 12;
+  const totalSteps = Math.round((max - min) / step);
+  const currentStepFloat = (val - min) / step;
+  const zeroStepFloat = (0 - min) / step;
+  const isLight = document.body.classList.contains('theme-porcelain');
+  const accent = isLight ? '#e07a3b' : '#f59e0b';
+
+  // Thanh Tonal Delta nối từ 0 đến giá trị hiện tại
+  if (min < 0 && max > 0) {
+    const zeroX = centerX + (zeroStepFloat - currentStepFloat) * tickSpacing;
+    const left = Math.max(10, Math.min(zeroX, centerX));
+    const right = Math.min(w - 10, Math.max(zeroX, centerX));
+    rulerCtx.fillStyle = isLight ? 'rgba(224, 122, 59, 0.18)' : 'rgba(245, 158, 11, 0.18)';
+    rulerCtx.fillRect(left, centerY - 11, right - left, 22);
+  }
+
+  const sigma = tickSpacing * 3.4;
+  for (let i = 0; i <= totalSteps; i++) {
+    const x = centerX + (i - currentStepFloat) * tickSpacing;
+    if (x < 8 || x > w - 8) continue;
+    const dist = Math.abs(x - centerX);
+    const edgeFade = Math.max(0.1, 1 - dist / (w * 0.48));
+    const gauss = Math.exp(-(dist * dist) / (2 * sigma * sigma));
+    const tickVal = min + i * step;
+    const isZero = Math.abs(tickVal) < step * 0.25;
+    const isMajor = (i % 5 === 0) || isZero;
+    const halfH = (isMajor ? 9.5 : 5) * (1 + 0.45 * gauss);
+
+    rulerCtx.strokeStyle = isZero ? accent : isLight ? `rgba(24,26,31,${edgeFade * 0.75})` : `rgba(238,240,245,${edgeFade * 0.75})`;
+    rulerCtx.lineWidth = isZero ? 2.4 : isMajor ? 1.7 : 1.1;
+    rulerCtx.beginPath();
+    rulerCtx.moveTo(x, centerY - halfH);
+    rulerCtx.lineTo(x, centerY + halfH);
+    rulerCtx.stroke();
+  }
+
+  // Kim chỉ thị trung tâm M3 Expressive
+  rulerCtx.fillStyle = accent;
+  rulerCtx.fillRect(centerX - 1.5, 4, 3, h - 8);
+}
+
+if (rulerCanvas) {
+  rulerCanvas.addEventListener('pointerdown', ev => {
+    rulerDragging = true;
+    rulerStartX = ev.clientX;
+    rulerStartVal = Number(settings[activeRulerControl[0]] || 0);
+    rulerCanvas.setPointerCapture(ev.pointerId);
+  });
+  rulerCanvas.addEventListener('pointermove', ev => {
+    if (!rulerDragging) return;
+    const [key, , min, max, step] = activeRulerControl;
+    const dx = ev.clientX - rulerStartX;
+    let raw = rulerStartVal - (dx / 12) * step;
+    if (min < 0 && max > 0 && Math.abs(raw) < step * 0.35) raw = 0;
+    const snapped = Math.max(min, Math.min(max, Math.round(raw / step) * step));
+    if (snapped !== settings[key]) {
+      settings[key] = Number(snapped.toFixed(4));
+      sync();
+      drawTickRuler();
+      render();
+    }
+  });
+  const endDrag = () => { rulerDragging = false; };
+  rulerCanvas.addEventListener('pointerup', endDrag);
+  rulerCanvas.addEventListener('pointercancel', endDrag);
+}
+
+attachMd3Ripples();
+drawTickRuler();

@@ -35,53 +35,127 @@ import android.view.View;
  *         (Back, Undo, Redo, Export, Menu, Wand Auto-Balance, 11 thông số chỉnh màu, Search, Heart, Folder...).</li>
  * </ul>
  */
-final class StudioStyle {
+public final class StudioStyle {
 
     // =========================================================================
     // BẢNG MÀU TỐI GIẢN (MINIMAL STUDIO PALETTE)
     // =========================================================================
 
     /** Nền chính xám trắng trung tính dịu mắt (#F6F7F9). */
-    static final int BG = 0xfff6f7f9;
-    static final int PORCELAIN = 0xfff6f7f9;
+    public static final int BG = 0xfff6f7f9;
+    public static final int PORCELAIN = 0xfff6f7f9;
 
     /** Nền bề mặt phụ (#EFF1F5). */
-    static final int SURFACE = 0xffeff1f5;
+    public static final int SURFACE = 0xffeff1f5;
 
     /** Nền bề mặt cấp 2 (#E6E9EF). */
-    static final int SURFACE_CONTAINER = 0xffe6e9ef;
+    public static final int SURFACE_CONTAINER = 0xffe6e9ef;
 
     /** Đường viền mảnh trung tính (#E1E4EA). */
-    static final int LINE = 0xffe1e4ea;
+    public static final int LINE = 0xffe1e4ea;
 
     /** Màu chữ & nút chính mực đen than (#181A1F). */
-    static final int INK = 0xff181a1f;
+    public static final int INK = 0xff181a1f;
 
     /** Màu chữ phụ xám trung tính (#6E737D). */
-    static final int MUTED = 0xff6e737d;
+    public static final int MUTED = 0xff6e737d;
 
     // Màu kênh chức năng (chỉ dùng cho biểu đồ RGB / Đường cong R-G-B khi cần phân biệt kênh)
-    static final int GOOGLE_RED = 0xffd9483b;
-    static final int RED_TONAL = 0xfffbeae8;
+    public static final int GOOGLE_RED = 0xffd9483b;
+    public static final int RED_TONAL = 0xfffbeae8;
 
-    static final int GOOGLE_GREEN = 0xff2e9b52;
-    static final int GREEN_TONAL = 0xffe8f5ec;
+    public static final int GOOGLE_GREEN = 0xff2e9b52;
+    public static final int GREEN_TONAL = 0xffe8f5ec;
 
-    static final int GOOGLE_BLUE = 0xff2563eb;
-    static final int BLUE_TONAL = 0xffedf2fd;
+    public static final int GOOGLE_BLUE = 0xff2563eb;
+    public static final int BLUE_TONAL = 0xffedf2fd;
 
-    static final int GOOGLE_YELLOW = 0xffd9822b;
-    static final int YELLOW_TONAL = 0xfffbf2e6;
+    public static final int GOOGLE_YELLOW = 0xffd9822b;
+    public static final int YELLOW_TONAL = 0xfffbf2e6;
 
     /** Màu nhấn chính của toàn bộ giao diện: Đen than tối giản (#181A1F). */
-    static final int WARM_AMBER = INK;
-    static final int ACCENT = INK;
+    public static final int WARM_AMBER = INK;
+    public static final int ACCENT = INK;
 
     /** Nền xám nhạt cho các nút/thẻ đang chọn (#EAECEF). */
-    static final int WARM_AMBER_LIGHT = 0xffeaecef;
+    public static final int WARM_AMBER_LIGHT = 0xffeaecef;
 
     /** Màu viên thuốc tối (#181A1F). */
-    static final int DARK_PILL = 0xff181a1f;
+    public static final int DARK_PILL = 0xff181a1f;
+
+    // --- Hệ thống Token Material Design 3 (M3 Tonal Surface Hierarchy) ---
+    public static final int M3_SURFACE_CONTAINER_LOWEST = 0xffffffff;
+    public static final int M3_SURFACE_CONTAINER_LOW = 0xfff3f4f8;
+    public static final int M3_SURFACE_CONTAINER = 0xffe6e9ef;
+    public static final int M3_SURFACE_CONTAINER_HIGH = 0xffdcdfe7;
+    public static final int M3_SURFACE_CONTAINER_HIGHEST = 0xffd0d5df;
+
+    public static final int M3_PRIMARY = 0xffe07a3b;
+    public static final int M3_ON_PRIMARY = 0xffffffff;
+    public static final int M3_PRIMARY_CONTAINER = 0xffffdbca;
+    public static final int M3_ON_PRIMARY_CONTAINER = 0xff341100;
+
+    public static final int M3_SECONDARY_CONTAINER = 0xffdce4f5;
+    public static final int M3_ON_SECONDARY_CONTAINER = 0xff141c2b;
+    public static final int M3_OUTLINE = 0xff8a8e98;
+    public static final int M3_OUTLINE_VARIANT = 0xffdcdfe6;
+
+    // --- Hệ thống Token M3 Darkroom (Chế độ Phòng tối) ---
+    public static final int M3_DARK_BG = 0xff0b0d10;
+    public static final int M3_DARK_SURFACE = 0xff111318;
+    public static final int M3_DARK_SURFACE_CONTAINER_LOW = 0xff15181e;
+    public static final int M3_DARK_SURFACE_CONTAINER = 0xff1b1f27;
+    public static final int M3_DARK_SURFACE_CONTAINER_HIGH = 0xff232833;
+    public static final int M3_DARK_PRIMARY = 0xfff59e0b;
+    public static final int M3_DARK_PRIMARY_CONTAINER = 0xff422c05;
+    public static final int M3_DARK_ON_PRIMARY_CONTAINER = 0xffffdf9e;
+
+    // --- Bán kính bo góc chuẩn Material Design 3 (dp) ---
+    public static final float CORNER_XS_DP = 4f;
+    public static final float CORNER_SM_DP = 8f;
+    public static final float CORNER_MD_DP = 12f;
+    public static final float CORNER_LG_DP = 16f;
+    public static final float CORNER_XL_DP = 28f;
+    public static final float CORNER_FULL_DP = 999f;
+
+    public static int dpToPx(Context context, float dp) {
+        return Math.round(dp * context.getResources().getDisplayMetrics().density);
+    }
+
+    /**
+     * Tạo nền thẻ Material Design 3 kèm viền mảnh và bo góc chuẩn M3.
+     */
+    public static GradientDrawable createM3SurfaceDrawable(
+            Context context,
+            int fillColor,
+            int strokeColor,
+            float cornerDp,
+            float strokeWidthDp
+    ) {
+        GradientDrawable gd = new GradientDrawable();
+        gd.setShape(GradientDrawable.RECTANGLE);
+        gd.setColor(fillColor);
+        gd.setCornerRadius(dpToPx(context, cornerDp));
+        if (strokeWidthDp > 0f) {
+            gd.setStroke(Math.max(1, dpToPx(context, strokeWidthDp)), strokeColor);
+        }
+        return gd;
+    }
+
+    /**
+     * Tạo nút bấm hoặc Chip có hiệu ứng sóng nước (M3 Ripple State Layer).
+     */
+    public static Drawable createM3RippleSurface(
+            Context context,
+            int fillColor,
+            int rippleColor,
+            int strokeColor,
+            float cornerDp
+    ) {
+        GradientDrawable content = createM3SurfaceDrawable(context, fillColor, strokeColor, cornerDp, 1f);
+        GradientDrawable mask = createM3SurfaceDrawable(context, Color.WHITE, Color.TRANSPARENT, cornerDp, 0f);
+        return new RippleDrawable(ColorStateList.valueOf(rippleColor), content, mask);
+    }
 
     private StudioStyle() {
     }

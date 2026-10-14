@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>IRO Studio 3.0 Ultimate — Phòng Tối Quang Học & Living Film 24fps</title>
+  <title>IRO Studio 3.0 — Material Design 3 Expressive Darkroom</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,9 +11,10 @@
     <header class="topbar">
       <div class="brand">
         <h1>IRO</h1>
-        <span>Studio 3.0 Ultimate</span>
+        <span>Material 3 Expressive</span>
       </div>
       <div class="actions">
+        <button id="themeToggleBtn" class="ghost" title="Chuyển đổi giao diện Darkroom / Warm Porcelain">🌓 Giao diện M3</button>
         <button id="aiAuto" class="secondary">✨ AI Cân bằng</button>
         <button id="promptRecipeBtn" class="ghost">💬 Mô tả cảm xúc</button>
         <button id="matchRefBtn" class="ghost">🎨 Học màu ảnh mẫu</button>
@@ -37,7 +38,7 @@
       <aside class="sidebar left">
         <div class="panel-header">
           <h2>GIẢ LẬP MÀU PHIM</h2>
-          <p>Công thức màu phim chuẩn Fujifilm X-Trans V</p>
+          <p>Thẻ M3 Morphing Pill · Chuẩn Fujifilm X-Trans V</p>
         </div>
         <div id="films" class="film-grid"></div>
 
@@ -55,7 +56,7 @@
 
         <div class="lut-panel">
           <h3>BIỂU ĐỒ RGB HISTOGRAM & PALETTE</h3>
-          <canvas id="histogram" width="256" height="88" style="width:100%;height:88px;background:#111;border-radius:6px"></canvas>
+          <canvas id="histogram" width="256" height="88" style="width:100%;height:88px;background:#111318;border-radius:12px"></canvas>
           <div id="paletteSwatches" style="display:flex;gap:6px;margin-top:8px;height:18px"></div>
         </div>
       </aside>
@@ -87,16 +88,34 @@
           </div>
         </div>
 
+        <!-- Thanh trượt thước chia vạch độ chính xác cao chuẩn M3 Expressive (TickRulerView) -->
+        <div class="tick-ruler-dock">
+          <div class="tick-ruler-header">
+            <span id="rulerLabel">THƯỚC CHIA VẠCH ĐỘ CHÍNH XÁC CAO (M3 TICK RULER) · BÙ SÁNG EV</span>
+            <strong id="rulerValue">+0.00</strong>
+          </div>
+          <canvas id="tickRulerCanvas" width="720" height="44"></canvas>
+        </div>
+
         <div class="status-bar">
           <span id="status">Thử màu trên ảnh mẫu hoặc mở ảnh của bạn</span>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px">M3 Expressive Motion</span>
         </div>
       </section>
 
       <aside class="sidebar right">
         <div class="panel-header">
           <h2>PHÒNG TỐI QUANG HỌC 3.0</h2>
-          <p>Clarity, Dehaze, Bokeh Helios & Giấy Ảnh</p>
+          <p>Chọn nhóm công cụ M3 Segmented Tabs</p>
         </div>
+
+        <div class="md3-segmented-tabs" id="categoryTabs">
+          <button class="md3-tab active" data-cat="all">Tất cả</button>
+          <button class="md3-tab" data-cat="0">Ánh sáng</button>
+          <button class="md3-tab" data-cat="1">Màu sắc</button>
+          <button class="md3-tab" data-cat="2">Quang học</button>
+        </div>
+
         <div id="controls" class="controls"></div>
 
         <div class="recipe-actions">

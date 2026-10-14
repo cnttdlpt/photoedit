@@ -2,55 +2,64 @@ package vn.iro.editor;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
+import android.animation.ValueAnimator;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.transition.ChangeBounds;
+import android.transition.Fade;
+import android.transition.Slide;
+import android.transition.TransitionManager;
+import android.transition.TransitionSet;
+import android.view.Gravity;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Interpolator;
 import android.view.animation.OvershootInterpolator;
 import android.view.animation.PathInterpolator;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 /**
- * Hệ thống chuyển động và tương tác vật lý chuẩn Google Material 3 Expressive (Android 15/16).
- *
- * <p>Cung cấp các đường cong nội suy (Motion Tokens) và hiệu ứng chuyển cảnh mượt mà:
- * <ul>
- *     <li><b>Emphasized Decelerate ({@link #EMPHASIZED_DECELERATE}):</b> Đường cong giảm tốc đặc trưng
- *         của Google Material 3 ({@code cubic-bezier(0.05, 0.7, 0.1, 1.0)}) cho các chuyển động mở rộng,
- *         chuyển tab Shared-Axis và xuất hiện thẻ.</li>
- *     <li><b>Expressive Spring ({@link #EXPRESSIVE_SPRING}):</b> Hiệu ứng đàn hồi vật lý (Spring Overshoot)
- *         khi người dùng chạm nhả nút, chọn công cụ trên Navigation Rail hoặc bật huy hiệu.</li>
- *     <li><b>Container & Shared-Axis Transitions:</b> Chuyển cảnh mượt giữa màn hình chào và phòng tối chỉnh ảnh,
- *         cũng như khi chuyển đổi giữa 3 phân hệ {@code Tinh chỉnh}, {@code Màu phim}, {@code Khung ảnh}.</li>
- * </ul>
+ * Hệ thống chuyển động và tương tác vật lý chuẩn Material Design 3 Expressive.
+ * Tích hợp đầy đủ các đường cong gia tốc M3, tương tác chạm Morphing Shape,
+ * hiệu ứng chuyển cảnh Shared-Axis, Living Film 24fps và dấu ngày tháng Quartz Date.
  */
 public final class MotionStudio {
+    private MotionStudio() {}
 
-    /** Đường cong giảm tốc nhấn mạnh chuẩn Google Material 3 (dùng cho phần tử đi vào màn hình). */
     public static final Interpolator EMPHASIZED_DECELERATE = new PathInterpolator(0.05f, 0.7f, 0.1f, 1.0f);
-
-    /** Đường cong tăng tốc chuẩn Google Material 3 (dùng cho phần tử rời khỏi màn hình). */
     public static final Interpolator EMPHASIZED_ACCELERATE = new PathInterpolator(0.3f, 0.0f, 0.8f, 0.15f);
-
-    /** Đường cong tiêu chuẩn Material 3 cho các biến đổi kích thước/màu sắc trên màn hình. */
     public static final Interpolator STANDARD = new PathInterpolator(0.2f, 0.0f, 0.0f, 1.0f);
-
-    /** Đường cong đàn hồi (Spring Physics) đặc trưng của Material 3 Expressive. */
     public static final Interpolator EXPRESSIVE_SPRING = new OvershootInterpolator(1.45f);
+    public static final Interpolator EXPRESSIVE_GENTLE_SPRING = new OvershootInterpolator(1.15f);
 
-    private MotionStudio() {
+    public static final long DURATION_SHORT = 200L;
+    public static final long DURATION_MEDIUM = 350L;
+    public static final long DURATION_LONG = 500L;
+
+    /**
+     * Gắn hiệu ứng phản hồi chạm đàn hồi chuẩn M3 Expressive.
+     */
+    public static void attachExpressiveTouch(View view) {
+        attachExpressiveTouch(view, 0.95f);
     }
 
     /**
-     * Gắn hiệu ứng phản hồi chạm đàn hồi (Tactile Spring Press) chuẩn Material 3 Expressive cho một {@link View}.
-     * Khi chạm xuống sẽ thu nhỏ nhẹ ({@code pressedScale}) và khi nhả tay sẽ bật nảy mềm mại về {@code 1.0f}.
-     *
-     * @param view         Thành phần giao diện cần gắn hiệu ứng.
-     * @param pressedScale Tỷ lệ thu nhỏ khi nhấn giữ (ví dụ {@code 0.94f} cho nút nhỏ, {@code 0.97f} cho thẻ lớn).
+     * Gắn hiệu ứng phản hồi chạm đàn hồi kèm tùy chỉnh tỷ lệ thu nhỏ.
      */
     public static void attachExpressiveTouch(final View view, final float pressedScale) {
-        if (view == null) {
-            return;
-        }
+        if (view == null) return;
         view.setOnTouchListener((v, event) -> {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
@@ -71,23 +80,79 @@ public final class MotionStudio {
                             .start();
                     break;
             }
-            // Trả về false để vẫn cho phép RippleDrawable, onClick và onLongClick hoạt động bình thường
             return false;
         });
     }
 
     /**
-     * Chuyển đổi giữa 2 màn hình lớn (ví dụ: Màn hình chào {@code EmptyPhoto} <-> Phòng tối {@code EditorWorkspace})
-     * bằng hiệu ứng phóng nhẹ kèm mờ dần (Material 3 Shared Axis Z / Container Transform).
-     *
-     * @param outgoing Màn hình sắp ẩn đi.
-     * @param incoming Màn hình sắp hiện lên.
-     * @param forward  {@code true} nếu đi sâu vào trình chỉnh sửa, {@code false} nếu quay lại màn hình chào.
+     * Phản hồi chạm M3 Expressive kết hợp biến đổi hình học (Shape Morphing: đổi bán kính bo góc khi nhấn).
+     */
+    public static void attachMorphingShapeTouch(
+            View view,
+            GradientDrawable shapeDrawable,
+            float restingCornerPx,
+            float pressedCornerPx
+    ) {
+        if (view == null) return;
+        view.setOnTouchListener((v, event) -> {
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                    v.animate().scaleX(0.95f).scaleY(0.95f).setDuration(110L).setInterpolator(EMPHASIZED_DECELERATE).start();
+                    if (shapeDrawable != null) {
+                        animateCornerRadius(shapeDrawable, restingCornerPx, pressedCornerPx, 120L);
+                    }
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(240L).setInterpolator(EXPRESSIVE_SPRING).start();
+                    if (shapeDrawable != null) {
+                        animateCornerRadius(shapeDrawable, pressedCornerPx, restingCornerPx, 240L);
+                    }
+                    break;
+            }
+            return false;
+        });
+    }
+
+    public static void animateCornerRadius(GradientDrawable drawable, float fromPx, float toPx, long duration) {
+        if (drawable == null) return;
+        ValueAnimator va = ValueAnimator.ofFloat(fromPx, toPx);
+        va.setDuration(duration);
+        va.setInterpolator(EMPHASIZED_DECELERATE);
+        va.addUpdateListener(anim -> drawable.setCornerRadius((Float) anim.getAnimatedValue()));
+        va.start();
+    }
+
+    public static void animateContainerTransition(ViewGroup sceneRoot) {
+        if (sceneRoot == null) return;
+        TransitionSet transition = new TransitionSet();
+        transition.addTransition(new ChangeBounds().setDuration(DURATION_MEDIUM).setInterpolator(EMPHASIZED_DECELERATE));
+        transition.addTransition(new Fade(Fade.IN).setDuration(DURATION_SHORT).setInterpolator(EMPHASIZED_DECELERATE));
+        transition.addTransition(new Fade(Fade.OUT).setDuration(150L).setInterpolator(EMPHASIZED_ACCELERATE));
+        TransitionManager.beginDelayedTransition(sceneRoot, transition);
+    }
+
+    /**
+     * Chuyển cảnh trục ngang Material Design 3 (Shared Axis X) khi người dùng đổi Tab công cụ.
+     */
+    public static void animateSharedAxisX(ViewGroup container, boolean forward) {
+        if (container == null) return;
+        TransitionSet set = new TransitionSet();
+        Slide slide = new Slide(forward ? Gravity.END : Gravity.START);
+        slide.setDuration(DURATION_MEDIUM);
+        slide.setInterpolator(EMPHASIZED_DECELERATE);
+        Fade fade = new Fade();
+        fade.setDuration(DURATION_SHORT);
+        set.addTransition(slide).addTransition(fade).addTransition(new ChangeBounds());
+        TransitionManager.beginDelayedTransition(container, set);
+    }
+
+    /**
+     * Chuyển đổi giữa 2 màn hình lớn bằng hiệu ứng Shared Axis Z / Container Transform.
      */
     public static void transitionScreens(final View outgoing, final View incoming, boolean forward) {
-        if (incoming == null) {
-            return;
-        }
+        if (incoming == null) return;
         if (outgoing != null && outgoing.getVisibility() == View.VISIBLE && outgoing != incoming) {
             final float exitScale = forward ? 1.04f : 0.94f;
             outgoing.animate().cancel();
@@ -131,17 +196,10 @@ public final class MotionStudio {
     }
 
     /**
-     * Hiệu ứng chuyển Tab công cụ theo chuẩn Material 3 Shared-Axis (trục Y trên Tablet/Landscape Navigation Rail,
-     * hoặc trục X trên điện thoại dọc).
-     *
-     * @param targetPanel  Khung nội dung của tab vừa được chọn.
-     * @param verticalAxis {@code true} nếu trượt theo chiều dọc (Tablet/Landscape), {@code false} nếu trượt ngang.
-     * @param direction    Hướng chuyển ({@code >= 0} là tiến tới, {@code < 0} là lùi lại).
+     * Hiệu ứng chuyển Tab công cụ theo chuẩn Material 3 Shared-Axis.
      */
     public static void animateSharedAxisTab(final View targetPanel, boolean verticalAxis, int direction) {
-        if (targetPanel == null) {
-            return;
-        }
+        if (targetPanel == null) return;
         float density = targetPanel.getResources().getDisplayMetrics().density;
         float offsetPx = (direction >= 0 ? 1f : -1f) * 18f * density;
 
@@ -167,21 +225,16 @@ public final class MotionStudio {
     }
 
     /**
-     * Hiệu ứng xuất hiện nối tiếp (Staggered Cascade) cho các phần tử con trong một {@link ViewGroup}.
-     * Giúp giao diện khổ ngang / máy tính bảng có chiều sâu chuyển động mượt mà như Google Photos.
+     * Hiệu ứng xuất hiện nối tiếp dạng thác đổ (Staggered Cascade).
      */
     public static void animateCascade(ViewGroup group, int baseDelayMs, int stepDelayMs) {
-        if (group == null) {
-            return;
-        }
+        if (group == null) return;
         float density = group.getResources().getDisplayMetrics().density;
         float slidePx = 16f * density;
         int count = group.getChildCount();
         for (int i = 0; i < count; i++) {
             View child = group.getChildAt(i);
-            if (child == null || child.getVisibility() != View.VISIBLE) {
-                continue;
-            }
+            if (child == null || child.getVisibility() != View.VISIBLE) continue;
             child.setAlpha(0f);
             child.setTranslationY(slidePx);
             child.animate()
@@ -195,21 +248,47 @@ public final class MotionStudio {
     }
 
     /**
-     * Hiệu ứng nảy nhẹ (Pop Micro-Animation) khi một huy hiệu hoặc nút trạng thái vừa cập nhật giá trị.
+     * Hiệu ứng xuất hiện tuần tự dạng thác đổ cho danh sách thanh trượt hoặc thẻ màu phim.
+     */
+    public static void animateStaggeredCascade(ViewGroup group, long stepDelayMs) {
+        if (group == null) return;
+        int count = group.getChildCount();
+        for (int i = 0; i < count; i++) {
+            View child = group.getChildAt(i);
+            if (child.getVisibility() != View.VISIBLE) continue;
+            child.setAlpha(0f);
+            child.setTranslationY(24f);
+            child.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setStartDelay(i * stepDelayMs)
+                    .setDuration(280L)
+                    .setInterpolator(EMPHASIZED_DECELERATE)
+                    .start();
+        }
+    }
+
+    /**
+     * Hiệu ứng nảy nhẹ khi huy hiệu hoặc nút trạng thái vừa cập nhật giá trị.
      */
     public static void popBadge(View badge) {
-        if (badge == null) {
-            return;
-        }
+        pulseBadge(badge);
+    }
+
+    /**
+     * Nhịp nảy đàn hồi (Micro-pulse) cho nhãn hiển thị thông số khi chạm mốc 0 hoặc hoàn tất AI Auto-Balance.
+     */
+    public static void pulseBadge(View badge) {
+        if (badge == null) return;
         badge.animate().cancel();
-        badge.setScaleX(0.86f);
-        badge.setScaleY(0.86f);
-        badge.animate()
-                .scaleX(1f)
-                .scaleY(1f)
-                .setDuration(240)
-                .setInterpolator(EXPRESSIVE_SPRING)
-                .start();
+        ObjectAnimator pulse = ObjectAnimator.ofPropertyValuesHolder(
+                badge,
+                PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.18f, 1f),
+                PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.18f, 1f)
+        );
+        pulse.setDuration(260L);
+        pulse.setInterpolator(EXPRESSIVE_GENTLE_SPRING);
+        pulse.start();
     }
 
     /**
@@ -259,5 +338,51 @@ public final class MotionStudio {
                         .start();
             }
         }
+    }
+
+    public static List<Bitmap> generateLivingFilmFrames(
+            Bitmap source,
+            Settings baseSettings,
+            ColorEngine engine,
+            int totalFrames
+    ) {
+        return generateLivingFilmFrames(source, baseSettings, totalFrames);
+    }
+
+    public static List<Bitmap> generateLivingFilmFrames(
+            Bitmap source,
+            Settings baseSettings,
+            int totalFrames
+    ) {
+        List<Bitmap> frames = new ArrayList<>(totalFrames);
+        if (source == null || source.getWidth() < 1 || source.getHeight() < 1) return frames;
+        int w = source.getWidth();
+        int h = source.getHeight();
+        int[] inPixels = new int[w * h];
+        source.getPixels(inPixels, 0, w, 0, 0, w, h);
+        Settings s = baseSettings != null ? baseSettings.copy() : new Settings();
+        if (s.grain <= 0) s.grain = 8;
+        for (int f = 0; f < totalFrames; f++) {
+            int[] outPixels = ColorEngine.process(inPixels, w, h, s, null);
+            Bitmap rendered = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            rendered.setPixels(outPixels, 0, w, 0, 0, w, h);
+            drawQuartzDateStamp(rendered);
+            frames.add(rendered);
+        }
+        return frames;
+    }
+
+    public static void drawQuartzDateStamp(Bitmap target) {
+        if (target == null || !target.isMutable()) return;
+        Canvas canvas = new Canvas(target);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        float fontSize = Math.max(18f, Math.min(target.getWidth(), target.getHeight()) * 0.032f);
+        paint.setTypeface(Typeface.MONOSPACE);
+        paint.setTextSize(fontSize);
+        paint.setFakeBoldText(true);
+        paint.setColor(Color.rgb(255, 123, 26));
+        paint.setShadowLayer(fontSize * 0.45f, 0f, 0f, Color.argb(215, 255, 68, 0));
+        String stamp = new SimpleDateFormat("''yy MM dd", Locale.US).format(new Date());
+        canvas.drawText(stamp, target.getWidth() - fontSize * 6.4f, target.getHeight() - fontSize * 1.1f, paint);
     }
 }

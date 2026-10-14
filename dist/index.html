@@ -1,6 +1,132 @@
-<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#161918"><title>IRO — Phòng màu ảnh</title><link rel="stylesheet" href="style.css"></head><body>
-<header><a class="brand" href="./">iro<span>COLOR STUDIO</span></a><div class="project"><span class="dot"></span><span id="filename">Một chút màu. Một câu chuyện.</span></div><button class="primary" id="export">Xuất ảnh <span>↗</span></button></header>
-<main><aside class="library"><div class="eyebrow">PHÒNG TỐI KỸ THUẬT SỐ</div><h1>Màu của<br>riêng bạn<span>.</span></h1><p class="muted intro">Từ một khung hình,<br>đến một cảm giác.</p><button class="upload" id="open">＋ &nbsp; Mở ảnh của bạn</button><input type="file" id="photo" accept="image/jpeg,image/png,image/webp,image/avif" hidden>
-<div class="section-title">01 / FILM SIMULATION <span>9</span></div><div id="films" class="films"></div><p class="micro">Các màu lấy cảm hứng từ phim Fuji, không phải profile chính thức của Fujifilm.</p><div class="section-title">02 / LUT CỦA BẠN <span>＋</span></div><button id="importLut" class="lut-upload">↥ &nbsp; Thêm LUT .cube <small>3D LUT · 2–65 điểm mỗi chiều</small></button><input type="file" id="lutfile" accept=".cube" hidden><select id="lutSelect" aria-label="Chọn LUT"><option value="">Không áp dụng LUT</option></select><label class="slider-label">Cường độ LUT <output id="lutValue">100%</output></label><input id="lutAmount" type="range" min="0" max="100" value="100" aria-label="Cường độ LUT"><button class="text-button" id="removeLut">Xóa LUT đang chọn</button><div class="privacy">◉ &nbsp; Ảnh được xử lý ngay trên máy bạn.</div></aside>
-<section class="workspace"><div class="workspace-top"><div><span class="eyebrow">YOUR EVERYDAY, ON FILM</span><h2 id="lookTitle">Original <span>/ Nguyên bản</span></h2></div><span class="badge" id="imageSize">ẢNH MẪU</span></div><div class="stage" id="drop"><div class="canvas-wrap"><canvas id="canvas" aria-label="Ảnh xem trước"></canvas><span class="image-tag" id="imageTag">IRO / ORIGINAL</span></div><div id="busy" hidden>Đang xử lý…</div></div><div class="viewbar"><span id="status" role="status">Kéo ảnh vào đây để bắt đầu</span><button id="compare" aria-pressed="false">◧ &nbsp; Xem ảnh gốc</button><span class="zoom">FIT ↗</span></div><div class="recipe-card"><div class="recipe-icon">✳</div><div><span class="eyebrow">TỪ CÔNG THỨC BẠN GỬI</span><h3>Classic Chrome, after hours.</h3><p>DR200 · Grain Weak · WB R+1 B−1 · EV +⅔</p></div><button id="sampleRecipe">Áp dụng recipe <span>↗</span></button></div><div class="workspace-footer"><span>MAKE ORDINARY FEEL SOMETHING.</span><span>IRO STUDIO — 01</span></div></section>
-<aside class="adjustments"><div class="adjust-header"><h2>Chỉnh tay</h2><button class="text-button" id="reset">Đặt lại ↺</button></div><p class="muted">Tinh chỉnh từng sắc độ theo ý bạn.</p><div id="controls"></div><details><summary>Thông số lúc chụp</summary><p class="micro">Recipe gốc: ISO tự động, tối đa 12800. ISO không thể thay đổi sau khi chụp. DR, WB Auto và các thang Fuji ở đây được mô phỏng trên ảnh JPEG/PNG; không tái tạo xử lý RAW của máy ảnh. NR −4 là mức thấp nhất, +4 là cao nhất.</p></details><div class="save-row"><button id="saveRecipe">↓ Lưu recipe</button><button id="loadRecipe">↑ Nhập recipe</button></div><input type="file" id="recipefile" accept=".json" hidden><label class="format-label">Định dạng xuất<select id="format"><option value="image/jpeg">JPEG · chất lượng 95%</option><option value="image/png">PNG · không mất dữ liệu</option><option value="image/webp">WebP · chất lượng 95%</option></select></label><p class="micro">Xuất theo kích thước ảnh gốc, tối đa 24 MP. Bản xem trước giới hạn cạnh dài 1400 px.</p></aside></main><div class="toast" id="toast" role="alert" hidden></div><script type="module" src="app.mjs"></script></body></html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>IRO Studio 3.0 Ultimate — Phòng Tối Quang Học & Living Film 24fps</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>IRO</h1>
+        <span>Studio 3.0 Ultimate</span>
+      </div>
+      <div class="actions">
+        <button id="aiAuto" class="secondary">✨ AI Cân bằng</button>
+        <button id="promptRecipeBtn" class="ghost">💬 Mô tả cảm xúc</button>
+        <button id="matchRefBtn" class="ghost">🎨 Học màu ảnh mẫu</button>
+        <button id="livingFilmBtn" class="ghost">🎬 Living Film 24fps</button>
+        <button id="dateStampBtn" class="ghost">📅 Dấu ngày '26</button>
+        <button id="quadViewBtn" class="ghost">⊞ Xem 4 Màu</button>
+        <button id="contactSheetBtn" class="ghost">🎞️ Contact Sheet</button>
+        <button id="rotate90" class="ghost">↻ Xoay 90°</button>
+        <button id="exportCube" class="ghost">📦 Xuất .CUBE</button>
+        <button id="shareCode" class="ghost">Mã IRO</button>
+        <button id="importLut">Nhập .CUBE</button>
+        <button id="open">Mở ảnh</button>
+        <button id="export" class="primary">Xuất ảnh</button>
+        <input type="file" id="photo" accept="image/*" hidden>
+        <input type="file" id="refPhoto" accept="image/*" hidden>
+        <input type="file" id="lutfile" accept=".cube" hidden>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar left">
+        <div class="panel-header">
+          <h2>GIẢ LẬP MÀU PHIM</h2>
+          <p>Công thức màu phim chuẩn Fujifilm X-Trans V</p>
+        </div>
+        <div id="films" class="film-grid"></div>
+
+        <div class="lut-panel">
+          <h3>LUT 3D TÙY CHỈNH (INDEXEDDB)</h3>
+          <select id="lutSelect">
+            <option value="">Không dùng LUT 3D</option>
+          </select>
+          <div class="control">
+            <label for="lutAmount">Cường độ LUT <output id="lutValue">100%</output></label>
+            <input type="range" id="lutAmount" min="0" max="100" value="100">
+          </div>
+          <button id="removeLut" class="text-btn" hidden>Gỡ bỏ LUT</button>
+        </div>
+
+        <div class="lut-panel">
+          <h3>BIỂU ĐỒ RGB HISTOGRAM & PALETTE</h3>
+          <canvas id="histogram" width="256" height="88" style="width:100%;height:88px;background:#111;border-radius:6px"></canvas>
+          <div id="paletteSwatches" style="display:flex;gap:6px;margin-top:8px;height:18px"></div>
+        </div>
+      </aside>
+
+      <section class="stage">
+        <div class="view-header">
+          <div class="info">
+            <h2 id="lookTitle">Classic Chrome</h2>
+            <span id="filename">Fujifilm Classic Chrome Demo</span>
+            <span id="imageSize" class="tag">ẢNH MẪU MINH HỌA</span>
+          </div>
+          <div class="tools">
+            <label style="font-size:12px;display:inline-flex;align-items:center;gap:6px">
+              Trước/Sau
+              <input type="range" id="splitCompare" min="0" max="100" value="0" style="width:85px">
+            </label>
+            <button id="compare" class="ghost">Giữ xem gốc</button>
+            <button id="sampleRecipe" class="ghost">Công thức mẫu</button>
+            <button id="reset" class="ghost">Đặt lại</button>
+          </div>
+        </div>
+
+        <div class="canvas-wrap" id="drop">
+          <canvas id="canvas"></canvas>
+          <span id="imageTag" class="badge">IRO / CLASSIC CHROME</span>
+          <div id="busy" class="busy-overlay" hidden>
+            <div class="spinner"></div>
+            <span>Đang xử lý quang học & hạt phim...</span>
+          </div>
+        </div>
+
+        <div class="status-bar">
+          <span id="status">Thử màu trên ảnh mẫu hoặc mở ảnh của bạn</span>
+        </div>
+      </section>
+
+      <aside class="sidebar right">
+        <div class="panel-header">
+          <h2>PHÒNG TỐI QUANG HỌC 3.0</h2>
+          <p>Clarity, Dehaze, Bokeh Helios & Giấy Ảnh</p>
+        </div>
+        <div id="controls" class="controls"></div>
+
+        <div class="recipe-actions">
+          <button id="saveRecipe" class="secondary">Lưu công thức</button>
+          <button id="loadRecipe" class="secondary">Tải công thức</button>
+          <input type="file" id="recipefile" accept=".json" hidden>
+        </div>
+
+        <div class="export-options">
+          <label for="frameSelect">Khung triển lãm (PhotoFrame)</label>
+          <select id="frameSelect">
+            <option value="None">Không viền</option>
+            <option value="GalleryWhite">Khung Trắng Gallery + EXIF + 5 Ô Màu</option>
+            <option value="DarkroomBlack">Khung Đen Phòng tối + Mã IRO</option>
+            <option value="Film35mm">Khung Phim 35mm Răng Cưa (Sprocket)</option>
+            <option value="HasselbladV">Khung Vuông Hasselblad V-Notch</option>
+            <option value="PostcardGPS">Khung Bưu Thiếp Kỷ Niệm + Dấu Bưu Điện</option>
+          </select>
+
+          <label for="format" style="margin-top:8px;display:block">Định dạng xuất (PNG tự nhúng ẩn Recipe)</label>
+          <select id="format">
+            <option value="image/jpeg">JPEG (Chất lượng cao 92%)</option>
+            <option value="image/png">PNG (Không nén · Nhúng ẩn công thức)</option>
+            <option value="image/webp">WebP (Siêu nhẹ 92%)</option>
+          </select>
+        </div>
+      </aside>
+    </main>
+  </div>
+  <div class="toast" id="toast" hidden></div>
+  <script type="module" src="app.mjs"></script>
+</body>
+</html>

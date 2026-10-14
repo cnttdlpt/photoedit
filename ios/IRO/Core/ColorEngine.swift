@@ -59,7 +59,7 @@ public enum ColorEngine {
         let colorFactor = 1 + s.color * 0.08
         let tonHigh = s.highlight * 0.035
         let tonShad = s.shadow * 0.035
-        let tonDR   = Double(s.dr - 100) / 300 * 0.10
+        let tonDR   = Double(s.dr - 100) / 300.0 * 0.10
         let ccFactor = s.colorChrome * 0.012
         let cbFactor = s.chromeBlue * 0.04
         let grainSize = Int(max(1, s.grainSize))

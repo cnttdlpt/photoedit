@@ -205,4 +205,54 @@ public final class CubeLut {
     private static double clamp(double x) {
         return Math.max(0.0, Math.min(1.0, x));
     }
+
+    /**
+     * Xuất toàn bộ công thức màu hiện tại thành văn bản bảng tra màu chuẩn 3D LUT Adobe .cube.
+     * Cho phép mang công thức màu sang DaVinci Resolve, Premiere Pro, Final Cut Pro, CapCut.
+     *
+     * @param s        Bộ thông số Settings đang hiệu chỉnh.
+     * @param lut      LUT 3D đang chọn (nếu có).
+     * @param cubeSize Kích thước lưới lập phương (thường là 33 hoặc 17).
+     * @return Chuỗi nội dung định dạng .cube chuẩn quốc tế.
+     */
+    public static String bakeRecipeToCube(Settings s, CubeLut lut, int cubeSize) {
+        int n = Math.max(2, Math.min(65, cubeSize));
+        StringBuilder sb = new StringBuilder(n * n * n * 28 + 256);
+        sb.append("# Created by IRO Studio 3.0\n");
+        sb.append("TITLE \"IRO ").append(s.film != null ? s.film.replace("\"", "") : "Custom").append("\"\n");
+        sb.append("LUT_3D_SIZE ").append(n).append("\n");
+        sb.append("DOMAIN_MIN 0.0 0.0 0.0\n");
+        sb.append("DOMAIN_MAX 1.0 1.0 1.0\n");
+
+        int total = n * n * n;
+        int[] inPixels = new int[total];
+        int idx = 0;
+        for (int b = 0; b < n; b++) {
+            int bByte = Math.round((float) b / (n - 1) * 255.0f);
+            for (int g = 0; g < n; g++) {
+                int gByte = Math.round((float) g / (n - 1) * 255.0f);
+                for (int r = 0; r < n; r++) {
+                    int rByte = Math.round((float) r / (n - 1) * 255.0f);
+                    inPixels[idx++] = 0xff000000 | (rByte << 16) | (gByte << 8) | bByte;
+                }
+            }
+        }
+
+        Settings bakeSettings = s.copy();
+        bakeSettings.grain = 0.0;
+        bakeSettings.sharpness = 0.0;
+        bakeSettings.nr = -4.0;
+        bakeSettings.swirlyBokeh = 0.0;
+
+        int[] outPixels = ColorEngine.process(inPixels, n, n * n, bakeSettings, lut);
+
+        for (int p : outPixels) {
+            float outR = ((p >>> 16) & 255) / 255.0f;
+            float outG = ((p >>> 8) & 255) / 255.0f;
+            float outB = (p & 255) / 255.0f;
+            sb.append(String.format(java.util.Locale.ROOT, "%.6f %.6f %.6f\n", outR, outG, outB));
+        }
+
+        return sb.toString();
+    }
 }

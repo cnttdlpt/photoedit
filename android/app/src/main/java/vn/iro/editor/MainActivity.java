@@ -87,6 +87,7 @@ public class MainActivity extends Activity {
     private static final int OPEN_RECIPE = 12;
     private static final int SAVE_IMAGE = 13;
     private static final int SAVE_RECIPE = 14;
+    private static final int SAVE_LUT_CUBE = 15;
 
     /**
      * Ba phân hệ công cụ chính trên thanh chuyển chế độ (Mode Switcher Pill).
@@ -125,7 +126,16 @@ public class MainActivity extends Activity {
         NR("Khử nhiễu", "nr", -4.0, 4.0, 1.0, -4.0),
         LUT_AMOUNT("Cường độ LUT", "film", 0.0, 100.0, 1.0, 100.0),
         COLOR_CHROME("Color Chrome", "color", 0.0, 2.0, 1.0, 0.0),
-        CHROME_BLUE("Chrome Blue", "blue", 0.0, 2.0, 1.0, 0.0);
+        CHROME_BLUE("Chrome Blue", "blue", 0.0, 2.0, 1.0, 0.0),
+        PRO_MIST("Pro-Mist", "mist", 0.0, 100.0, 5.0, 0.0),
+        HALATION("Halation", "flame", 0.0, 100.0, 5.0, 0.0),
+        BLEACH_BYPASS("Bleach Bypass", "silver", 0.0, 100.0, 5.0, 0.0),
+        DEHAZE("Khử sương", "fog", -100.0, 100.0, 5.0, 0.0),
+        TEXTURE("Texture", "texture", -100.0, 100.0, 5.0, 0.0),
+        SKIN_PROTECT("Bảo vệ da", "person", 0.0, 100.0, 5.0, 0.0),
+        SWIRLY_BOKEH("Bokeh xoáy", "lens", 0.0, 100.0, 5.0, 0.0),
+        DEPTH_FOG("Sương mù 3D", "cloud", 0.0, 100.0, 5.0, 0.0),
+        LIGHT_LEAK("Lọt sáng", "sun", 0.0, 100.0, 5.0, 0.0);
 
         public final String label;
         public final String icon;
@@ -159,6 +169,15 @@ public class MainActivity extends Activity {
                 case LUT_AMOUNT: return s.lutAmount;
                 case COLOR_CHROME: return s.colorChrome;
                 case CHROME_BLUE: return s.chromeBlue;
+                case PRO_MIST: return s.proMist;
+                case HALATION: return s.halation;
+                case BLEACH_BYPASS: return s.bleachBypass;
+                case DEHAZE: return s.dehaze;
+                case TEXTURE: return s.texture;
+                case SKIN_PROTECT: return s.skinProtect;
+                case SWIRLY_BOKEH: return s.swirlyBokeh;
+                case DEPTH_FOG: return s.depthFog;
+                case LIGHT_LEAK: return s.lightLeak;
                 default: return 0.0;
             }
         }
@@ -180,6 +199,15 @@ public class MainActivity extends Activity {
                 case LUT_AMOUNT: s.lutAmount = clamped; break;
                 case COLOR_CHROME: s.colorChrome = clamped; break;
                 case CHROME_BLUE: s.chromeBlue = clamped; break;
+                case PRO_MIST: s.proMist = clamped; break;
+                case HALATION: s.halation = clamped; break;
+                case BLEACH_BYPASS: s.bleachBypass = clamped; break;
+                case DEHAZE: s.dehaze = clamped; break;
+                case TEXTURE: s.texture = clamped; break;
+                case SKIN_PROTECT: s.skinProtect = clamped; break;
+                case SWIRLY_BOKEH: s.swirlyBokeh = clamped; break;
+                case DEPTH_FOG: s.depthFog = clamped; break;
+                case LIGHT_LEAK: s.lightLeak = clamped; break;
             }
         }
 
@@ -201,6 +229,13 @@ public class MainActivity extends Activity {
             }
             if (this == GRAIN || this == LUT_AMOUNT || this == COLOR_CHROME || this == CHROME_BLUE) {
                 return String.format(Locale.ROOT, "%.0f", v);
+            }
+            if (this == PRO_MIST || this == HALATION || this == BLEACH_BYPASS || this == SKIN_PROTECT
+                    || this == SWIRLY_BOKEH || this == DEPTH_FOG || this == LIGHT_LEAK) {
+                return String.format(Locale.ROOT, "%.0f%%", v);
+            }
+            if (this == DEHAZE || this == TEXTURE) {
+                return String.format(Locale.ROOT, "%+.0f", v);
             }
             return String.format(Locale.ROOT, "%+.0f", v);
         }
@@ -3430,6 +3465,8 @@ public class MainActivity extends Activity {
             importRecipe(uri);
         } else if (request == SAVE_IMAGE) {
             exportImage(uri);
+        } else if (request == SAVE_LUT_CUBE) {
+            exportLutCube(uri);
         } else if (request == SAVE_RECIPE) {
             final String payload = exportRecipeJson;
             executor.execute(() -> {
@@ -3442,6 +3479,27 @@ public class MainActivity extends Activity {
                 }
             });
         }
+    }
+
+    private void exportLutCube(Uri destination) {
+        final Settings s = (exportSettings != null) ? exportSettings : settings.copy();
+        final CubeLut lut = exportLut;
+        statusLabel.setText("Đang xuất file 3D LUT .cube…");
+        executor.execute(() -> {
+            try {
+                String cubeText = CubeLut.bakeRecipeToCube(s, lut, 33);
+                try (OutputStream out = getContentResolver().openOutputStream(destination)) {
+                    if (out == null) throw new IOException("Không mở được tệp đích để ghi LUT");
+                    out.write(cubeText.getBytes(StandardCharsets.UTF_8));
+                }
+                runOnUiThread(() -> {
+                    message("Đã xuất file 3D LUT .cube (33×33×33) thành công!");
+                    statusLabel.setText("Đã xuất file 3D LUT .cube cho Premiere/DaVinci/CapCut");
+                });
+            } catch (Exception e) {
+                error(e);
+            }
+        });
     }
 
     /**
@@ -4410,6 +4468,21 @@ public class MainActivity extends Activity {
                         exportBusy = false;
                         exportUri = null;
                         exportLut = null;
+                        error(e);
+                    }
+                })
+                .setNeutralButton("Xuất LUT 3D (.cube)", (d, n) -> {
+                    exportSettings = settings.copy();
+                    exportLut = activeLut;
+                    try {
+                        String filmSlug = (settings.film != null)
+                                ? settings.film.toLowerCase().replaceAll("[^a-z0-9]+", "-")
+                                : "custom";
+                        createDocument(
+                                SAVE_LUT_CUBE,
+                                "application/octet-stream",
+                                "iro-" + filmSlug + ".cube");
+                    } catch (Exception e) {
                         error(e);
                     }
                 })

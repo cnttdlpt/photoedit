@@ -58,6 +58,33 @@ public final class Settings {
     /** Hiệu ứng Color Chrome FX Blue (làm sâu riêng vùng màu xanh dương/bầu trời), phạm vi [0.0, 2.0]. */
     public double chromeBlue = 0.0;
 
+    /** Kính lọc khuếch tán quang học Black Pro-Mist, phạm vi [0.0, 100.0]. */
+    public double proMist = 0.0;
+
+    /** Quầng sáng đỏ quanh vùng cháy sáng (Halation CineStill 800T), phạm vi [0.0, 100.0]. */
+    public double halation = 0.0;
+
+    /** Hiệu ứng giữ bạc phòng tối (Bleach Bypass), phạm vi [0.0, 100.0]. */
+    public double bleachBypass = 0.0;
+
+    /** Vệt lọt sáng phim 35mm (Vintage Light Leak), phạm vi [0.0, 100.0]. */
+    public double lightLeak = 0.0;
+
+    /** Mặt nạ bảo vệ tông màu da người mẫu (Skin Protection Mask), phạm vi [0.0, 100.0]. */
+    public double skinProtect = 0.0;
+
+    /** Khử mù sương (Dehaze) theo thuật toán Dark Channel Prior, phạm vi [-100.0, +100.0]. */
+    public double dehaze = 0.0;
+
+    /** Tách tần số chi tiết vi mô / mịn da (Texture), phạm vi [-100.0, +100.0]. */
+    public double texture = 0.0;
+
+    /** Hiệu ứng Bokeh xoáy ống kính cổ Helios 44-2 58mm f/2 (Swirly Bokeh), phạm vi [0.0, 100.0]. */
+    public double swirlyBokeh = 0.0;
+
+    /** Sương mù theo chiều sâu hậu cảnh 3D (3D Depth Fog), phạm vi [0.0, 100.0]. */
+    public double depthFog = 0.0;
+
     /** Cường độ pha trộn LUT 3D (%), phạm vi [0.0, 100.0]. Mặc định 100%. */
     public double lutAmount = 100.0;
 
@@ -96,6 +123,15 @@ public final class Settings {
         s.clarity = this.clarity;
         s.colorChrome = this.colorChrome;
         s.chromeBlue = this.chromeBlue;
+        s.proMist = this.proMist;
+        s.halation = this.halation;
+        s.bleachBypass = this.bleachBypass;
+        s.lightLeak = this.lightLeak;
+        s.skinProtect = this.skinProtect;
+        s.dehaze = this.dehaze;
+        s.texture = this.texture;
+        s.swirlyBokeh = this.swirlyBokeh;
+        s.depthFog = this.depthFog;
         s.lutAmount = this.lutAmount;
         s.dr = this.dr;
         s.film = this.film;
@@ -124,6 +160,15 @@ public final class Settings {
         checkRange("clarity", clarity, -5.0, 5.0);
         checkRange("colorChrome", colorChrome, 0.0, 2.0);
         checkRange("chromeBlue", chromeBlue, 0.0, 2.0);
+        checkRange("proMist", proMist, 0.0, 100.0);
+        checkRange("halation", halation, 0.0, 100.0);
+        checkRange("bleachBypass", bleachBypass, 0.0, 100.0);
+        checkRange("lightLeak", lightLeak, 0.0, 100.0);
+        checkRange("skinProtect", skinProtect, 0.0, 100.0);
+        checkRange("dehaze", dehaze, -100.0, 100.0);
+        checkRange("texture", texture, -100.0, 100.0);
+        checkRange("swirlyBokeh", swirlyBokeh, 0.0, 100.0);
+        checkRange("depthFog", depthFog, 0.0, 100.0);
         checkRange("lutAmount", lutAmount, 0.0, 100.0);
 
         if (dr != 100 && dr != 200 && dr != 400) {
@@ -160,6 +205,15 @@ public final class Settings {
                 && Double.compare(that.clarity, clarity) == 0
                 && Double.compare(that.colorChrome, colorChrome) == 0
                 && Double.compare(that.chromeBlue, chromeBlue) == 0
+                && Double.compare(that.proMist, proMist) == 0
+                && Double.compare(that.halation, halation) == 0
+                && Double.compare(that.bleachBypass, bleachBypass) == 0
+                && Double.compare(that.lightLeak, lightLeak) == 0
+                && Double.compare(that.skinProtect, skinProtect) == 0
+                && Double.compare(that.dehaze, dehaze) == 0
+                && Double.compare(that.texture, texture) == 0
+                && Double.compare(that.swirlyBokeh, swirlyBokeh) == 0
+                && Double.compare(that.depthFog, depthFog) == 0
                 && Double.compare(that.lutAmount, lutAmount) == 0
                 && dr == that.dr
                 && Objects.equals(film, that.film)
@@ -169,13 +223,15 @@ public final class Settings {
     @Override
     public int hashCode() {
         return Objects.hash(exposure, highlight, shadow, color, red, blue, temperature,
-                sharpness, nr, grain, grainSize, clarity, colorChrome, chromeBlue, lutAmount, dr, film, wb);
+                sharpness, nr, grain, grainSize, clarity, colorChrome, chromeBlue,
+                proMist, halation, bleachBypass, lightLeak, skinProtect, dehaze, texture,
+                swirlyBokeh, depthFog, lutAmount, dr, film, wb);
     }
 
     @Override
     public String toString() {
         return String.format(Locale.ROOT,
-                "Settings[film=%s, ev=%.2f, hi=%.1f, sh=%.1f, col=%.1f, temp=%.0f, R=%.0f, B=%.0f, grain=%.0f, sharp=%.1f, clarity=%.1f, nr=%.1f, dr=%d]",
-                film, exposure, highlight, shadow, color, temperature, red, blue, grain, sharpness, clarity, nr, dr);
+                "Settings[film=%s, ev=%.2f, hi=%.1f, sh=%.1f, col=%.1f, temp=%.0f, mist=%.0f, hal=%.0f, dehaze=%.0f, tex=%.0f, dr=%d]",
+                film, exposure, highlight, shadow, color, temperature, proMist, halation, dehaze, texture, dr);
     }
 }

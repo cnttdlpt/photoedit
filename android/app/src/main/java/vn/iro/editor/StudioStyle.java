@@ -593,6 +593,119 @@ public final class StudioStyle {
                     p.setStyle(Paint.Style.STROKE);
                     break;
                 }
+                case "mist": {
+                    // Kính lọc Black Pro-Mist: vòng tròn tỏa tia khuếch tán
+                    c.drawCircle(12f, 12f, 4.5f, p);
+                    for (int a = 0; a < 360; a += 45) {
+                        double rad = Math.toRadians(a);
+                        float x1 = 12f + (float) Math.cos(rad) * 6.5f;
+                        float y1 = 12f + (float) Math.sin(rad) * 6.5f;
+                        float x2 = 12f + (float) Math.cos(rad) * 9.2f;
+                        float y2 = 12f + (float) Math.sin(rad) * 9.2f;
+                        c.drawLine(x1, y1, x2, y2, p);
+                    }
+                    break;
+                }
+                case "flame": {
+                    // Halation CineStill: ngọn lửa quầng đỏ
+                    Path flame = new Path();
+                    flame.moveTo(12f, 3.5f);
+                    flame.cubicTo(16f, 7.5f, 19f, 12f, 17f, 16.5f);
+                    flame.cubicTo(15.5f, 20f, 8.5f, 20f, 7f, 16.5f);
+                    flame.cubicTo(5f, 12f, 8f, 7.5f, 12f, 3.5f);
+                    flame.close();
+                    c.drawPath(flame, p);
+                    c.drawCircle(12f, 14f, 2f, p);
+                    break;
+                }
+                case "silver": {
+                    // Bleach Bypass: tinh thể bạc phòng tối
+                    Path diamond = new Path();
+                    diamond.moveTo(12f, 3.5f);
+                    diamond.lineTo(19f, 12f);
+                    diamond.lineTo(12f, 20.5f);
+                    diamond.lineTo(5f, 12f);
+                    diamond.close();
+                    c.drawPath(diamond, p);
+                    c.drawLine(12f, 3.5f, 12f, 20.5f, p);
+                    c.drawLine(5f, 12f, 19f, 12f, p);
+                    break;
+                }
+                case "fog": {
+                    // Dehaze / Khử mù sương: các dải sóng ngang
+                    c.drawLine(4f, 7.5f, 20f, 7.5f, p);
+                    c.drawLine(6f, 12f, 18f, 12f, p);
+                    c.drawLine(5f, 16.5f, 19f, 16.5f, p);
+                    c.drawCircle(12f, 7.5f, 1.5f, p);
+                    c.drawCircle(14f, 16.5f, 1.5f, p);
+                    break;
+                }
+                case "texture": {
+                    // Texture: lưới chi tiết vi mô
+                    p.setStyle(Paint.Style.FILL);
+                    for (int r = 6; r <= 18; r += 4) {
+                        for (int col = 6; col <= 18; col += 4) {
+                            c.drawCircle(col, r, 1.1f, p);
+                        }
+                    }
+                    p.setStyle(Paint.Style.STROKE);
+                    c.drawRoundRect(4f, 4f, 20f, 20f, 3f, 3f, p);
+                    break;
+                }
+                case "person": {
+                    // Skin Protect: chân dung người mẫu
+                    c.drawCircle(12f, 8f, 3.5f, p);
+                    Path body = new Path();
+                    body.moveTo(5f, 20f);
+                    body.cubicTo(5f, 14.5f, 9f, 13.5f, 12f, 13.5f);
+                    body.cubicTo(15f, 13.5f, 19f, 14.5f, 19f, 20f);
+                    c.drawPath(body, p);
+                    break;
+                }
+                case "lens": {
+                    // Swirly Bokeh Helios: xoáy ốc quang học
+                    c.drawCircle(12f, 12f, 8.5f, p);
+                    Path spiral = new Path();
+                    spiral.moveTo(12f, 12f);
+                    for (int t = 0; t <= 540; t += 30) {
+                        double rad = Math.toRadians(t);
+                        float r = (t / 540f) * 6.5f;
+                        float sx = 12f + (float) Math.cos(rad) * r;
+                        float sy = 12f + (float) Math.sin(rad) * r;
+                        if (t == 0) spiral.moveTo(sx, sy);
+                        else spiral.lineTo(sx, sy);
+                    }
+                    c.drawPath(spiral, p);
+                    break;
+                }
+                case "cloud": {
+                    // Sương mù 3D: đám mây chiều sâu
+                    Path cloud = new Path();
+                    cloud.moveTo(6f, 17f);
+                    cloud.lineTo(18f, 17f);
+                    cloud.cubicTo(20f, 17f, 21f, 15f, 20f, 13.5f);
+                    cloud.cubicTo(20f, 11.5f, 18f, 11f, 17f, 11f);
+                    cloud.cubicTo(16.5f, 8.5f, 14f, 7f, 11.5f, 7.5f);
+                    cloud.cubicTo(9.5f, 8f, 8f, 9.5f, 8f, 12f);
+                    cloud.cubicTo(6.5f, 12f, 5f, 13.5f, 5f, 15f);
+                    cloud.cubicTo(5f, 16.5f, 5.5f, 17f, 6f, 17f);
+                    cloud.close();
+                    c.drawPath(cloud, p);
+                    break;
+                }
+                case "sun": {
+                    // Light leak: vệt lọt sáng phim góc
+                    Path leak = new Path();
+                    leak.moveTo(3.5f, 3.5f);
+                    leak.lineTo(13f, 3.5f);
+                    leak.lineTo(3.5f, 13f);
+                    leak.close();
+                    c.drawPath(leak, p);
+                    c.drawLine(5f, 15f, 15f, 5f, p);
+                    c.drawLine(8f, 18f, 18f, 8f, p);
+                    c.drawCircle(16f, 16f, 3f, p);
+                    break;
+                }
                 default: {
                     c.drawCircle(12f, 12f, 7f, p);
                     break;

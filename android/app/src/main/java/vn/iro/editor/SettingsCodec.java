@@ -95,6 +95,21 @@ public final class SettingsCodec {
                     low = 0.0;
                     high = 2.0;
                     break;
+                case "proMist":
+                case "halation":
+                case "bleachBypass":
+                case "lightLeak":
+                case "skinProtect":
+                case "swirlyBokeh":
+                case "depthFog":
+                    low = 0.0;
+                    high = 100.0;
+                    break;
+                case "dehaze":
+                case "texture":
+                    low = -100.0;
+                    high = 100.0;
+                    break;
                 case "dr":
                     if (value != 100 && value != 200 && value != 400) {
                         throw new JSONException("DR không hợp lệ: " + value);

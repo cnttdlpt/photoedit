@@ -6,7 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$localWorkspace = "c:\Users\NamNV.dpt\Documents\chỉnh sửa ảnh"
+$localWorkspace = if ($PSScriptRoot) { Split-Path -Parent $PSScriptRoot } else { (Get-Location).Path }
 $gitRepo = "C:\Users\NamNV.dpt\Documents\photoedit"
 $gitAndroid = Join-Path $gitRepo "android"
 
@@ -32,7 +32,9 @@ if ($Pull) {
         $src = Join-Path $gitAndroid $folder
         $dst = Join-Path $localWorkspace $folder
         if (Test-Path -LiteralPath $src) {
-            Get-ChildItem -LiteralPath $src -Force | Copy-Item -Destination $dst -Recurse -Force
+            Get-ChildItem -LiteralPath $src -Force | ForEach-Object {
+                Copy-Item -LiteralPath $_.FullName -Destination $dst -Recurse -Force
+            }
         }
     }
     foreach ($file in $syncFiles) {
@@ -56,7 +58,8 @@ $syncItems = @(
     "build.gradle",
     "settings.gradle",
     "gradle.properties",
-    "README.md"
+    "README.md",
+    "AGENTS.md"
 )
 
 foreach ($item in $syncItems) {
@@ -67,7 +70,10 @@ foreach ($item in $syncItems) {
             if (-not (Test-Path -LiteralPath $dst)) {
                 New-Item -ItemType Directory -Path $dst -Force | Out-Null
             }
-            Get-ChildItem -LiteralPath $src -Force | Copy-Item -Destination $dst -Recurse -Force
+            robocopy $src $dst /E /XD dist build .gradle cache .idea bin /XF *.jar *.apk *.exe *.log *.class /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
+            if ($LASTEXITCODE -ge 8) {
+                throw "Robocopy failed with code $LASTEXITCODE for $item"
+            }
         } else {
             $parent = Split-Path -Parent $dst
             if (-not (Test-Path -LiteralPath $parent)) {

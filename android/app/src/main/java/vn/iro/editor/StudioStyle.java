@@ -110,6 +110,55 @@ public final class StudioStyle {
     public static final int M3_DARK_PRIMARY_CONTAINER = 0xff422c05;
     public static final int M3_DARK_ON_PRIMARY_CONTAINER = 0xffffdf9e;
 
+    // =========================================================================
+    // QUẢN LÝ GIAO DIỆN M3 (DARKROOM / WARM PORCELAIN DYNAMIC THEME)
+    // =========================================================================
+    private static boolean darkTheme = true;
+
+    public static boolean isDarkTheme() {
+        return darkTheme;
+    }
+
+    public static void setDarkTheme(boolean dark) {
+        darkTheme = dark;
+    }
+
+    public static void toggleDarkTheme() {
+        darkTheme = !darkTheme;
+    }
+
+    public static int getBackgroundColor() {
+        return darkTheme ? M3_DARK_BG : BG;
+    }
+
+    public static int getSurfaceColor() {
+        return darkTheme ? M3_DARK_SURFACE : SURFACE;
+    }
+
+    public static int getSurfaceContainerColor() {
+        return darkTheme ? M3_DARK_SURFACE_CONTAINER : M3_SURFACE_CONTAINER;
+    }
+
+    public static int getSurfaceContainerLowColor() {
+        return darkTheme ? M3_DARK_SURFACE_CONTAINER_LOW : M3_SURFACE_CONTAINER_LOW;
+    }
+
+    public static int getSurfaceContainerHighColor() {
+        return darkTheme ? M3_DARK_SURFACE_CONTAINER_HIGH : M3_SURFACE_CONTAINER_HIGH;
+    }
+
+    public static int getPrimaryColor() {
+        return darkTheme ? M3_DARK_PRIMARY : M3_PRIMARY;
+    }
+
+    public static int getTextColor() {
+        return darkTheme ? 0xffeef0f5 : INK;
+    }
+
+    public static int getMutedTextColor() {
+        return darkTheme ? 0xff9ca3b0 : MUTED;
+    }
+
     // --- Bán kính bo góc chuẩn Material Design 3 (dp) ---
     public static final float CORNER_XS_DP = 4f;
     public static final float CORNER_SM_DP = 8f;

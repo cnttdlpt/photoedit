@@ -31,6 +31,12 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -41,6 +47,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.imageio.ImageIO;
 import javax.swing.AbstractAction;
@@ -432,11 +439,17 @@ public final class IroDesktopApp {
         JMenuItem resetItem = new JMenuItem("Đặt lại toàn bộ thông số về gốc");
         resetItem.addActionListener(e -> resetAllAdjustments());
 
+        JMenuItem hotFolderItem = new JMenuItem(hotFolderRunning
+                ? "⏹ Dừng chụp cắm dây (Hot-Folder)..."
+                : "📸 Bật chụp cắm dây (Hot-Folder Watcher)...");
+        hotFolderItem.addActionListener(e -> toggleHotFolderWatcher());
+
         menu.add(openItem);
         menu.add(nextSampleItem);
         menu.addSeparator();
         menu.add(libItem);
         menu.add(lutItem);
+        menu.add(hotFolderItem);
         menu.addSeparator();
         menu.add(resetItem);
         menu.show(invoker, 0, invoker.getHeight() + 4);
@@ -1863,6 +1876,10 @@ public final class IroDesktopApp {
         root.getActionMap().put("auto", new AbstractAction() {
             @Override public void actionPerformed(ActionEvent e) { runAutoBalance(); }
         });
+        root.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_H, KeyEvent.CTRL_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK), "hotfolder");
+        root.getActionMap().put("hotfolder", new AbstractAction() {
+            @Override public void actionPerformed(ActionEvent e) { toggleHotFolderWatcher(); }
+        });
     }
 
     private void loadBundledCatalogRecipes() {
@@ -1898,6 +1915,129 @@ public final class IroDesktopApp {
                 catalogRecipes.addAll(others);
             }
         } catch (Exception ignored) {
+        }
+    }
+
+    // =========================================================================
+    // HOT-FOLDER WATCHER (CHỤP CẮM DÂY TỰ ĐỘNG CHO STUDIO & PHOTOBOOTH)
+    // =========================================================================
+    private volatile boolean hotFolderRunning = false;
+    private Thread hotFolderThread;
+    private File hotFolderDir;
+
+    public boolean isHotFolderRunning() {
+        return hotFolderRunning;
+    }
+
+    public synchronized void toggleHotFolderWatcher() {
+        if (hotFolderRunning) {
+            stopHotFolderWatcher();
+            JOptionPane.showMessageDialog(frame, "Đã dừng chế độ Chụp cắm dây (Hot-Folder Watcher).");
+        } else {
+            JFileChooser fc = new JFileChooser();
+            fc.setDialogTitle("Chọn thư mục đầu vào cho Hot-Folder (Ảnh chụp từ máy ảnh/Wi-Fi)");
+            fc.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            if (fc.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
+                File dir = fc.getSelectedFile();
+                startHotFolderWatcher(dir);
+            }
+        }
+    }
+
+    public synchronized void startHotFolderWatcher(File dir) {
+        if (dir == null || !dir.isDirectory()) return;
+        stopHotFolderWatcher();
+        this.hotFolderDir = dir;
+        this.hotFolderRunning = true;
+
+        File outDir = new File(dir, "Output");
+        if (!outDir.exists()) outDir.mkdirs();
+
+        hotFolderThread = new Thread(() -> {
+            try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
+                Path path = dir.toPath();
+                path.register(watcher, StandardWatchEventKinds.ENTRY_CREATE);
+
+                SwingUtilities.invokeLater(() ->
+                    bottomStatusLabel.setText("📸 Hot-Folder đang chạy: " + dir.getAbsolutePath() + " (Đầu ra: " + outDir.getName() + "/)")
+                );
+
+                while (hotFolderRunning) {
+                    WatchKey key;
+                    try {
+                        key = watcher.poll(1000, TimeUnit.MILLISECONDS);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                    if (key == null) continue;
+
+                    for (WatchEvent<?> event : key.pollEvents()) {
+                        if (event.kind() == StandardWatchEventKinds.OVERFLOW) continue;
+
+                        @SuppressWarnings("unchecked")
+                        WatchEvent<Path> ev = (WatchEvent<Path>) event;
+                        File newFile = new File(dir, ev.context().toString());
+                        String nameLower = newFile.getName().toLowerCase(Locale.ROOT);
+
+                        if (nameLower.endsWith(".jpg") || nameLower.endsWith(".jpeg")
+                                || nameLower.endsWith(".png") || nameLower.endsWith(".webp") || nameLower.endsWith(".bmp")) {
+                            // Chờ máy ảnh / Wi-Fi hoàn tất ghi file xuống đĩa
+                            try { Thread.sleep(600); } catch (InterruptedException ignored) {}
+
+                            try {
+                                BufferedImage imported = ImageIO.read(newFile);
+                                if (imported != null) {
+                                    int w = imported.getWidth();
+                                    int h = imported.getHeight();
+                                    int[] px = imported.getRGB(0, 0, w, h, null, 0, w);
+
+                                    Settings s = currentSettings != null ? currentSettings.copy() : new Settings();
+                                    int[] outPx = ColorEngine.process(px, w, h, s, activeCubeLut);
+                                    if (!lightCraftState.isIdentity()) {
+                                        outPx = LightCraftEngine.processPixels(outPx, w, h, lightCraftState);
+                                    }
+
+                                    BufferedImage rgb = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+                                    rgb.setRGB(0, 0, w, h, outPx, 0, w);
+                                    String recName = currentRecipe != null ? currentRecipe.name : s.film;
+                                    rgb = ImageCanvasPanel.renderFramedImage(rgb, canvasPanel.getFrameMode(), s.film, recName);
+
+                                    File outFile = new File(outDir, "PROCESSED_" + newFile.getName());
+                                    ImageIO.write(rgb, "jpg", outFile);
+
+                                    final BufferedImage displayImg = imported;
+                                    final String fname = newFile.getName();
+                                    SwingUtilities.invokeLater(() -> {
+                                        currentPhotoName = fname;
+                                        setSourceBufferedImage(displayImg);
+                                        bottomStatusLabel.setText("📸 Hot-Folder: Đã tự động xuất " + outFile.getName() + " (" + w + "x" + h + ")");
+                                    });
+                                }
+                            } catch (Exception ex) {
+                                System.err.println("Hot-Folder processing error: " + ex.getMessage());
+                            }
+                        }
+                    }
+                    if (!key.reset()) break;
+                }
+            } catch (Exception ex) {
+                System.err.println("Hot-Folder watcher error: " + ex.getMessage());
+            } finally {
+                hotFolderRunning = false;
+                SwingUtilities.invokeLater(() ->
+                    bottomStatusLabel.setText("Chế độ Hot-Folder đã tắt.")
+                );
+            }
+        }, "IRO-HotFolder-Watcher");
+        hotFolderThread.setDaemon(true);
+        hotFolderThread.start();
+    }
+
+    public synchronized void stopHotFolderWatcher() {
+        hotFolderRunning = false;
+        if (hotFolderThread != null) {
+            hotFolderThread.interrupt();
+            hotFolderThread = null;
         }
     }
 }

@@ -25,4 +25,7 @@ try {
     [xml]$manifest=Get-Content -LiteralPath 'app/src/main/AndroidManifest.xml' -Raw
     [xml]$styles=Get-Content -LiteralPath 'app/src/main/res/values/styles.xml' -Raw
     Write-Output 'Source checks passed. No APK was created.'
-} finally { Pop-Location }
+} finally {
+    Remove-Item -Path 'tools/build' -Recurse -Force -ErrorAction SilentlyContinue
+    Pop-Location
+}

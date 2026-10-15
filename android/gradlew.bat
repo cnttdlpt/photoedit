@@ -17,6 +17,7 @@
 @rem
 
 @if "%DEBUG%"=="" @echo off
+chcp 65001 > nul
 @rem ##########################################################################
 @rem
 @rem  Gradle startup script for Windows
@@ -70,7 +71,11 @@ goto fail
 :execute
 @rem Setup the command line
 
-set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
+if exist "gradle\wrapper\gradle-wrapper.jar" (
+    set CLASSPATH=gradle\wrapper\gradle-wrapper.jar
+) else (
+    set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
+)
 
 
 @rem Execute Gradle

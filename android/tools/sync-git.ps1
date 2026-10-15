@@ -26,7 +26,7 @@ if ($Pull) {
 
     Write-Host "-> Syncing from Git into Android Studio workspace..." -ForegroundColor Cyan
     $syncFolders = @("app\src", "desktop", "tools")
-    $syncFiles = @("build.gradle", "settings.gradle", "gradle.properties", "README.md")
+    $syncFiles = @("build.gradle", "settings.gradle", "gradle.properties", "gradlew", "gradlew.bat", "README.md")
 
     foreach ($folder in $syncFolders) {
         $src = Join-Path $gitAndroid $folder
@@ -58,6 +58,8 @@ $syncItems = @(
     "build.gradle",
     "settings.gradle",
     "gradle.properties",
+    "gradlew",
+    "gradlew.bat",
     "README.md",
     "AGENTS.md"
 )

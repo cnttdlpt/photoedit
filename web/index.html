@@ -29,10 +29,6 @@
           <p class="subtitle">Fujifilm X-Trans V · Color Lab</p>
         </div>
       </div>
-      <button id="activeRecipeQuickPill" type="button" class="m3-recipe-hero-pill" title="Nhấn để mở Kho 392 Công thức Fujifilm (Phím L)">
-        <span class="pill-sparkle">✦</span>
-        <span id="topActiveFilmLabel">Classic Chrome · Gốc</span>
-      </button>
     </div>
 
     <!-- Cụm Giữa: Viên thuốc Segmented Capsule tối giản -->
@@ -353,9 +349,11 @@
 
       <!-- Thanh chuyển Tab M3 Segmented Button -->
       <div class="m3-segmented-tabs" role="tablist">
-        <button type="button" class="m3-seg-btn active" data-tab-target="tabFilm">🎞️ Màu phim</button>
-        <button type="button" class="m3-seg-btn" data-tab-target="tabBasic">☀️ Ánh sáng</button>
-        <button type="button" class="m3-seg-btn" data-tab-target="tabOptical">✨ Quang học</button>
+        <button type="button" class="m3-seg-btn active" data-tab-target="tabFilm">🎞️ Phim</button>
+        <button type="button" class="m3-seg-btn" data-tab-target="tabBasic">☀️ Sáng</button>
+        <button type="button" class="m3-seg-btn" data-tab-target="tabOptical">✨ Quang</button>
+        <button type="button" class="m3-seg-btn" id="segLightCraftBtn" title="Buồng tối LightCraft (Tone Curve, Bàn xoay màu, HSL)">🎛️ Buồng tối</button>
+        <button type="button" class="m3-seg-btn" id="segRecipeLibBtn" title="Kho 392 công thức màu Fujifilm">📚 392 màu</button>
       </div>
 
       <!-- TAB 1: MÀU PHIM, PRESET & KHUNG TRIỂN LÃM -->
@@ -482,16 +480,20 @@
     </button>
   </nav>
 
-  <!-- HỘP THOẠI ĐĂNG KÝ / ĐĂNG NHẬP TÀI KHOẢN (AUTH MODAL) -->
-  <div id="authModal" class="contact-sheet-modal auth-dialog-modal" hidden>
-    <div class="contact-sheet-header">
-      <div class="auth-header-title">
-        <span class="auth-logo-badge">✦</span>
-        <h3>Tài khoản IRO Studio 3.0</h3>
+  <!-- HỘP THOẠI ĐĂNG KÝ / ĐĂNG NHẬP BẮT BUỘC (MANDATORY AUTH GATEWAY) -->
+  <div id="authModal" class="contact-sheet-modal auth-dialog-modal mandatory-gate" hidden>
+    <div class="auth-gate-wrapper">
+      <div class="auth-gate-brand">
+        <div class="auth-brand-badge">✦ IRO FILM STUDIO 3.0</div>
+        <h2>Đăng nhập để vào Phòng tối</h2>
+        <p class="auth-gate-sub">Vui lòng đăng nhập hoặc tạo tài khoản để chỉnh sửa ảnh, quản lý công thức và đồng bộ lên máy chủ.</p>
       </div>
-      <button id="closeAuthModal" type="button">✕ Đóng</button>
-    </div>
-    <div class="auth-modal-body">
+
+      <!-- Nút điền nhanh tài khoản Admin thử nghiệm -->
+      <button type="button" id="fillAdminDemoBtn" class="quick-admin-fill">
+        <span>🔑 Điền nhanh tài khoản Admin (admin / admin123@)</span>
+      </button>
+
       <div class="auth-tab-bar">
         <button type="button" id="authTabLogin" class="auth-tab active">Đăng nhập</button>
         <button type="button" id="authTabRegister" class="auth-tab">Đăng ký tài khoản</button>
@@ -511,7 +513,7 @@
           </div>
         </div>
         <p id="loginErrorMsg" class="auth-error-msg" hidden></p>
-        <button type="submit" id="submitLoginBtn" class="primary auth-submit-btn">Đăng nhập</button>
+        <button type="submit" id="submitLoginBtn" class="primary auth-submit-btn">Đăng nhập vào buồng tối</button>
         <p class="auth-hint">Chưa có tài khoản? <a href="#" id="switchToRegisterLink">Đăng ký miễn phí</a></p>
       </form>
 
@@ -537,9 +539,11 @@
           </div>
         </div>
         <p id="registerErrorMsg" class="auth-error-msg" hidden></p>
-        <button type="submit" id="submitRegisterBtn" class="primary auth-submit-btn">Tạo tài khoản mới</button>
+        <button type="submit" id="submitRegisterBtn" class="primary auth-submit-btn">Tạo tài khoản & Đăng nhập</button>
         <p class="auth-hint">Đã có tài khoản? <a href="#" id="switchToLoginLink">Đăng nhập ngay</a></p>
       </form>
+
+      <button id="closeAuthModal" type="button" style="display:none;">✕ Đóng</button>
     </div>
   </div>
 

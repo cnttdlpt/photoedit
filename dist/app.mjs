@@ -206,7 +206,9 @@ function activateInspectorTab(targetId) {
 }
 
 segTabBtns.forEach(btn => {
-  btn.addEventListener('click', () => activateInspectorTab(btn.dataset.tabTarget));
+  btn.addEventListener('click', () => {
+    if (btn.dataset.tabTarget) activateInspectorTab(btn.dataset.tabTarget);
+  });
 });
 
 railItems.forEach(item => {
@@ -770,6 +772,7 @@ function openRecipeLibraryModal() {
 }
 
 document.querySelector('#recipeLibraryBtn').addEventListener('click', openRecipeLibraryModal);
+document.querySelector('#segRecipeLibBtn')?.addEventListener('click', openRecipeLibraryModal);
 document.querySelector('#activeRecipeQuickPill')?.addEventListener('click', openRecipeLibraryModal);
 document.querySelector('#openFullCatalogInline').addEventListener('click', openRecipeLibraryModal);
 document.querySelector('#closeRecipeLibrary').addEventListener('click', () => { recipeLibraryModal.hidden = true; });
@@ -1006,13 +1009,19 @@ function renderHslSliders() {
 
 initLightCraftModal();
 
-document.querySelector('#lightCraftBtn').addEventListener('click', () => {
+const openLightCraft = () => {
+  if (!state.source) {
+    setStatus('Hãy mở ảnh hoặc chọn ảnh mẫu trước khi mở Buồng tối LightCraft.');
+    return;
+  }
   lightCraftModal.hidden = !lightCraftModal.hidden;
   if (!lightCraftModal.hidden) {
     drawAllColorWheels();
     renderHslSliders();
   }
-});
+};
+document.querySelector('#lightCraftBtn')?.addEventListener('click', openLightCraft);
+document.querySelector('#segLightCraftBtn')?.addEventListener('click', openLightCraft);
 document.querySelector('#closeLightCraft').addEventListener('click', () => { lightCraftModal.hidden = true; });
 document.querySelector('#resetLightCraftBtn').addEventListener('click', () => {
   resetColorWheels();
@@ -1742,6 +1751,9 @@ window.addEventListener('keydown', e => {
     return;
   }
   if (e.key === 'Escape') {
+    if (document.body.classList.contains('auth-locked')) {
+      return;
+    }
     recipeLibraryModal.hidden = true;
     lightCraftModal.hidden = true;
     contactSheetModal.hidden = true;
@@ -2141,6 +2153,7 @@ function setDragOverlayVisible(visible) {
 window.addEventListener('dragenter', e => {
   e.preventDefault();
   e.stopPropagation();
+  if (document.body.classList.contains('auth-locked')) return;
   dragCounter++;
   if (e.dataTransfer) {
     e.dataTransfer.dropEffect = 'copy';
@@ -2151,6 +2164,7 @@ window.addEventListener('dragenter', e => {
 window.addEventListener('dragover', e => {
   e.preventDefault();
   e.stopPropagation();
+  if (document.body.classList.contains('auth-locked')) return;
   if (e.dataTransfer) {
     e.dataTransfer.dropEffect = 'copy';
   }
@@ -2171,6 +2185,10 @@ window.addEventListener('drop', async e => {
   e.stopPropagation();
   dragCounter = 0;
   setDragOverlayVisible(false);
+  if (document.body.classList.contains('auth-locked')) {
+    showToast('Vui lòng đăng nhập trước khi tải ảnh vào buồng tối!', 'warning', '🔒');
+    return;
+  }
 
   // 1. Lấy tệp từ files
   let file = e.dataTransfer?.files?.[0];
@@ -2551,6 +2569,25 @@ const switchToLoginLink = document.getElementById('switchToLoginLink');
 const loginErrorMsg = document.getElementById('loginErrorMsg');
 const registerErrorMsg = document.getElementById('registerErrorMsg');
 
+function lockAppToAuth() {
+  document.body.classList.add('auth-locked');
+  if (authModal) {
+    authModal.hidden = false;
+    authModal.classList.add('mandatory-gate');
+  }
+  if (closeAuthModal) {
+    closeAuthModal.style.display = 'none';
+  }
+}
+
+function unlockAppFromAuth() {
+  document.body.classList.remove('auth-locked');
+  if (authModal) {
+    authModal.hidden = true;
+    authModal.classList.remove('mandatory-gate');
+  }
+}
+
 function openAuthModal(mode = 'login') {
   if (!authModal) return;
   authModal.hidden = false;
@@ -2559,6 +2596,18 @@ function openAuthModal(mode = 'login') {
   } else {
     authTabLogin?.click();
   }
+}
+
+const fillAdminDemoBtn = document.getElementById('fillAdminDemoBtn');
+if (fillAdminDemoBtn) {
+  fillAdminDemoBtn.addEventListener('click', () => {
+    authTabLogin?.click();
+    const accountInput = document.getElementById('loginAccountInput');
+    const pwdInput = document.getElementById('loginPasswordInput');
+    if (accountInput) accountInput.value = 'admin';
+    if (pwdInput) pwdInput.value = 'admin123@';
+    showToast('Đã điền tài khoản Quản trị: admin / admin123@', 'info', '🔑');
+  });
 }
 
 if (authTriggerBtn) {
@@ -2592,6 +2641,7 @@ document.addEventListener('click', (e) => {
 
 if (closeAuthModal) {
   closeAuthModal.addEventListener('click', () => {
+    if (document.body.classList.contains('auth-locked')) return;
     if (authModal) authModal.hidden = true;
   });
 }
@@ -2656,7 +2706,10 @@ loginForm?.addEventListener('submit', async (e) => {
       state.currentUser = data.user;
       localStorage.setItem('iro_token', data.token);
       updateUserAccountUI();
-      if (authModal) authModal.hidden = true;
+      unlockAppFromAuth();
+      if (!state.source) {
+        generateSampleImage('portrait');
+      }
       loginForm.reset();
       showToast(`Chào mừng ${data.user.full_name || data.user.username}!`, 'success', '👋');
       setStatus(`👤 Đã đăng nhập: ${data.user.full_name || data.user.username} (${data.user.role.toUpperCase()})`);
@@ -2672,7 +2725,7 @@ loginForm?.addEventListener('submit', async (e) => {
       loginErrorMsg.hidden = false;
     }
   } finally {
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Đăng nhập'; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Đăng nhập vào buồng tối'; }
   }
 });
 
@@ -2698,7 +2751,10 @@ registerForm?.addEventListener('submit', async (e) => {
       state.currentUser = data.user;
       localStorage.setItem('iro_token', data.token);
       updateUserAccountUI();
-      if (authModal) authModal.hidden = true;
+      unlockAppFromAuth();
+      if (!state.source) {
+        generateSampleImage('portrait');
+      }
       registerForm.reset();
       showToast('Đăng ký tài khoản thành công!', 'success', '🎉');
       setStatus(`🎉 Chào mừng thành viên mới: ${data.user.full_name || data.user.username}!`);
@@ -2714,7 +2770,7 @@ registerForm?.addEventListener('submit', async (e) => {
       registerErrorMsg.hidden = false;
     }
   } finally {
-    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Tạo tài khoản mới'; }
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Tạo tài khoản & Đăng nhập'; }
   }
 });
 
@@ -2734,6 +2790,7 @@ if (logoutMenuBtn) {
     localStorage.removeItem('iro_token');
     updateUserAccountUI();
     if (userAccountDropdown) userAccountDropdown.hidden = true;
+    lockAppToAuth();
     showToast('Đã đăng xuất tài khoản.', 'info', '👋');
     setStatus('Đã đăng xuất tài khoản.');
   });
@@ -2779,6 +2836,7 @@ function updateUserAccountUI() {
 async function checkCurrentUser() {
   if (!state.authToken) {
     updateUserAccountUI();
+    lockAppToAuth();
     return;
   }
   try {
@@ -2789,14 +2847,21 @@ async function checkCurrentUser() {
     if (data.ok && data.user) {
       state.currentUser = data.user;
       updateUserAccountUI();
+      unlockAppFromAuth();
+      if (!state.source) {
+        generateSampleImage('portrait');
+      }
     } else {
       state.authToken = '';
       state.currentUser = null;
       localStorage.removeItem('iro_token');
       updateUserAccountUI();
+      lockAppToAuth();
     }
   } catch (err) {
     console.debug('Failed to verify token:', err);
+    updateUserAccountUI();
+    lockAppToAuth();
   }
 }
 
@@ -3086,8 +3151,7 @@ window.iroLoadCloudPhoto = async (url, filenameEnc, settingsJsonStr) => {
   }
 };
 
-// Khởi tạo trạng thái ban đầu, kiểm tra xác thực người dùng và tự động nạp ảnh mẫu
+// Khởi tạo trạng thái ban đầu và kiểm tra xác thực người dùng bắt buộc
 drawCurveEditor();
-generateSampleImage('portrait');
 checkCurrentUser();
 

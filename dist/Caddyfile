@@ -1,0 +1,24 @@
+# IRO Studio 3.0 — Caddyfile Configuration
+# Tự động cấp phát chứng chỉ SSL HTTPS miễn phí khi thay :80 bằng tên miền (VD: studio.domain.com)
+:80 {
+    root * /usr/share/caddy
+    file_server
+    encode gzip zstd
+
+    try_files {path} /index.html
+
+    header {
+        Access-Control-Allow-Origin *
+        X-Content-Type-Options nosniff
+    }
+
+    @static {
+        path *.css *.js *.mjs *.jpg *.jpeg *.png *.webp *.svg *.cube *.woff2
+    }
+    header @static Cache-Control "public, max-age=2592000"
+
+    @dynamic {
+        path *.html *.json
+    }
+    header @dynamic Cache-Control "no-cache"
+}

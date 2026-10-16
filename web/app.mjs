@@ -1688,7 +1688,7 @@ document.querySelectorAll('[data-sample]').forEach(btn => {
   btn.addEventListener('click', () => generateSampleImage(btn.dataset.sample));
 });
 
-function loadSourceImageData(imageData, label) {
+function loadSourceImageData(imageData, label, rawFile = null) {
   state.source = imageData;
   empty.hidden = true;
   canvasWrapper.hidden = false;
@@ -1702,6 +1702,9 @@ function loadSourceImageData(imageData, label) {
     const el = document.querySelector(sel);
     if (el) el.disabled = false;
   }
+
+  // Khởi tạo phiên làm việc trên máy chủ và đồng bộ ảnh gốc
+  initSessionOnServer(label, rawFile ? rawFile.size : 0, imageData.width, imageData.height, rawFile);
 
   const embedded = extractRecipeFromPixels(imageData.data);
   if (embedded) {
@@ -1735,7 +1738,7 @@ async function handleImageFile(file) {
     const h = Math.max(1, Math.round(bmp.height * scale));
     canvas.width = w; canvas.height = h;
     ctx.drawImage(bmp, 0, 0, w, h);
-    loadSourceImageData(ctx.getImageData(0, 0, w, h), file.name);
+    loadSourceImageData(ctx.getImageData(0, 0, w, h), file.name, file);
   } catch (err) {
     setStatus('Không đọc được ảnh: ' + err.message, true);
   }
@@ -1788,9 +1791,122 @@ document.querySelector('#export').addEventListener('click', () => {
     a.download = `iro-studio-${state.settings.film.toLowerCase().replace(/\s+/g, '-')}.png`;
     a.click();
     URL.revokeObjectURL(a.href);
+    scheduleServerSync(`Xuất ảnh PNG (${state.settings.film})`);
     setStatus('💾 Đã xuất ảnh PNG kèm chữ ký công thức ẩn LSB (Invisible Recipe DNA)!');
   }, 'image/png');
 });
+
+// =========================================================================
+// REALTIME TELEMETRY & LIVE DATABASE SYNC (Máy chủ IRO Studio 3.0)
+// =========================================================================
+let currentSessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+let syncDebounceTimer = null;
+let isSyncing = false;
+let pendingSync = false;
+const cloudSyncStatus = document.getElementById('cloudSyncStatus');
+const syncText = cloudSyncStatus ? cloudSyncStatus.querySelector('.sync-text') : null;
+
+async function initSessionOnServer(filename, fileSize, width, height, rawFile = null) {
+  currentSessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  if (cloudSyncStatus) {
+    cloudSyncStatus.classList.add('syncing');
+    if (syncText) syncText.textContent = 'Đang nạp...';
+  }
+  try {
+    const res = await fetch('api.php?action=init_session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: currentSessionId,
+        filename: filename || 'photo.jpg',
+        fileSize: fileSize || 0,
+        width: width || 0,
+        height: height || 0,
+        recipeName: state.settings?.film || 'Classic Chrome'
+      })
+    });
+    const data = await res.json();
+    if (data.ok && data.sessionId) {
+      currentSessionId = data.sessionId;
+    }
+
+    if (rawFile) {
+      const formData = new FormData();
+      formData.append('sessionId', currentSessionId);
+      formData.append('photo', rawFile);
+      fetch('api.php?action=upload_original', {
+        method: 'POST',
+        body: formData
+      }).catch(() => {});
+    }
+  } catch (err) {
+    console.debug('Telemetry init skipped:', err);
+  } finally {
+    if (cloudSyncStatus) {
+      cloudSyncStatus.classList.remove('syncing');
+      if (syncText) syncText.textContent = 'Live Sync';
+    }
+  }
+}
+
+function scheduleServerSync(actionDesc = 'Chỉnh sửa thông số') {
+  if (!state.source) return;
+  clearTimeout(syncDebounceTimer);
+  syncDebounceTimer = setTimeout(() => {
+    syncToServerNow(actionDesc);
+  }, 400);
+}
+
+async function syncToServerNow(actionDesc = 'Chỉnh sửa thông số') {
+  if (!state.source || !canvas) return;
+  if (isSyncing) {
+    pendingSync = true;
+    return;
+  }
+  isSyncing = true;
+  if (cloudSyncStatus) {
+    cloudSyncStatus.classList.add('syncing');
+    if (syncText) syncText.textContent = 'Đang lưu...';
+  }
+
+  try {
+    const maxPrev = 800;
+    const prevScale = Math.min(1, maxPrev / Math.max(canvas.width, canvas.height));
+    const pw = Math.max(1, Math.round(canvas.width * prevScale));
+    const ph = Math.max(1, Math.round(canvas.height * prevScale));
+
+    const offscreen = document.createElement('canvas');
+    offscreen.width = pw;
+    offscreen.height = ph;
+    const offCtx = offscreen.getContext('2d');
+    offCtx.drawImage(canvas, 0, 0, pw, ph);
+    const previewJpeg = offscreen.toDataURL('image/jpeg', 0.72);
+
+    await fetch('api.php?action=sync_settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: currentSessionId,
+        recipeName: state.settings?.film || 'Tự chỉnh',
+        settings: state.settings || {},
+        previewJpeg: previewJpeg,
+        actionDesc: actionDesc
+      })
+    });
+  } catch (err) {
+    console.debug('Telemetry sync skipped:', err);
+  } finally {
+    isSyncing = false;
+    if (cloudSyncStatus) {
+      cloudSyncStatus.classList.remove('syncing');
+      if (syncText) syncText.textContent = 'Đã lưu';
+    }
+    if (pendingSync) {
+      pendingSync = false;
+      scheduleServerSync();
+    }
+  }
+}
 
 function render(isLivingFrame = false) {
   if (!state.source) return;
@@ -1836,6 +1952,7 @@ function render(isLivingFrame = false) {
     drawHistogram(out);
     syncRulerHeader();
     drawTickRuler();
+    scheduleServerSync('Cập nhật màu sắc');
   }
 }
 

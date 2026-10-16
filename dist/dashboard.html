@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bảng Điều Khiển Giám Sát Realtime — IRO Studio 3.0</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    :root {
+      --bg-dark: #121316;
+      --card-bg: #1c1e24;
+      --border-color: #2b2f38;
+      --accent-color: #e28743;
+      --text-main: #f3f4f6;
+      --text-dim: #9ca3af;
+      --green: #10b981;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+    }
+
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .header-title h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-action {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-action:hover {
+      background: #272a33;
+      border-color: #4b5563;
+    }
+
+    .btn-action.active {
+      background: var(--accent-color);
+      color: #fff;
+      border-color: var(--accent-color);
+    }
+
+    /* Stats Grid */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px 20px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    /* Sessions Grid */
+    .sessions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 20px;
+    }
+
+    .session-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .session-card:hover {
+      border-color: #4b5563;
+      transform: translateY(-2px);
+    }
+
+    .session-card-header {
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .user-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .user-ip {
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 13px;
+      color: #60a5fa;
+    }
+
+    .user-time {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .recipe-badge {
+      background: rgba(226, 135, 67, 0.15);
+      color: var(--accent-color);
+      border: 1px solid rgba(226, 135, 67, 0.3);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .card-images {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 14px 16px;
+      background: #14151a;
+    }
+
+    .img-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .img-box span {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+    }
+
+    .img-box img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .img-box .placeholder {
+      width: 100%;
+      height: 140px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--text-dim);
+      border: 1px dashed var(--border-color);
+    }
+
+    .card-details {
+      padding: 14px 16px;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-dim);
+    }
+
+    .meta-row strong {
+      color: var(--text-main);
+    }
+
+    .sliders-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .pill-param {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10.5px;
+      font-family: monospace;
+    }
+
+    .card-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .edit-counter {
+      font-size: 11.5px;
+      color: var(--text-dim);
+    }
+
+    .edit-counter strong {
+      color: var(--green);
+    }
+
+    /* Modal for Log details */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .log-item {
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      font-size: 12.5px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .log-time {
+      font-size: 11px;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="dashboard-header">
+    <div class="header-title">
+      <h1>
+        <span>IRO Studio 3.0 Realtime Dashboard</span>
+        <span class="live-badge">
+          <span class="live-dot"></span> Trực tiếp (Live)
+        </span>
+      </h1>
+      <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-dim);">
+        Theo dõi người dùng tải ảnh lên và chỉnh sửa thông số trực tiếp trên máy chủ
+      </p>
+    </div>
+
+    <div class="header-controls">
+      <button id="autoRefreshBtn" class="btn-action active">
+        <span>🔄 Tự làm mới (2s)</span>
+      </button>
+      <button id="manualRefreshBtn" class="btn-action">
+        <span>Cập nhật ngay</span>
+      </button>
+      <a href="index.html" class="btn-action" target="_blank" style="text-decoration: none;">
+        <span>🌐 Mở Phòng Tối Web</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Thống kê tổng quan -->
+  <section class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Tổng số ảnh đã nạp</div>
+      <div id="statTotalPhotos" class="stat-value">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Tổng lượt tinh chỉnh Live</div>
+      <div id="statTotalEdits" class="stat-value">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Đang xem trực tiếp</div>
+      <div id="statActiveNow" class="stat-value">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Lần sửa gần nhất</div>
+      <div id="statLastUpdate" class="stat-value" style="font-size: 18px; line-height: 34px;">--:--:--</div>
+    </div>
+  </section>
+
+  <!-- Lưới hiển thị các phiên chỉnh ảnh -->
+  <section id="sessionsGrid" class="sessions-grid">
+    <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">
+      Đang nạp dữ liệu từ máy chủ...
+    </div>
+  </section>
+
+  <!-- Modal xem lịch sử chỉnh sửa chi tiết -->
+  <div id="logModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">Lịch sử từng bước chỉnh sửa</h3>
+        <button id="closeModalBtn" class="btn-action" style="padding: 4px 10px;">✕</button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    let autoRefresh = true;
+    let refreshTimer = null;
+
+    const sessionsGrid = document.getElementById('sessionsGrid');
+    const autoRefreshBtn = document.getElementById('autoRefreshBtn');
+    const manualRefreshBtn = document.getElementById('manualRefreshBtn');
+    const logModal = document.getElementById('logModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    autoRefreshBtn.addEventListener('click', () => {
+      autoRefresh = !autoRefresh;
+      autoRefreshBtn.classList.toggle('active', autoRefresh);
+      autoRefreshBtn.querySelector('span').textContent = autoRefresh ? '🔄 Tự làm mới (2s)' : '⏸ Đã tạm dừng';
+      if (autoRefresh) startPolling();
+      else clearInterval(refreshTimer);
+    });
+
+    manualRefreshBtn.addEventListener('click', fetchSessions);
+    closeModalBtn.addEventListener('click', () => logModal.classList.remove('open'));
+
+    async function fetchSessions() {
+      try {
+        const res = await fetch('api.php?action=get_sessions');
+        const data = await res.json();
+        if (!data.ok) return;
+
+        document.getElementById('statTotalPhotos').textContent = data.totalCount || 0;
+        document.getElementById('statTotalEdits').textContent = data.totalEdits || 0;
+        document.getElementById('statActiveNow').textContent = data.sessions.length || 0;
+
+        if (data.sessions.length > 0) {
+          const lastTime = new Date(data.sessions[0].updated_at).toLocaleTimeString('vi-VN');
+          document.getElementById('statLastUpdate').textContent = lastTime;
+        }
+
+        renderGrid(data.sessions);
+      } catch (err) {
+        console.error('Lỗi nạp sessions:', err);
+      }
+    }
+
+    function renderGrid(sessions) {
+      if (!sessions || sessions.length === 0) {
+        sessionsGrid.innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-dim); background: var(--card-bg); border-radius: 16px; border: 1px dashed var(--border-color);">
+            <div style="font-size: 32px; margin-bottom: 8px;">📷</div>
+            <div style="font-size: 15px; font-weight: 600; color: #fff;">Chưa có ảnh nào được tải lên máy chủ</div>
+            <p style="font-size: 13px; margin: 4px 0 0;">Mở phòng tối web, kéo thả ảnh vào và thử kéo thanh trượt để xem đồng bộ trực tiếp tại đây!</p>
+          </div>
+        `;
+        return;
+      }
+
+      sessionsGrid.innerHTML = sessions.map(s => {
+        const settings = s.settings || {};
+        const params = [];
+        if (settings.exposure) params.push(`EV: ${settings.exposure > 0 ? '+' : ''}${settings.exposure}`);
+        if (settings.temperature) params.push(`K: ${settings.temperature}`);
+        if (settings.highlight) params.push(`H: ${settings.highlight}`);
+        if (settings.shadow) params.push(`S: ${settings.shadow}`);
+        if (settings.color) params.push(`Màu: ${settings.color}`);
+        if (settings.grain) params.push(`Hạt: ${settings.grain}`);
+
+        const timeStr = new Date(s.updated_at).toLocaleTimeString('vi-VN') + ' ' + new Date(s.updated_at).toLocaleDateString('vi-VN');
+
+        return `
+          <div class="session-card" data-sid="${s.session_id}">
+            <div class="session-card-header">
+              <div class="user-info">
+                <span class="user-ip">IP: ${s.client_ip || '127.0.0.1'}</span>
+                <span class="user-time">${timeStr}</span>
+              </div>
+              <span class="recipe-badge">${s.recipe_name || 'Tự chỉnh'}</span>
+            </div>
+
+            <div class="card-images">
+              <div class="img-box">
+                <span>Ảnh Gốc</span>
+                ${s.original_url 
+                  ? `<a href="${s.original_url}" target="_blank"><img src="${s.original_url}" alt="Ảnh gốc" loading="lazy"></a>`
+                  : `<div class="placeholder">Chưa lưu ảnh gốc</div>`}
+              </div>
+              <div class="img-box">
+                <span style="color: var(--accent-color);">Đang sửa Trực tiếp ✨</span>
+                ${s.preview_url 
+                  ? `<a href="${s.preview_url}" target="_blank"><img src="${s.preview_url}" alt="Đang sửa" loading="lazy"></a>`
+                  : `<div class="placeholder">Đang xử lý...</div>`}
+              </div>
+            </div>
+
+            <div class="card-details">
+              <div class="meta-row">
+                <span>Tên file:</span>
+                <strong>${s.filename || 'photo.jpg'}</strong>
+              </div>
+              <div class="meta-row">
+                <span>Độ phân giải:</span>
+                <strong>${s.width ? `${s.width}×${s.height}px` : 'N/A'}</strong>
+              </div>
+              <div class="meta-row">
+                <span>Thông số tức thời:</span>
+              </div>
+              <div class="sliders-preview">
+                ${params.length ? params.map(p => `<span class="pill-param">${p}</span>`).join('') : '<span class="pill-param">Mặc định</span>'}
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <span class="edit-counter">Lượt sửa: <strong>${s.edit_count || 0}</strong></span>
+              <button class="btn-action" onclick="viewLogs('${s.session_id}', '${s.filename}')" style="padding: 4px 10px; font-size: 11.5px;">
+                📜 Xem lịch sử
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function viewLogs(sessionId, filename) {
+      modalTitle.textContent = `Lịch sử chỉnh sửa: ${filename || sessionId}`;
+      modalBody.innerHTML = '<div style="text-align: center; padding: 20px;">Đang tải...</div>';
+      logModal.classList.add('open');
+
+      try {
+        const res = await fetch(`api.php?action=get_logs&sessionId=${encodeURIComponent(sessionId)}`);
+        const data = await res.json();
+        if (!data.ok || !data.logs || !data.logs.length) {
+          modalBody.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 20px;">Chưa có bước chỉnh sửa nào.</div>';
+          return;
+        }
+
+        modalBody.innerHTML = data.logs.map(log => {
+          const t = new Date(log.created_at).toLocaleTimeString('vi-VN');
+          return `
+            <div class="log-item">
+              <div>${log.detail || log.action}</div>
+              <div class="log-time">${t}</div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        modalBody.innerHTML = '<div style="color: #ef4444; padding: 20px;">Lỗi khi nạp lịch sử.</div>';
+      }
+    }
+
+    function startPolling() {
+      clearInterval(refreshTimer);
+      refreshTimer = setInterval(() => {
+        if (autoRefresh) fetchSessions();
+      }, 2000);
+    }
+
+    // Khởi chạy ngay
+    fetchSessions();
+    startPolling();
+  </script>
+</body>
+</html>

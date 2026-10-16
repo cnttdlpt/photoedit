@@ -50,7 +50,13 @@ export const CURATED_PRESETS = [
   { name: 'Điện ảnh lạnh', subtitle: 'Eterna · bóng xanh', settings: { film: 'ETERNA', temperature: -12, shadowsHue: 235, shadowsSat: 20 } },
   { name: 'Đen trắng', subtitle: 'Acros · hạt phim', settings: { film: 'Acros', shadow: 1, grain: 8, clarity: 15 } },
   { name: 'Cảnh sắc', subtitle: 'Velvia · màu rực', settings: { film: 'Velvia', chrome: 1, highlight: -1, color: 1 } },
-  { name: 'Chân dung dịu', subtitle: 'Astia · tông mềm', settings: { film: 'Astia', color: -0.5, temperature: 5, shadow: -0.5 } }
+  { name: 'Chân dung dịu', subtitle: 'Astia · tông mềm', settings: { film: 'Astia', color: -0.5, temperature: 5, shadow: -0.5 } },
+  { name: 'Bạc lạnh', subtitle: 'Selenium · đơn sắc lạnh', settings: { film: 'Monochrome', darkroomProcess: 'Selenium', shadow: 1, grain: 8 } },
+  { name: 'Giấy nâu', subtitle: 'Sepia · sáng mềm', settings: { film: 'Sepia', highlight: -1, shadow: -1, grain: 12 } },
+  { name: 'Phố đêm', subtitle: 'Classic Neg. · quầng sáng', settings: { film: 'Classic Neg.', temperature: -15, halation: 30, highlight: -1, shadowsHue: 225, shadowsSat: 15 } },
+  { name: 'Xanh biển', subtitle: 'Provia · lam trong', settings: { film: 'Provia', temperature: -8, chromeBlue: 1, hslSat: [0, 0, 0, 0, 8, 18, 0, 0] } },
+  { name: 'Rừng sớm', subtitle: 'Astia · lục dịu', settings: { film: 'Astia', shadow: -1, hslHue: [0, 0, 0, 15, 0, 0, 0, 0], hslSat: [0, 0, -12, -18, 0, 0, 0, 0], hslLum: [0, 0, 0, 12, 0, 0, 0, 0] } },
+  { name: 'Bạc tương phản', subtitle: 'Bleach Bypass · sắc nhạt', settings: { film: 'ETERNA Bleach Bypass', clarity: 20, shadow: 1, highlight: -1, vignette: 12 } }
 ];
 
 export const LIGHTCRAFT_PRESETS = [
@@ -629,7 +635,7 @@ export function autoBalanceSettings(pixels, current = defaults) {
 
 export function promptToRecipeVi(promptText, base = defaults) {
   const q = (promptText || '').toLowerCase();
-  const next = { ...defaults, ...base, diagnosticMode: 'Off' };
+  const next = structuredClone({ ...defaults, ...base, diagnosticMode: 'Off' });
   if (q.includes('cyanotype') || q.includes('xanh phổ') || q.includes('1842')) {
     Object.assign(next, { darkroomProcess: 'Cyanotype', contrast: 1, clarity: 25, grain: 8 });
     return { settings: next, reasonVi: 'Đã áp dụng quy trình in Xanh Phổ Cyanotype 1842.' };

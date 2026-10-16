@@ -1,4 +1,4 @@
-import { processPixels, rotatePixels90, computeHistogramAndStats } from './engine.mjs?v=20261016-fix1';
+import { processPixels, rotatePixels90, computeHistogramAndStats } from './engine.mjs?v=20261016-fix2';
 
 self.onmessage = ({ data: d }) => {
   try {

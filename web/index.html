@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>IRO Studio 3.0 — Material Design 3 Expressive Color Lab</title>
-  <link rel="stylesheet" href="style.css?v=20261016-fix1" />
+  <link rel="stylesheet" href="style.css?v=20261016-fix2" />
 </head>
 <body>
   <header class="topbar m3-top-app-bar">
@@ -420,6 +420,15 @@
     </aside>
   </main>
 
-  <script type="module" src="app.mjs?v=20261016-fix1"></script>
+  <!-- Lớp phủ thông báo thả ảnh trực quan (Drag & Drop Overlay) -->
+  <div id="dragDropOverlay" class="drag-drop-overlay" hidden>
+    <div class="drag-drop-box">
+      <div class="drag-drop-icon">📥</div>
+      <h3>Thả ảnh vào đây</h3>
+      <p>Nhận ảnh JPG, PNG, WebP, HEIC/HEIF, AVIF hoặc tệp .cube</p>
+    </div>
+  </div>
+
+  <script type="module" src="app.mjs?v=20261016-fix2"></script>
 </body>
 </html>

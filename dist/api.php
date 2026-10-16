@@ -127,6 +127,33 @@ if ($action === 'init_session') {
 }
 
 // =============================================================================
+// ACTION: convert_image (Tự động chuyển đổi định dạng HEIC, RAW, TIFF sang JPEG)
+// =============================================================================
+if ($action === 'convert_image') {
+    $uploadedFile = $_FILES['photo'] ?? null;
+    if (!$uploadedFile || $uploadedFile['error'] !== UPLOAD_ERR_OK) {
+        http_response_code(400);
+        echo json_encode(['ok' => false, 'error' => 'No file uploaded or upload error: ' . ($uploadedFile['error'] ?? 'empty')]);
+        exit;
+    }
+    $tmpSrc = $uploadedFile['tmp_name'];
+    $tmpDst = tempnam(sys_get_temp_dir(), 'iro_conv_') . '.jpg';
+    $cmd = 'convert ' . escapeshellarg($tmpSrc . '[0]') . ' -auto-orient -quality 92 ' . escapeshellarg($tmpDst);
+    exec($cmd, $cmdOut, $retVal);
+    if ($retVal === 0 && file_exists($tmpDst) && filesize($tmpDst) > 0) {
+        header('Content-Type: image/jpeg');
+        header('Content-Length: ' . filesize($tmpDst));
+        readfile($tmpDst);
+        @unlink($tmpDst);
+        exit;
+    } else {
+        http_response_code(500);
+        echo json_encode(['ok' => false, 'error' => 'Image conversion failed']);
+        exit;
+    }
+}
+
+// =============================================================================
 // ACTION: upload_original (Lưu bản ảnh gốc lên máy chủ)
 // =============================================================================
 if ($action === 'upload_original') {

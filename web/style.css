@@ -1701,3 +1701,54 @@ button:disabled {
   from { opacity: 0.4; transform: scale(0.85); }
   to { opacity: 1; transform: scale(1.15); }
 }
+
+/* ==========================================================================
+   7. DRAG & DROP OVERLAY (KÉO THẢ ẢNH TOÀN MÀN HÌNH CHUẨN M3)
+   ========================================================================== */
+.drag-drop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 17, 22, 0.82);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  animation: m3PopIn 0.2s cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+.drag-drop-overlay[hidden] {
+  display: none !important;
+}
+.drag-drop-box {
+  background: var(--panel-elevated, #1a1d26);
+  border: 2px dashed var(--accent, #e28743);
+  border-radius: 28px;
+  padding: 44px 64px;
+  text-align: center;
+  color: var(--fg, #f3f4f8);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  transform: scale(1.02);
+  pointer-events: none;
+}
+.drag-drop-icon {
+  font-size: 58px;
+  margin-bottom: 12px;
+  animation: bounceDown 1s infinite alternate ease-in-out;
+}
+@keyframes bounceDown {
+  from { transform: translateY(-4px); }
+  to { transform: translateY(4px); }
+}
+.drag-drop-box h3 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--accent, #e28743);
+}
+.drag-drop-box p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted, #9ca3af);
+}
+

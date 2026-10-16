@@ -54,9 +54,14 @@ async function boot(favorites = '[]', storageBlocked = false) {
     setItem(_key, value) { if (storageBlocked) throw new Error('Storage denied'); stored = value; }
   };
   const requests = [];
+  const downloads = [];
+  const NativeURL = globalThis.URL;
   const globals = {
     document, window, ImageData, localStorage,
     navigator: { clipboard: { writeText: async () => {} } },
+    URL: class extends NativeURL {
+      static createObjectURL(blob) { downloads.push(blob); return super.createObjectURL(blob); }
+    },
     fetch: async (url, options) => {
       requests.push({ url, options });
       return { ok: true, json: async () => String(url).includes('recipes.json') ? structuredClone(catalog) : { ok: true } };
@@ -79,7 +84,7 @@ async function boot(favorites = '[]', storageBlocked = false) {
     await new Promise(resolve => setImmediate(resolve));
     const element = selector => assertElement(document.querySelector(selector), selector);
     return {
-      document, element, requests, cleanup,
+      document, element, requests, downloads, cleanup,
       click(selector) { element(selector).click(); },
       input(selector, value, kind = 'input') {
         const target = element(selector); target.value = String(value);
@@ -103,6 +108,11 @@ test('real page starts, renders sample and wires exposure, undo, frames and navi
     assert.equal(app.element('#canvas').height, 640);
     assert.match(app.element('#status').textContent, /Sẵn sàng/);
     assert.equal(app.element('#export').disabled, false);
+    let photoPicker = 0, lutPicker = 0;
+    app.element('#photo').addEventListener('click', () => photoPicker++);
+    app.element('#lut').addEventListener('click', () => lutPicker++);
+    app.click('#openBtn'); app.click('#importLutBtn');
+    assert.equal(photoPicker, 1); assert.equal(lutPicker, 1);
     const before = app.pixels();
     app.input('#in-exposure', 1);
     app.input('#in-exposure', 1, 'change');
@@ -139,6 +149,61 @@ test('catalog search, favorite and recipe application use real catalog records',
     const before = app.pixels();
     app.input('#lumMidtones', 30);
     assert.notEqual(app.pixels(), before, 'Wheel luminance must affect output');
+  } finally { app.cleanup(); }
+});
+
+test('rotate, curve, comparison, contact sheet and export controls execute their real handlers', async () => {
+  const app = await boot();
+  try {
+    const original = app.pixels();
+    app.click('#rotate90');
+    assert.equal(app.element('#canvas').width, 640);
+    assert.equal(app.element('#canvas').height, 960);
+    app.click('#undoBtn');
+    assert.equal(app.pixels(), original);
+    app.click('[data-curve="scurve"]');
+    assert.notEqual(app.pixels(), original, 'Tone curve must affect pixels');
+    app.click('#resetAll');
+    app.click('#compareBtn');
+    app.click('#compareBtn');
+    app.click('#quadViewBtn');
+    assert.equal(app.document.querySelectorAll('.quad-card').length, 4);
+    app.click('.quad-card');
+    assert.equal(app.element('#quadViewGrid').hidden, true);
+    app.click('#contactSheetBtn');
+    assert.ok(app.document.querySelectorAll('.sheet-item').length >= 6);
+    app.click('.sheet-item');
+    assert.equal(app.element('#contactSheetModal').hidden, true);
+    app.input('#frameStyle', 30, 'change');
+    app.click('#export');
+    assert.equal(app.downloads.at(-1).type, 'image/png');
+    const png = Buffer.from(await app.downloads.at(-1).arrayBuffer());
+    assert.equal(png.subarray(1, 4).toString(), 'PNG');
+    app.click('#exportCube');
+    assert.match(await app.downloads.at(-1).text(), /LUT_3D_SIZE 17/);
+  } finally { app.cleanup(); }
+});
+
+test('prompt, HSL, LightCraft presets and invalid share code preserve a working reset', async () => {
+  const app = await boot();
+  try {
+    const original = app.pixels();
+    app.click('#promptRecipeBtn');
+    app.input('#promptTextInput', 'ảnh đêm điện ảnh');
+    app.click('#applyPromptBtn');
+    assert.equal(app.element('#promptModal').hidden, true);
+    app.click('#lightCraftBtn');
+    const before = app.pixels();
+    app.input('.hsl-row input', 50);
+    assert.notEqual(app.pixels(), before);
+    for (const button of app.document.querySelectorAll('.lc-preset-btn')) button.click();
+    app.click('#resetAll');
+    assert.equal(app.pixels(), original, 'HSL editing must not mutate reset defaults');
+    globalThis.window.prompt = () => 'IRO1-invalid';
+    app.click('#shareCode');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.match(app.element('#status').textContent, /không hợp lệ/);
+    assert.equal(app.pixels(), original);
   } finally { app.cleanup(); }
 });
 

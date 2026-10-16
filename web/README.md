@@ -39,7 +39,7 @@
 | `engine.mjs` | Lõi xử lý hình ảnh toán học, thuật toán màu sắc, 30 khung ảnh và xuất file |
 | `worker.mjs` | Web Worker xử lý ảnh bất đồng bộ ngoài luồng chính, tránh giật lag giao diện |
 | `recipes.json` | Thư viện 392 công thức màu Fujifilm trích xuất chuẩn hóa từ Fuji X Weekly |
-| `tests.mjs` | Bộ 8 kiểm thử đơn vị tự động kiểm tra tính đúng đắn toán học của Engine |
+| `tests.mjs`, `*.test.mjs` | Kiểm thử engine, liên kết giao diện, thao tác DOM và HTTP/cache |
 | `server.mjs` | Máy chủ Node.js hiệu năng cao, hỗ trợ nén Gzip, cache headers và CORS |
 | `Dockerfile` | Cấu hình Docker container hóa ứng dụng |
 | `docker-compose.yml` | Cấu hình Docker Compose triển khai 1 lệnh |
@@ -66,9 +66,10 @@ Truy cập tại: `http://localhost:4173`
 
 ### 3. Kiểm thử đơn vị tự động
 ```bash
-node --test tests.mjs
+npm install --include=dev
+npm test
 ```
-Kết quả kiểm tra toàn diện 8/8 bài kiểm tra (100% PASS).
+Bộ kiểm thử gồm 29 ca: xử lý ảnh, liên kết app/engine, thao tác giao diện bằng DOM và Canvas trong Node, cùng MIME/cache của HTTP server. Kiểm thử DOM dùng dữ liệu cục bộ, không mở trình duyệt hoặc kết nối website. Chi tiết lượt sửa lỗi: [VALIDATION.md](VALIDATION.md).
 
 ---
 

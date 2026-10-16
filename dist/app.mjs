@@ -6,7 +6,21 @@ import {
   bakeRecipeToCube, extractDominantPalette, matchColorFromReference,
   promptToRecipeVi, embedRecipeIntoPixels, extractRecipeFromPixels,
   parseFujiRecipe, LIGHTCRAFT_PRESETS, PHOTO_FRAMES, renderPhotoFrame
-} from './engine.mjs';
+} from './engine.mjs?v=20261016-fix2';
+
+// Polyfill roundRect cho các trình duyệt hoặc WebKit cũ
+if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii = 0) {
+    const r = typeof radii === 'number' ? radii : (Array.isArray(radii) ? radii[0] : 0);
+    this.moveTo(x + r, y);
+    this.arcTo(x + w, y, x + w, y + h, r);
+    this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r);
+    this.arcTo(x, y, x + w, y, r);
+    this.closePath();
+    return this;
+  };
+}
 
 const canvas = document.querySelector('#canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -20,6 +34,7 @@ const curveCanvas = document.querySelector('#curveCanvas');
 const curveCtx = curveCanvas.getContext('2d');
 const status = document.querySelector('#status');
 const empty = document.querySelector('#empty');
+const dragDropOverlay = document.querySelector('#dragDropOverlay');
 const quadViewGrid = document.querySelector('#quadViewGrid');
 const contactSheetModal = document.querySelector('#contactSheetModal');
 const contactSheetGrid = document.querySelector('#contactSheetGrid');
@@ -1795,8 +1810,15 @@ document.querySelectorAll('[data-sample]').forEach(btn => {
 
 function loadSourceImageData(imageData, label, rawFile = null) {
   state.source = imageData;
+  state.stageZoom = 1.0;
+  state.stagePanX = 0;
+  state.stagePanY = 0;
+  applyStageTransform();
+
   empty.hidden = true;
+  empty.style.display = 'none';
   canvasWrapper.hidden = false;
+  canvasWrapper.style.display = 'inline-block';
 
   const enableIds = [
     '#export', '#compareBtn', '#rotate90', '#aiAuto',
@@ -1833,43 +1855,102 @@ function loadSourceImageData(imageData, label, rawFile = null) {
   setStatus(`Đã nạp ${label} (${imageData.width}×${imageData.height}px) — Sẵn sàng hậu kỳ.`);
 }
 
-function readImageFile(file) {
-  return new Promise((resolve, reject) => {
-    // 1. Thử giải mã bằng Image() + createObjectURL (Hỗ trợ tốt nhất trên Safari, Chrome, iOS, Android)
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.decoding = 'async';
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      // 2. Fallback đọc base64 qua FileReader
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img2 = new Image();
-        img2.onload = () => resolve(img2);
-        img2.onerror = () => {
-          // 3. Fallback cuối cùng bằng createImageBitmap nếu trình duyệt hỗ trợ
-          if (typeof createImageBitmap === 'function') {
-            createImageBitmap(file).then(resolve).catch(reject);
-          } else {
-            reject(new Error('Trình duyệt không hỗ trợ đọc định dạng ảnh này'));
-          }
-        };
-        img2.src = reader.result;
+async function readImageFile(file) {
+  // 1. createImageBitmap (Tự động nhận diện EXIF orientation, hỗ trợ cực tốt trên Safari 15+, Chrome, iPad)
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => createImageBitmap(file));
+      if (bmp && bmp.width > 0 && bmp.height > 0) {
+        return bmp;
+      }
+    } catch (_) {}
+  }
+
+  // 2. HTMLImageElement + ObjectURL (Không dùng decoding="async" để tránh Safari giải phóng blob sớm)
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const el = new Image();
+      el.onload = async () => {
+        try {
+          if (typeof el.decode === 'function') await el.decode();
+        } catch (_) {}
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+        resolve(el);
       };
-      reader.onerror = reject;
+      el.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Object URL decode failed'));
+      };
+      el.src = url;
+    });
+    if (img && (img.naturalWidth || img.width) > 0) return img;
+  } catch (_) {}
+
+  // 3. FileReader DataURL
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('FileReader failed'));
       reader.readAsDataURL(file);
-    };
-    img.src = url;
-  });
+    });
+
+    const img2 = await new Promise((resolve, reject) => {
+      const el = new Image();
+      el.onload = async () => {
+        try {
+          if (typeof el.decode === 'function') await el.decode();
+        } catch (_) {}
+        resolve(el);
+      };
+      el.onerror = () => reject(new Error('DataURL decode failed'));
+      el.src = dataUrl;
+    });
+    if (img2 && (img2.naturalWidth || img2.width) > 0) return img2;
+  } catch (_) {}
+
+  // 4. Chuyển đổi định dạng nâng cao qua máy chủ (Hỗ trợ định dạng HEIC/HEIF/RAW từ iPhone/iPad trên Chrome)
+  try {
+    setStatus(`Đang giải mã định dạng ảnh nâng cao qua máy chủ...`);
+    const formData = new FormData();
+    formData.append('photo', file);
+    const convRes = await fetch('api.php?action=convert_image', {
+      method: 'POST',
+      body: formData
+    });
+    if (convRes.ok) {
+      const convBlob = await convRes.blob();
+      if (typeof createImageBitmap === 'function') {
+        try {
+          return await createImageBitmap(convBlob);
+        } catch (_) {}
+      }
+      return await new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(convBlob);
+        const el = new Image();
+        el.onload = () => {
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+          resolve(el);
+        };
+        el.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('Converted image load failed'));
+        };
+        el.src = url;
+      });
+    }
+  } catch (err) {
+    console.warn('Server image conversion error:', err);
+  }
+
+  throw new Error('Trình duyệt không thể giải mã định dạng ảnh này. Hãy thử chọn ảnh JPG, PNG hoặc WebP.');
 }
 
 async function handleImageFile(file) {
   if (!file) return;
-  setStatus(`Đang đọc tệp ${file.name}...`);
+  const fileName = file.name || 'Ảnh tải lên';
+  setStatus(`Đang nạp tệp ${fileName}...`);
   try {
     const img = await readImageFile(file);
     const maxDim = 2560; // Hỗ trợ độ phân giải lên tới 2.5K sắc nét
@@ -1889,7 +1970,7 @@ async function handleImageFile(file) {
     if (typeof img.close === 'function') img.close();
 
     const imgData = tempCtx.getImageData(0, 0, w, h);
-    loadSourceImageData(imgData, file.name, file);
+    loadSourceImageData(imgData, fileName, file);
   } catch (err) {
     console.error('Lỗi khi mở ảnh:', err);
     alert('Không thể mở tệp ảnh: ' + (err.message || 'Định dạng không được hỗ trợ'));
@@ -1917,9 +1998,12 @@ if (importLutBtn) {
   });
 }
 
-photoInput.addEventListener('change', e => {
+photoInput.addEventListener('change', async e => {
   const file = e.target.files?.[0];
-  if (file) handleImageFile(file);
+  if (file) {
+    await handleImageFile(file);
+  }
+  // Chỉ xóa value sau khi đọc xong tránh Safari giải phóng file handle
   photoInput.value = '';
 });
 
@@ -1931,25 +2015,103 @@ empty.addEventListener('click', e => {
 });
 empty.style.cursor = 'pointer';
 
-// Kéo thả ảnh trực quan trên toàn màn hình
+// =========================================================================
+// KÉO THẢ ẢNH TRỰC QUAN TOÀN MÀN HÌNH (CHUẨN CHROME & SAFARI / MACOS / IPAD)
+// =========================================================================
+let dragCounter = 0;
+
+function setDragOverlayVisible(visible) {
+  if (dragDropOverlay) {
+    dragDropOverlay.hidden = !visible;
+  }
+  if (stageContainer) {
+    stageContainer.style.borderColor = visible ? 'var(--accent, #e28743)' : '';
+  }
+}
+
+// Ngăn chặn hành vi mặc định của trình duyệt (mở ảnh thành trang mới) trên toàn document
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+  document.addEventListener(eventName, e => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, false);
+  window.addEventListener(eventName, e => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, false);
+});
+
+window.addEventListener('dragenter', e => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter++;
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'copy';
+  }
+  setDragOverlayVisible(true);
+});
+
 window.addEventListener('dragover', e => {
   e.preventDefault();
   e.stopPropagation();
-  stageContainer.style.borderColor = 'var(--accent, #e28743)';
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'copy';
+  }
 });
+
 window.addEventListener('dragleave', e => {
   e.preventDefault();
   e.stopPropagation();
-  stageContainer.style.borderColor = '';
+  dragCounter--;
+  if (dragCounter <= 0) {
+    dragCounter = 0;
+    setDragOverlayVisible(false);
+  }
 });
-window.addEventListener('drop', e => {
+
+window.addEventListener('drop', async e => {
   e.preventDefault();
   e.stopPropagation();
-  stageContainer.style.borderColor = '';
-  const file = e.dataTransfer?.files?.[0];
-  if (file && (file.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif|avif)$/i.test(file.name))) {
-    handleImageFile(file);
+  dragCounter = 0;
+  setDragOverlayVisible(false);
+
+  // 1. Lấy tệp từ files
+  let file = e.dataTransfer?.files?.[0];
+
+  // 2. Nếu files rỗng (kéo từ Safari hoặc một số app macOS), tìm trong items
+  if (!file && e.dataTransfer?.items) {
+    for (let i = 0; i < e.dataTransfer.items.length; i++) {
+      const item = e.dataTransfer.items[i];
+      if (item.kind === 'file') {
+        const f = item.getAsFile();
+        if (f) {
+          file = f;
+          break;
+        }
+      }
+    }
   }
+
+  if (!file) {
+    setStatus('Không phát hiện tệp ảnh nào được thả vào.', true);
+    return;
+  }
+
+  // Tự động nhận diện nếu kéo thả tệp 3D LUT (.cube)
+  if (file.name && file.name.toLowerCase().endsWith('.cube')) {
+    try {
+      state.lut = parseCube(await file.text());
+      commitHistory(`Nạp LUT ${file.name}`);
+      render();
+      setStatus(`Đã nạp 3D LUT: ${state.lut.title} (${state.lut.size}³).`);
+    } catch (err) {
+      setStatus('Lỗi nạp LUT: ' + err.message, true);
+    }
+    return;
+  }
+
+  // Nạp ảnh
+  await handleImageFile(file);
 });
 
 document.querySelector('#lut').addEventListener('change', async e => {

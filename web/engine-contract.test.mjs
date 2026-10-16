@@ -23,11 +23,17 @@ test('Every engine symbol imported by the browser entry point exists', async () 
 });
 
 test('Ribbon and LightCraft presets use working controls and change rendered pixels', () => {
-  assert.ok(CURATED_PRESETS.length > 0 && LIGHTCRAFT_PRESETS.length > 0);
+  assert.equal(CURATED_PRESETS.length, 12, 'Contact sheet promises twelve previews');
+  assert.ok(LIGHTCRAFT_PRESETS.length > 0);
+  const renderedPresets = new Set();
   for (const preset of CURATED_PRESETS) {
     assert.ok(preset.name && preset.subtitle);
     for (const key of Object.keys(preset.settings)) assert.ok(key in defaults, `${preset.name}: ${key}`);
-    assert.notDeepEqual(processPixels(fixture, 3, 3, { ...defaults, ...preset.settings }), fixture, preset.name);
+    const rendered = processPixels(fixture, 3, 3, { ...defaults, ...preset.settings });
+    assert.notDeepEqual(rendered, fixture, preset.name);
+    const signature = Array.from(rendered).join(',');
+    assert.ok(!renderedPresets.has(signature), `Duplicate rendered preset: ${preset.name}`);
+    renderedPresets.add(signature);
   }
   for (const preset of LIGHTCRAFT_PRESETS) {
     const settings = structuredClone(defaults);
@@ -38,6 +44,18 @@ test('Ribbon and LightCraft presets use working controls and change rendered pix
     for (const key of ['hslHue', 'hslSat', 'hslLum', 'clarity', 'vignette']) if (key in preset) settings[key] = preset[key];
     assert.notDeepEqual(processPixels(fixture, 3, 3, settings), fixture, preset.name);
   }
+});
+
+test('Prompt-generated recipes own their editable nested controls', () => {
+  const defaultSnapshot = structuredClone(defaults);
+  const generated = engine.promptToRecipeVi('phố đêm').settings;
+  generated.hslHue[0] = 80;
+  generated.curvePoints[0][1] = 0.25;
+  assert.deepEqual(defaults, defaultSnapshot);
+  const base = structuredClone(defaults);
+  const custom = engine.promptToRecipeVi('đen trắng', base).settings;
+  custom.hslSat[1] = -40;
+  assert.deepEqual(base, defaultSnapshot);
 });
 
 test('Every film option in the editor selects a real implemented look', async () => {

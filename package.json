@@ -1,1 +1,12 @@
-{"name":"iro-film-studio","private":true,"type":"module","scripts":{"start":"node server.mjs","test":"node --test tests.mjs"}}
+{
+  "name": "iro-film-studio",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node start.mjs",
+    "backend": "node backend/server.mjs",
+    "frontend": "node frontend/server.mjs",
+    "test": "node --test tests.mjs"
+  }
+}

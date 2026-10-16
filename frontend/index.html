@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+  <title>IRO Studio 3.0 — Material Design 3 Expressive Color Lab</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#121316" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="IRO Studio" />
+  <link rel="stylesheet" href="style.css?v=20261016-fix3" />
+</head>
+<body>
+  <header class="topbar m3-top-app-bar">
+    <!-- Cụm Trái: Thương hiệu + Viên thuốc Công thức đang dùng -->
+    <div class="brand-cluster">
+      <div class="brand">
+        <div class="brand-badge" aria-hidden="true">
+          <span class="brand-dot"></span>
+        </div>
+        <div class="brand-copy">
+          <h1>IRO <span class="badge-pro">3.0</span>
+            <span id="cloudSyncStatus" class="cloud-sync-badge" title="Đồng bộ tự động với máy chủ">
+              <span class="sync-dot"></span>
+              <span class="sync-text">Live</span>
+            </span>
+          </h1>
+          <p class="subtitle">Fujifilm X-Trans V · Color Lab</p>
+        </div>
+      </div>
+      <button id="activeRecipeQuickPill" type="button" class="m3-recipe-hero-pill" title="Nhấn để mở Kho 392 Công thức Fujifilm (Phím L)">
+        <span class="pill-sparkle">✦</span>
+        <span id="topActiveFilmLabel">Classic Chrome · Gốc</span>
+      </button>
+    </div>
+
+    <!-- Cụm Giữa: Viên thuốc Segmented Capsule tối giản -->
+    <div class="m3-center-capsule" role="toolbar" aria-label="Công cụ sân khấu">
+      <button id="undoBtn" type="button" class="capsule-icon-btn" title="Hoàn tác (Ctrl+Z)" disabled>↶</button>
+      <button id="redoBtn" type="button" class="capsule-icon-btn" title="Làm lại (Ctrl+Y)" disabled>↷</button>
+      <span class="capsule-divider"></span>
+      <button id="compareBtn" type="button" class="capsule-pill-btn" title="Bật/tắt thanh gạt so sánh Trước/Sau hoặc nhấn giữ Phím Space" disabled>⇄ So sánh</button>
+      <button id="rotate90" type="button" class="capsule-icon-btn" title="Xoay ảnh 90° (Phím R)" disabled>↻</button>
+    </div>
+
+    <!-- Cụm Phải: Mở ảnh + Xuất ảnh + Tài khoản + Menu Công cụ mở rộng -->
+    <div class="actions m3-right-actions">
+      <input id="referenceInput" type="file" accept="image/*,.heic,.heif" style="position:fixed;top:-9999px;left:-9999px;opacity:0;" />
+      <input id="lut" type="file" accept=".cube" style="position:fixed;top:-9999px;left:-9999px;opacity:0;" />
+      <input id="photo" type="file" accept="image/*,.heic,.heif,.jpg,.jpeg,.png,.webp,.avif" style="position:fixed;top:-9999px;left:-9999px;opacity:0;" />
+
+      <button type="button" class="file m3-outlined-btn" id="openBtn" title="Mở ảnh từ máy (JPG, PNG, WebP, HEIC)">📷 Mở ảnh</button>
+      <button id="export" type="button" class="primary m3-filled-cta" disabled>💾 Xuất ảnh</button>
+
+      <!-- Khối Tài khoản Người dùng & Phân quyền -->
+      <div class="user-account-container" style="position: relative;">
+        <button id="authTriggerBtn" type="button" class="btn-user-pill" title="Đăng nhập / Đăng ký hoặc xem thông tin tài khoản">
+          <span class="user-avatar-icon">👤</span>
+          <span id="userAccountLabel">Đăng nhập</span>
+        </button>
+        <div id="userAccountDropdown" class="m3-dropdown-menu" hidden>
+          <div class="user-dropdown-header">
+            <div class="user-drop-avatar" id="dropUserAvatar">👤</div>
+            <div class="user-drop-info">
+              <strong id="dropUserName">Khách vãng lai</strong>
+              <span id="dropUserRole" class="badge-role">GUEST</span>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <button type="button" id="myPhotosMenuBtn" class="dropdown-item">📁 Ảnh đã sửa của tôi</button>
+          <button type="button" id="adminUsersMenuBtn" class="dropdown-item" hidden>🛠️ Quản lý người dùng</button>
+          <a href="dashboard.html" target="_blank" class="dropdown-item" style="text-decoration:none;color:inherit;">📊 Giám sát Realtime</a>
+          <div class="dropdown-divider"></div>
+          <button type="button" id="logoutMenuBtn" class="dropdown-item text-danger">🚪 Đăng xuất</button>
+        </div>
+      </div>
+
+      <!-- Menu Công cụ Mở rộng Gom gọn -->
+      <div class="more-tools-container" style="position: relative;">
+        <button id="moreToolsBtn" type="button" class="capsule-icon-btn" title="Menu công cụ mở rộng">⚙️</button>
+        <div id="moreToolsDropdown" class="m3-dropdown-menu" hidden>
+          <div class="dropdown-section-title">Kho công thức & AI</div>
+          <button id="recipeLibraryBtn" type="button" class="dropdown-item">🎞️ Kho 392 công thức (Phím L)</button>
+          <button id="surpriseRecipeBtn" type="button" class="dropdown-item">🎲 Thử ngẫu nhiên công thức (Phím X)</button>
+          <button id="lightCraftBtn" type="button" class="dropdown-item" disabled>🎛️ Buồng tối LightCraft (Phím 4)</button>
+          <button id="aiAuto" type="button" class="dropdown-item" disabled>⚡ AI Cân bằng tự động</button>
+          <button id="promptRecipeBtn" type="button" class="dropdown-item">🪄 Tả cảnh pha màu AI</button>
+          <button id="matchRefBtn" type="button" class="dropdown-item" disabled>🎨 Học màu từ ảnh mẫu</button>
+          
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-section-title">Trình chiếu & Phim</div>
+          <button id="quadViewBtn" type="button" class="dropdown-item" disabled>⊞ Lưới 4 phương án màu (Phím Q)</button>
+          <button id="livingFilmBtn" type="button" class="dropdown-item" disabled>🎞️ Chạy hạt phim sống 24fps</button>
+          <button id="contactSheetBtn" type="button" class="dropdown-item" disabled>🗂️ Bảng 12 ảnh Contact Sheet</button>
+          <button id="dateStampBtn" type="button" class="dropdown-item" disabled>📅 Dấu ngày tháng LED cam</button>
+
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-section-title">Mã & 3D LUT</div>
+          <button id="importLutBtn" type="button" class="dropdown-item">📂 Nạp tệp 3D LUT (.cube)</button>
+          <button id="exportCube" type="button" class="dropdown-item" disabled>🧊 Xuất 3D LUT (.cube)</button>
+          <button id="shareCode" type="button" class="dropdown-item" disabled>🔗 Sao chép mã công thức IRO1</button>
+          <button id="quickCmdBtn" type="button" class="dropdown-item">🔍 Tìm nhanh (Ctrl+K)</button>
+          <button id="themeToggleBtn" type="button" class="dropdown-item">☀️ Chuyển giao diện Sáng / Tối</button>
+          <a href="dashboard.html" target="_blank" class="dropdown-item" style="text-decoration:none;color:inherit;">📊 Bảng giám sát Realtime</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace m3-three-zone-studio">
+    <!-- ZONE 1: THANH ĐIỀU HƯỚNG DỌC MATERIAL 3 (NAVIGATION RAIL) -->
+    <nav class="m3-nav-rail" aria-label="Điều hướng Studio">
+      <button type="button" class="rail-item active" data-rail-target="tabFilm" title="Giả lập Màu phim & Khung EXIF (Phím 1)">
+        <span class="rail-pill"><span class="rail-icon">🎞️</span></span>
+        <span class="rail-label">Màu phim</span>
+      </button>
+      <button type="button" class="rail-item" data-rail-target="tabBasic" title="Ánh sáng, Phơi sáng & Cân bằng trắng (Phím 2)">
+        <span class="rail-pill"><span class="rail-icon">☀️</span></span>
+        <span class="rail-label">Ánh sáng</span>
+      </button>
+      <button type="button" class="rail-item" data-rail-target="tabOptical" title="Quang học 3.0, Hạt phim & Phòng tối (Phím 3)">
+        <span class="rail-pill"><span class="rail-icon">✨</span></span>
+        <span class="rail-label">Quang học</span>
+      </button>
+      <button type="button" class="rail-item" data-rail-action="lightcraft" title="Buồng tối LightCraft: Tone Curve, 3-Way Wheels & HSL (Phím 4)">
+        <span class="rail-pill"><span class="rail-icon">🎛️</span></span>
+        <span class="rail-label">LightCraft</span>
+      </button>
+      <button type="button" class="rail-item" data-rail-action="library" title="Kho 392 công thức màu FujiXWeekly (Phím L)">
+        <span class="rail-pill warm-pill"><span class="rail-icon">📚</span></span>
+        <span class="rail-label">Kho 392</span>
+      </button>
+
+      <div class="rail-spacer"></div>
+
+      <button type="button" class="rail-bottom-btn" id="railSampleCycleBtn" title="Đổi ảnh mẫu Studio kế tiếp">
+        <span>🖼️</span>
+        <small>Ảnh mẫu</small>
+      </button>
+      <button type="button" class="rail-bottom-btn" id="railResetAllBtn" title="Đặt lại toàn bộ thông số về gốc">
+        <span>↺</span>
+        <small>Đặt lại</small>
+      </button>
+    </nav>
+
+    <!-- ZONE 2: SÂN KHẤU TRUNG TÂM + THƯỚC CHIA VẠCH GAUSSIAN M3 -->
+    <section class="stage-column">
+      <div class="stage" id="stageContainer">
+        <div id="empty" class="empty-state">
+          <div class="empty-icon">📷</div>
+          <h2>IRO Studio 3.0 · Material Design 3 Expressive</h2>
+          <p>Kéo & thả ảnh vào đây, bấm <b>Mở ảnh</b>, hoặc chọn ngay một bối cảnh mẫu bên dưới để trải nghiệm 392 màu phim Fujifilm và động cơ quang học 3.0.</p>
+          <div class="sample-presets">
+            <button type="button" class="sample-btn" data-sample="portrait">👩 Chân dung Hoàng hôn</button>
+            <button type="button" class="sample-btn" data-sample="street">🏮 Phố đêm Neon</button>
+            <button type="button" class="sample-btn" data-sample="landscape">🏔️ Phong cảnh Núi</button>
+          </div>
+        </div>
+
+        <div class="canvas-viewport" id="canvasViewport">
+          <div class="canvas-wrapper" id="canvasWrapper" hidden>
+            <canvas id="canvas"></canvas>
+            <canvas id="beforeCanvas" class="before-canvas" hidden></canvas>
+            <div id="splitSlider" class="split-slider" hidden>
+              <div class="split-handle">⇄</div>
+              <span class="split-label before">TRƯỚC (GỐC)</span>
+              <span class="split-label after">SAU (IRO 3.0)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nút nổi thông báo tỷ lệ Zoom (chỉ hiện khi Zoom > 100%) -->
+        <button id="zoomResetBadge" type="button" class="m3-zoom-badge" hidden title="Nhấp để đặt lại khung nhìn 100%">
+          🔍 100% · Đặt lại
+        </button>
+
+        <!-- Lưới 4 phương án màu (Quad-View Audition) -->
+        <div id="quadViewGrid" class="quad-view-grid" hidden></div>
+
+        <!-- Bảng 12 biến thể màu Film (Contact Sheet) -->
+        <div id="contactSheetModal" class="contact-sheet-modal" hidden>
+          <div class="contact-sheet-header">
+            <h3>🗂️ Bảng 12 biến thể màu Film (Contact Sheet) — Nhấn vào bất kỳ ô nào để áp dụng ngay</h3>
+            <button id="closeContactSheet" type="button">✕ Đóng</button>
+          </div>
+          <div id="contactSheetGrid" class="contact-sheet-grid"></div>
+        </div>
+
+        <!-- Hộp thoại AI Tả Cảnh Pha Màu (Vietnamese NLP Prompt-to-Recipe) -->
+        <div id="promptModal" class="contact-sheet-modal" hidden>
+          <div class="contact-sheet-header">
+            <h3>🪄 AI Tả Cảnh Pha Màu (Vietnamese NLP Prompt-to-Recipe)</h3>
+            <button id="closePromptModal" type="button">✕ Đóng</button>
+          </div>
+          <div class="prompt-modal-body">
+            <p class="prompt-hint">Nhập cảm xúc, địa điểm hoặc thời tiết bằng tiếng Việt. Động cơ ngữ nghĩa IRO sẽ tự động chọn giả lập Film, cân bằng trắng, Pro-Mist, Halation và hạt phim phù hợp:</p>
+            <div class="prompt-input-row">
+              <input id="promptTextInput" type="text" placeholder="VD: Chiều mưa Đà Lạt buồn điện ảnh, Nắng sớm Hà Nội cổ điển, Đêm Sài Gòn Cyberpunk..." />
+              <button id="applyPromptBtn" type="button" class="primary">✨ Pha màu ngay</button>
+            </div>
+            <div class="prompt-tags">
+              <button type="button" class="prompt-chip" data-prompt="Chiều mưa Đà Lạt buồn điện ảnh mờ sương">🌧️ Chiều mưa Đà Lạt</button>
+              <button type="button" class="prompt-chip" data-prompt="Nắng sớm Hà Nội mùa thu hoài cổ ấm áp">🍂 Nắng thu Hà Nội</button>
+              <button type="button" class="prompt-chip" data-prompt="Đêm Sài Gòn neon rực rỡ điện ảnh">🌃 Đêm Sài Gòn Neon</button>
+              <button type="button" class="prompt-chip" data-prompt="Chân dung nàng thơ trong trẻo dịu dàng">🌸 Chân dung Nàng thơ</button>
+              <button type="button" class="prompt-chip" data-prompt="Phóng sự đường phố đen trắng tương phản gắt">🖤 Đường phố Đen trắng</button>
+              <button type="button" class="prompt-chip" data-prompt="Biển mùa hè trong xanh rực rỡ nắng vàng">🏖️ Biển nắng Mùa hè</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hộp thoại Tìm kiếm nhanh & Phím tắt (Command Palette Ctrl+K) -->
+        <div id="cmdPaletteModal" class="contact-sheet-modal" hidden>
+          <div class="contact-sheet-header">
+            <h3>🔍 Tìm nhanh Công thức & Lệnh tắt Studio (Ctrl+K)</h3>
+            <button id="closeCmdPaletteBtn" type="button">✕ Đóng</button>
+          </div>
+          <div class="prompt-modal-body">
+            <div class="prompt-input-row">
+              <input id="cmdSearchInput" type="search" placeholder="Gõ tên công thức (Kodachrome, Portra, Reggie, Classic Neg...) hoặc lệnh..." />
+            </div>
+            <div id="cmdQuickResults" class="cmd-results-grid"></div>
+            <div class="shortcut-cheat-grid">
+              <span><kbd>Space</kbd> Nhấn giữ xem Ảnh gốc</span>
+              <span><kbd>Ctrl+Z / Y</kbd> Hoàn tác / Làm lại</span>
+              <span><kbd>Phím R</kbd> Xoay ảnh 90°</span>
+              <span><kbd>Phím Q</kbd> Lưới 4 phương án màu</span>
+              <span><kbd>Phím L</kbd> Kho 392 công thức</span>
+              <span><kbd>Phím X</kbd> Thử công thức ngẫu nhiên</span>
+              <span><kbd>Lăn chuột</kbd> Phóng to / Thu nhỏ 400%</span>
+              <span><kbd>Nhấp đúp</kbd> Đặt lại thông số về 0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hộp thoại Kho 392 Công thức màu Fujifilm X Weekly -->
+        <div id="recipeLibraryModal" class="contact-sheet-modal" hidden>
+          <div class="contact-sheet-header">
+            <div>
+              <h3>🎞️ Kho 392 Công thức màu Fujifilm X Weekly</h3>
+              <p class="modal-sub">Tích hợp trực tiếp 392 công thức từ cơ sở dữ liệu chuẩn của ứng dụng Android & iOS</p>
+            </div>
+            <div class="modal-header-actions">
+              <button id="modalRandomRecipeBtn" type="button" class="m3-tonal-btn">🎲 Thử ngẫu nhiên</button>
+              <button id="closeRecipeLibrary" type="button">✕ Đóng</button>
+            </div>
+          </div>
+          <div class="library-toolbar">
+            <input id="recipeSearchInput" type="search" placeholder="🔍 Tìm trong 392 công thức (VD: Kodachrome, Portra 400, Classic Neg, Cinestill, Reggie...)" />
+            <div id="recipeFilmFilterChips" class="film-filter-chips"></div>
+          </div>
+          <div id="recipeLibraryGrid" class="recipe-library-grid"></div>
+        </div>
+
+        <!-- Hộp thoại Buồng tối Chuyên nghiệp LightCraft -->
+        <div id="lightCraftModal" class="contact-sheet-modal" hidden>
+          <div class="contact-sheet-header">
+            <div>
+              <h3>🎛️ Buồng tối LightCraft Pro (Curves · 3-Way Color Wheels · 8-Band HSL)</h3>
+              <p class="modal-sub">Đồng bộ kiến trúc toán học với LightCraftEngine.java (Android) & LightCraftEngine.swift (iOS)</p>
+            </div>
+            <div class="lightcraft-header-actions">
+              <button id="resetLightCraftBtn" type="button">↺ Đặt lại LightCraft</button>
+              <button id="closeLightCraft" type="button">✕ Đóng</button>
+            </div>
+          </div>
+
+          <div class="lightcraft-body">
+            <!-- Cột 1: 12 Preset Phòng tối + Bàn xoay 3 vùng màu -->
+            <div class="lc-column">
+              <h4>✨ 12 Preset Phòng tối LightCraft</h4>
+              <div id="lightCraftPresetsGrid" class="lc-presets-grid"></div>
+
+              <h4 style="margin-top:14px">🎨 Bàn xoay pha màu 3 vùng (Shadows · Midtones · Highlights)</h4>
+              <div class="color-wheels-row">
+                <div class="wheel-box">
+                  <canvas id="wheelShadows" width="124" height="124" data-wheel="shadows"></canvas>
+                  <span>Vùng tối (Shadows)</span>
+                  <input id="lumShadows" type="range" min="-50" max="50" step="1" value="0" title="Độ sáng Vùng tối" />
+                </div>
+                <div class="wheel-box">
+                  <canvas id="wheelMidtones" width="124" height="124" data-wheel="midtones"></canvas>
+                  <span>Trung tính (Midtones)</span>
+                  <input id="lumMidtones" type="range" min="-50" max="50" step="1" value="0" title="Độ sáng Trung tính" />
+                </div>
+                <div class="wheel-box">
+                  <canvas id="wheelHighlights" width="124" height="124" data-wheel="highlights"></canvas>
+                  <span>Vùng sáng (Highlights)</span>
+                  <input id="lumHighlights" type="range" min="-50" max="50" step="1" value="0" title="Độ sáng Vùng sáng" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Cột 2: Bộ trộn 8 dải màu HSL chuẩn phòng tối -->
+            <div class="lc-column">
+              <div class="lc-hsl-header">
+                <h4>🌈 Bộ trộn 8 Dải màu chuyên sâu (8-Band HSL Mixer)</h4>
+                <div class="hsl-mode-tabs">
+                  <button type="button" class="hsl-mode-btn active" data-hsl-mode="hue">Đổi màu (Hue)</button>
+                  <button type="button" class="hsl-mode-btn" data-hsl-mode="sat">Bão hòa (Sat)</button>
+                  <button type="button" class="hsl-mode-btn" data-hsl-mode="lum">Độ sáng (Lum)</button>
+                </div>
+              </div>
+              <div id="hslSlidersContainer" class="hsl-sliders-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- THANH THƯỚC CHIA VẠCH ĐỘ CHÍNH XÁC CAO M3 (PRECISION TICK RULER DOCK) -->
+      <div class="m3-ruler-dock" id="m3RulerDock">
+        <div class="m3-ruler-header">
+          <div class="m3-ruler-title-wrap">
+            <span class="m3-ruler-badge" id="rulerActiveLabel">Phơi sáng (EV)</span>
+            <output class="m3-ruler-readout" id="rulerActiveValue">0</output>
+          </div>
+          <div class="m3-ruler-actions">
+            <span class="m3-ruler-hint">Kéo thước hoặc lăn chuột để tinh chỉnh · Nhấp đúp về 0</span>
+            <button type="button" id="rulerResetParamBtn" class="m3-tonal-chip">↺ Về 0</button>
+          </div>
+        </div>
+        <canvas id="m3TickRulerCanvas" width="760" height="54"></canvas>
+        <div class="m3-param-pill-strip" id="m3ParamPillStrip" role="tablist" aria-label="Chọn nhanh thông số thước đo"></div>
+      </div>
+    </section>
+
+    <!-- ZONE 3: BẢNG ĐIỀU KHIỂN BÊN PHẢI (M3 INSPECTOR CARD) -->
+    <aside class="controls m3-inspector-card m3-inspector-panel">
+      <!-- Thanh vuốt thu gọn / mở rộng cho điện thoại (Mobile Drawer Handle) -->
+      <div class="mobile-drawer-handle" id="mobileDrawerHandle" title="Chạm để thu gọn hoặc mở rộng bảng điều khiển">
+        <div class="drawer-pill-bar"></div>
+      </div>
+      <!-- Khối Biểu đồ RGB Histogram & Bảng màu Chủ đạo -->
+      <div class="inspector-section telemetry-card">
+        <div class="section-header">
+          <span>Biểu đồ RGB & Bảng màu</span>
+          <div class="diagnostic-pills">
+            <button type="button" class="diag-pill active" data-diag="Off" title="Xem ảnh bình thường">Chuẩn</button>
+            <button type="button" class="diag-pill" data-diag="ZoneMap" title="Bản đồ 11 vùng phơi sáng Ansel Adams Zone System">Zone Map</button>
+            <button type="button" class="diag-pill" data-diag="Zebra" title="Cảnh báo sọc đỏ vùng cháy sáng và xanh vùng bệt tối">Zebra</button>
+          </div>
+        </div>
+        <canvas id="histogramCanvas" width="320" height="84"></canvas>
+        <div class="palette-bar" id="dominantPaletteBar" title="5 sắc thái màu chủ đạo trích xuất trực tiếp từ bức ảnh (Nhấn vào ô màu để sao chép mã HEX)"></div>
+        <div class="stats-bar" id="statsBar">
+          <span class="stat-chip">EV: <b id="statEv">0.0</b></span>
+          <span class="stat-chip">DR: <b id="statDr">DR100</b></span>
+          <span class="stat-chip">WB: <b id="statWb">5500K</b></span>
+          <span class="stat-chip">Vùng sáng: <b id="statClip">0%</b></span>
+        </div>
+      </div>
+
+      <!-- Thanh chuyển Tab M3 Segmented Button -->
+      <div class="m3-segmented-tabs" role="tablist">
+        <button type="button" class="m3-seg-btn active" data-tab-target="tabFilm">🎞️ Màu phim</button>
+        <button type="button" class="m3-seg-btn" data-tab-target="tabBasic">☀️ Ánh sáng</button>
+        <button type="button" class="m3-seg-btn" data-tab-target="tabOptical">✨ Quang học</button>
+      </div>
+
+      <!-- TAB 1: MÀU PHIM, PRESET & KHUNG TRIỂN LÃM -->
+      <div id="tabFilm" class="m3-tab-pane active">
+        <div class="inspector-section">
+          <div class="section-header">
+            <span>Công thức Phim nổi bật</span>
+            <div class="section-header-links">
+              <button id="inlineSurpriseBtn" type="button" class="reset-link" title="Chọn ngẫu nhiên 1 trong 392 công thức">🎲 Ngẫu nhiên</button>
+              <button id="openFullCatalogInline" type="button" class="reset-link">Mở 392 màu ➔</button>
+            </div>
+          </div>
+          <div class="preset-ribbon" id="presetRibbon"></div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="section-header">
+            <span>Giả lập Film & Khung EXIF</span>
+            <button id="resetAll" type="button" class="reset-link">Đặt lại gốc</button>
+          </div>
+          <label class="select-row">Giả lập Film
+            <select id="film">
+              <option>Original</option><option>Provia</option><option>Velvia</option><option>Astia</option>
+              <option>Classic Chrome</option><option>PRO Neg. Hi</option><option>PRO Neg. Std</option>
+              <option>Classic Neg.</option><option>Nostalgic Neg.</option><option>ETERNA</option>
+              <option>ETERNA Bleach Bypass</option><option>Acros</option><option>Monochrome</option><option>Sepia</option>
+            </select>
+          </label>
+          <label class="select-row">Dải tương phản (DR)
+            <select id="dr"><option value="100">DR100 (Chuẩn)</option><option value="200">DR200 (Bảo toàn vùng sáng)</option><option value="400">DR400 (Mở rộng tối đa)</option></select>
+          </label>
+          <label class="select-row">Khung Triển lãm (30 mẫu)
+            <select id="frameStyle"></select>
+          </label>
+          <div id="frameExifControls" class="frame-exif-controls" hidden>
+            <input id="frameTitleInput" type="text" placeholder="Tiêu đề / Máy ảnh (VD: FUJIFILM X100VI)" value="" />
+            <input id="frameExifInput" type="text" placeholder="Thông số ống kính (VD: 23mm f/2.0 · 1/500s · ISO 400)" value="" />
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: ÁNH SÁNG, ĐƯỜNG CONG TONE & CÂN BẰNG TRẮNG -->
+      <div id="tabBasic" class="m3-tab-pane" hidden>
+        <div class="inspector-section">
+          <div class="section-header">
+            <span>Đường cong Tone (Spline Curve)</span>
+            <button id="resetCurve" type="button" class="reset-link">Đặt lại</button>
+          </div>
+          <div class="curve-container">
+            <canvas id="curveCanvas" width="260" height="175"></canvas>
+            <div class="curve-presets">
+              <button type="button" data-curve="linear">Tuyến tính</button>
+              <button type="button" data-curve="scurve">S-Curve</button>
+              <button type="button" data-curve="matte">Phim Mờ</button>
+              <button type="button" data-curve="contrast">Tương phản</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="section-header"><span>Ánh sáng & Cân bằng trắng</span></div>
+          <div id="slidersBasic" class="sliders"></div>
+        </div>
+      </div>
+
+      <!-- TAB 3: QUANG HỌC 3.0, HẠT PHIM & IN PHÒNG TỐI -->
+      <div id="tabOptical" class="m3-tab-pane" hidden>
+        <div class="inspector-section">
+          <div class="section-header">
+            <span>Quang học 3.0 & Hạt phim</span>
+            <span class="badge-new">3.0 Lab</span>
+          </div>
+          <label class="select-row">Kích thước hạt
+            <select id="grainSize">
+              <option value="1">Nhỏ mịn (Small 35mm)</option>
+              <option value="2">To cổ điển (Large 16mm)</option>
+            </select>
+          </label>
+          <label class="select-row">Viền tím quang học
+            <select id="chromatic">
+              <option value="0">Tắt (Ống kính hiện đại)</option>
+              <option value="1">Nhẹ (Vintage 35mm f/1.4)</option>
+              <option value="2">Mạnh (Анаморфот / Helios)</option>
+            </select>
+          </label>
+          <label class="select-row">In Phòng tối Cổ điển
+            <select id="darkroomProcess">
+              <option value="None">Chuẩn màu (Standard Color)</option>
+              <option value="Cyanotype">Xanh Phổ 1842 (Cyanotype Blueprint)</option>
+              <option value="Platinum">Bạch kim Palladium (Platinum Print)</option>
+              <option value="Selenium">Ngâm Selenium Bạc (Selenium Silver)</option>
+              <option value="SplitGrade">In Tách Bậc (Ilford Split-Grade)</option>
+            </select>
+          </label>
+          <div id="slidersOptical" class="sliders"></div>
+        </div>
+      </div>
+
+      <p id="status" role="status">Đang khởi tạo IRO Studio 3.0 M3 Expressive...</p>
+    </aside>
+  </main>
+
+  <!-- THANH ĐIỀU HƯỚNG DƯỚI ĐÁY DÀNH CHO ĐIỆN THOẠI & TABLET (M3 BOTTOM NAV) -->
+  <nav class="m3-bottom-nav" id="m3BottomNav">
+    <button type="button" class="bottom-nav-item active" data-rail-target="tabFilm" title="Màu phim">
+      <span class="nav-icon">🎞️</span>
+      <span class="nav-label">Phim</span>
+    </button>
+    <button type="button" class="bottom-nav-item" data-rail-target="tabBasic" title="Ánh sáng">
+      <span class="nav-icon">☀️</span>
+      <span class="nav-label">Ánh sáng</span>
+    </button>
+    <button type="button" class="bottom-nav-item" data-rail-target="tabOptical" title="Quang học">
+      <span class="nav-icon">✨</span>
+      <span class="nav-label">Quang học</span>
+    </button>
+    <button type="button" class="bottom-nav-item" id="mobileToolsBtn" title="Menu công cụ">
+      <span class="nav-icon">🎛️</span>
+      <span class="nav-label">Công cụ</span>
+    </button>
+    <button type="button" class="bottom-nav-item" id="mobileAuthBtn" title="Tài khoản">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Tài khoản</span>
+    </button>
+  </nav>
+
+  <!-- HỘP THOẠI ĐĂNG KÝ / ĐĂNG NHẬP TÀI KHOẢN (AUTH MODAL) -->
+  <div id="authModal" class="contact-sheet-modal auth-dialog-modal" hidden>
+    <div class="contact-sheet-header">
+      <div class="auth-header-title">
+        <span class="auth-logo-badge">✦</span>
+        <h3>Tài khoản IRO Studio 3.0</h3>
+      </div>
+      <button id="closeAuthModal" type="button">✕ Đóng</button>
+    </div>
+    <div class="auth-modal-body">
+      <div class="auth-tab-bar">
+        <button type="button" id="authTabLogin" class="auth-tab active">Đăng nhập</button>
+        <button type="button" id="authTabRegister" class="auth-tab">Đăng ký tài khoản</button>
+      </div>
+
+      <!-- Form Đăng nhập -->
+      <form id="loginForm" class="auth-form">
+        <div class="auth-field">
+          <label for="loginAccountInput">Tên đăng nhập hoặc Email</label>
+          <input type="text" id="loginAccountInput" placeholder="VD: admin hoặc email@domain.com" required autocomplete="username" />
+        </div>
+        <div class="auth-field">
+          <label for="loginPasswordInput">Mật khẩu</label>
+          <div class="password-wrapper">
+            <input type="password" id="loginPasswordInput" placeholder="Nhập mật khẩu" required autocomplete="current-password" />
+            <button type="button" class="toggle-pwd-btn" data-target="loginPasswordInput" title="Hiện/ẩn mật khẩu">👁️</button>
+          </div>
+        </div>
+        <p id="loginErrorMsg" class="auth-error-msg" hidden></p>
+        <button type="submit" id="submitLoginBtn" class="primary auth-submit-btn">Đăng nhập</button>
+        <p class="auth-hint">Chưa có tài khoản? <a href="#" id="switchToRegisterLink">Đăng ký miễn phí</a></p>
+      </form>
+
+      <!-- Form Đăng ký -->
+      <form id="registerForm" class="auth-form" hidden>
+        <div class="auth-field">
+          <label for="regUsernameInput">Tên đăng nhập</label>
+          <input type="text" id="regUsernameInput" placeholder="3-24 ký tự chữ thường, số, gạch dưới" required autocomplete="username" />
+        </div>
+        <div class="auth-field">
+          <label for="regFullNameInput">Họ và tên</label>
+          <input type="text" id="regFullNameInput" placeholder="Nguyễn Văn A" required autocomplete="name" />
+        </div>
+        <div class="auth-field">
+          <label for="regEmailInput">Địa chỉ Email</label>
+          <input type="email" id="regEmailInput" placeholder="email@domain.com" required autocomplete="email" />
+        </div>
+        <div class="auth-field">
+          <label for="regPasswordInput">Mật khẩu</label>
+          <div class="password-wrapper">
+            <input type="password" id="regPasswordInput" placeholder="Tối thiểu 6 ký tự" minlength="6" required autocomplete="new-password" />
+            <button type="button" class="toggle-pwd-btn" data-target="regPasswordInput" title="Hiện/ẩn mật khẩu">👁️</button>
+          </div>
+        </div>
+        <p id="registerErrorMsg" class="auth-error-msg" hidden></p>
+        <button type="submit" id="submitRegisterBtn" class="primary auth-submit-btn">Tạo tài khoản mới</button>
+        <p class="auth-hint">Đã có tài khoản? <a href="#" id="switchToLoginLink">Đăng nhập ngay</a></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- HỘP THOẠI QUẢN TRỊ VIÊN QUẢN LÝ NGƯỜI DÙNG (ADMIN MODAL) -->
+  <div id="adminUserModal" class="contact-sheet-modal admin-mgmt-modal" hidden>
+    <div class="contact-sheet-header">
+      <div>
+        <h3>🛠️ Quản lý Tài khoản & Phân quyền Hệ thống</h3>
+        <p class="modal-sub">Dành cho Quản trị viên (Admin) — Giám sát thành viên, phân quyền và khóa tài khoản</p>
+      </div>
+      <button id="closeAdminUserModal" type="button">✕ Đóng</button>
+    </div>
+    <div class="admin-modal-body">
+      <div class="admin-toolbar">
+        <input type="search" id="adminUserSearchInput" placeholder="🔍 Tìm kiếm thành viên theo username hoặc email..." />
+        <button type="button" id="adminRefreshUsersBtn" class="m3-tonal-btn">↻ Làm mới</button>
+      </div>
+      <div class="admin-table-wrapper">
+        <table class="admin-users-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Người dùng</th>
+              <th>Email</th>
+              <th>Vai trò</th>
+              <th>Trạng thái</th>
+              <th>Ảnh đã sửa</th>
+              <th>Ngày tạo</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="adminUsersTableBody">
+            <!-- Render động qua JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- HỘP THOẠI THƯ VIỆN ẢNH CỦA TÔI (MY PHOTOS MODAL) -->
+  <div id="myPhotosModal" class="contact-sheet-modal" hidden>
+    <div class="contact-sheet-header">
+      <div>
+        <h3>📁 Thư viện Ảnh Đã Sửa của Tôi</h3>
+        <p class="modal-sub">Lịch sử các bức ảnh bạn đã chỉnh sửa được lưu trên máy chủ IRO</p>
+      </div>
+      <button id="closeMyPhotosModal" type="button">✕ Đóng</button>
+    </div>
+    <div class="my-photos-body">
+      <div id="myPhotosGrid" class="my-photos-grid">
+        <p class="empty-hint">Đang tải lịch sử ảnh...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lớp phủ thông báo thả ảnh trực quan (Drag & Drop Overlay) -->
+  <div id="dragDropOverlay" class="drag-drop-overlay" hidden>
+    <div class="drag-drop-box">
+      <div class="drag-drop-icon">📥</div>
+      <h3>Thả ảnh vào đây</h3>
+      <p>Nhận ảnh JPG, PNG, WebP, HEIC/HEIF, AVIF hoặc tệp .cube</p>
+    </div>
+  </div>
+
+  <script type="module" src="app.mjs?v=20261016-fix3"></script>
+</body>
+</html>

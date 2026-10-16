@@ -1,0 +1,13 @@
+{
+  "name": "iro-backend",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend API & Database Service for IRO Film Studio 3.0",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7"
+  }
+}

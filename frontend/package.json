@@ -1,0 +1,10 @@
+{
+  "name": "iro-frontend",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Frontend Web Client & Static Reverse Proxy for IRO Studio 3.0",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}

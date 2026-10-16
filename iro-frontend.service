@@ -1,0 +1,22 @@
+[Unit]
+Description=IRO Studio 3.0 Frontend Service (Port 3000)
+After=network.target iro-backend.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/iro-studio/frontend
+ExecStart=/usr/bin/node server.mjs
+Restart=always
+RestartSec=3
+Environment=PORT=3000
+Environment=HOST=0.0.0.0
+Environment=BACKEND_URL=http://127.0.0.1:5000
+Environment=NODE_ENV=production
+LimitNOFILE=65535
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

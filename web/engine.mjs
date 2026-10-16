@@ -11,9 +11,13 @@ export const defaults = {
   sharpness: 0, nr: -4, exposure: 0, temperature: 0, rotation: 0,
   frame: 'None', frameStyle: 0,
   curvePoints: [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]],
-  shadowsHue: 0, shadowsSat: 0,
-  midtonesHue: 0, midtonesSat: 0,
-  highlightsHue: 0, highlightsSat: 0
+  shadowsHue: 0, shadowsSat: 0, shadowsLum: 0,
+  midtonesHue: 0, midtonesSat: 0, midtonesLum: 0,
+  highlightsHue: 0, highlightsSat: 0, highlightsLum: 0,
+  hslHue: [0, 0, 0, 0, 0, 0, 0, 0],
+  hslSat: [0, 0, 0, 0, 0, 0, 0, 0],
+  hslLum: [0, 0, 0, 0, 0, 0, 0, 0],
+  vignette: 0
 };
 
 export const films = {
@@ -25,10 +29,65 @@ export const films = {
   'ASTIA': [.95, .91, 4, 0, 1],
   'ETERNA': [.7, .82, 1, 2, 4],
   'ACROS': [0, 1.17, 0, 0, 0],
-  'Nostalgic Neg.': [.87, .96, 9, 3, -5]
+  'Nostalgic Neg.': [.87, .96, 9, 3, -5],
+  // Approximate editor looks, not measured or proprietary camera color profiles.
+  'PRO Neg. Hi': [.9, 1.08, 2, 0, -1],
+  'PRO Neg. Std': [.9, .93, 2, 0, -1],
+  'ETERNA Bleach Bypass': [.5, 1.18, 0, 0, 0],
+  'Monochrome': [0, 1, 0, 0, 0],
+  'Sepia': [0, 1, 20, 6, -12]
 };
 
+// UI/source spellings for the profiles already implemented above.
+films.Provia = films.PROVIA;
+films.Astia = films.ASTIA;
+films.Acros = films.ACROS;
+
+// Editor looks made from actual supported controls, not camera-profile downloads.
+export const CURATED_PRESETS = [
+  { name: 'Phố trầm', subtitle: 'Chrome · tương phản nhẹ', settings: { film: 'Classic Chrome', color: -1, shadow: 1, chrome: 1 } },
+  { name: 'Nắng ấm', subtitle: 'Hoài niệm · sắc vàng', settings: { film: 'Nostalgic Neg.', temperature: 18, highlight: -1, grain: 8 } },
+  { name: 'Điện ảnh lạnh', subtitle: 'Eterna · bóng xanh', settings: { film: 'ETERNA', temperature: -12, shadowsHue: 235, shadowsSat: 20 } },
+  { name: 'Đen trắng', subtitle: 'Acros · hạt phim', settings: { film: 'Acros', shadow: 1, grain: 8, clarity: 15 } },
+  { name: 'Cảnh sắc', subtitle: 'Velvia · màu rực', settings: { film: 'Velvia', chrome: 1, highlight: -1, color: 1 } },
+  { name: 'Chân dung dịu', subtitle: 'Astia · tông mềm', settings: { film: 'Astia', color: -0.5, temperature: 5, shadow: -0.5 } }
+];
+
+export const LIGHTCRAFT_PRESETS = [
+  { name: 'Vàng dịu', sub: 'Trung tính ấm · da sáng', wheels: { midtones: { hue: 35, sat: 18, lum: 4 } }, hslSat: [0, -12, -10, 0, 0, 0, 0, 0], clarity: -8 },
+  { name: 'Bóng xanh', sub: 'Bóng lạnh · sáng ấm', wheels: { shadows: { hue: 225, sat: 24, lum: 0 }, highlights: { hue: 40, sat: 12, lum: 0 } }, clarity: 12 },
+  { name: 'Giấy mờ', sub: 'Nâng đen · nén sáng', curve: [[0, 0.08], [0.25, 0.24], [0.75, 0.76], [1, 0.94]], hslSat: [-10, -10, -15, -15, -10, -10, -10, -10], vignette: 10 },
+  { name: 'Lục điện ảnh', sub: 'Lục trầm · cam nổi', wheels: { shadows: { hue: 190, sat: 20, lum: -3 }, midtones: { hue: 28, sat: 10, lum: 2 } }, hslSat: [0, 8, -15, -25, -10, -12, -15, -10], hslLum: [0, 8, 0, -10, -8, -8, 0, 0], vignette: 18 }
+];
+
 const clamp = (v, lo = 0, hi = 255) => Math.max(lo, Math.min(hi, v));
+const boundedNumber = (value, lo, hi, fallback = 0) => Number.isFinite(Number(value)) ? clamp(Number(value), lo, hi) : fallback;
+const bandValues = values => Array.from({ length: 8 }, (_, index) => boundedNumber(values?.[index], -100, 100));
+const HSL_CENTERS = [0, 30, 60, 120, 180, 240, 270, 330, 360];
+
+function mixHsl(rgb, hueBands, saturationBands, luminanceBands) {
+  const [r, g, b] = rgb.map(v => clamp(v) / 255);
+  const high = Math.max(r, g, b), low = Math.min(r, g, b), delta = high - low;
+  if (delta < 1e-8) return rgb; // Neutral pixels have no color band.
+  let hue = high === r ? ((g - b) / delta) % 6 : high === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+  hue = (hue * 60 + 360) % 360;
+  let lightness = (high + low) / 2;
+  let saturation = delta / (1 - Math.abs(2 * lightness - 1));
+  let band = 0;
+  while (band < 7 && hue >= HSL_CENTERS[band + 1]) band++;
+  const fraction = (hue - HSL_CENTERS[band]) / (HSL_CENTERS[band + 1] - HSL_CENTERS[band]);
+  const blend = values => values[band] * (1 - fraction) + values[(band + 1) % 8] * fraction;
+  hue = (hue + blend(hueBands) * 0.3 + 360) % 360;
+  saturation = clamp(saturation * (1 + blend(saturationBands) / 100), 0, 1);
+  const lightShift = blend(luminanceBands) / 100;
+  lightness += lightShift >= 0 ? (1 - lightness) * lightShift : lightness * lightShift;
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const secondary = chroma * (1 - Math.abs((hue / 60) % 2 - 1));
+  const channels = hue < 60 ? [chroma, secondary, 0] : hue < 120 ? [secondary, chroma, 0]
+    : hue < 180 ? [0, chroma, secondary] : hue < 240 ? [0, secondary, chroma]
+      : hue < 300 ? [secondary, 0, chroma] : [chroma, 0, secondary];
+  return channels.map(value => (value + lightness - chroma / 2) * 255);
+}
 
 export function parseCube(text) {
   let size = 0, rows = [], min = [0, 0, 0], max = [1, 1, 1], title = 'Custom LUT';
@@ -191,13 +250,18 @@ export function rotatePixels90(input, width, height, rotation = 0) {
 
 export function processPixels(input, width, height, rawSettings, lut, frameSeed = 0) {
   const s = { ...defaults, ...rawSettings };
-  const out = new Uint8ClampedArray(input.length), film = films[s.film] || films.Original;
+  const filmName = Object.keys(films).find(name => name.toLowerCase() === String(s.film).trim().toLowerCase());
+  const out = new Uint8ClampedArray(input.length), film = films[filmName] || films.Original;
   const exp = 2 ** s.exposure, wb = { Auto: 0, Daylight: 3, Cloudy: 9, Tungsten: -15 }[s.wb] || 0;
   const hasCurve = Array.isArray(s.curvePoints) && s.curvePoints.some((p, idx) => Math.abs(p[0] - p[1]) > 1e-3 || (idx === 0 && p[0] > 0));
   const curveLut = hasCurve ? buildMonotoneCurveLut(s.curvePoints) : null;
   const caShift = Math.round(clamp(s.chromatic || 0, 0, 4));
   const invW = 1 / Math.max(1, width), invH = 1 / Math.max(1, height);
   const cx = width * 0.5, cy = height * 0.5, maxRad = Math.max(1, Math.hypot(cx, cy));
+  const hueBands = bandValues(s.hslHue), satBands = bandValues(s.hslSat), lumBands = bandValues(s.hslLum);
+  const hasHsl = [...hueBands, ...satBands, ...lumBands].some(value => value !== 0);
+  const hasWheels = ['shadows', 'midtones', 'highlights'].some(tone => s[`${tone}Sat`] > 0 || s[`${tone}Lum`] !== 0);
+  const vignette = boundedNumber(s.vignette, -50, 50) / 100;
 
   for (let i = 0; i < input.length; i += 4) {
     const pxIndex = i >>> 2;
@@ -296,28 +360,31 @@ export function processPixels(input, width, height, rawSettings, lut, frameSeed 
       }
     }
 
-    // 3-Way Color Grading Wheels (Shadows · Midtones · Highlights OkLab/Luminance-weighted)
-    if ((s.shadowsSat && s.shadowsSat > 0) || (s.midtonesSat && s.midtonesSat > 0) || (s.highlightsSat && s.highlightsSat > 0)) {
+    if (hasHsl) v = mixHsl(v, hueBands, satBands, lumBands);
+
+    // 3-Way Color Grading Wheels (Shadows · Midtones · Highlights luminance-weighted)
+    if (hasWheels) {
       const curL = clamp((v[0] * .2126 + v[1] * .7152 + v[2] * .0722) / 255, 0, 1);
       const wSh = Math.pow(1 - curL, 2);
       const wHi = Math.pow(curL, 2);
       const wMid = 4 * curL * (1 - curL);
 
-      const applyWheel = (hueDeg, satPct, weight) => {
-        if (!satPct || satPct <= 0 || weight <= 0) return;
+      const applyWheel = (hueDeg, satPct, lumPct, weight) => {
+        if (weight <= 0) return;
         const rad = ((hueDeg || 0) * Math.PI) / 180;
         const rShift = Math.cos(rad);
         const gShift = Math.cos(rad - (2 * Math.PI / 3));
         const bShift = Math.cos(rad + (2 * Math.PI / 3));
-        const mag = (satPct / 100) * weight * 60;
-        v[0] = clamp(v[0] + rShift * mag, 0, 255);
-        v[1] = clamp(v[1] + gShift * mag, 0, 255);
-        v[2] = clamp(v[2] + bShift * mag, 0, 255);
+        const mag = (boundedNumber(satPct, 0, 100) / 100) * weight * 60;
+        const light = boundedNumber(lumPct, -50, 50) / 100 * weight * 255;
+        v[0] = clamp(v[0] + rShift * mag + light, 0, 255);
+        v[1] = clamp(v[1] + gShift * mag + light, 0, 255);
+        v[2] = clamp(v[2] + bShift * mag + light, 0, 255);
       };
 
-      applyWheel(s.shadowsHue, s.shadowsSat, wSh);
-      applyWheel(s.midtonesHue, s.midtonesSat, wMid);
-      applyWheel(s.highlightsHue, s.highlightsSat, wHi);
+      applyWheel(s.shadowsHue, s.shadowsSat, s.shadowsLum, wSh);
+      applyWheel(s.midtonesHue, s.midtonesSat, s.midtonesLum, wMid);
+      applyWheel(s.highlightsHue, s.highlightsSat, s.highlightsLum, wHi);
     }
 
     // Hóa chất Giấy Ảnh Phòng Tối Cổ Điển (Historic Darkroom Print Processes)
@@ -344,6 +411,11 @@ export function processPixels(input, width, height, rawSettings, lut, frameSeed 
         v[0] = curveP * 248;
         v[1] = curveP * 240;
         v[2] = curveP * 226;
+      } else if (s.darkroomProcess === 'Selenium') {
+        const silver = clamp((pLum - 0.5) * 1.12 + 0.5, 0, 1);
+        v[0] = silver * 245;
+        v[1] = silver * 242;
+        v[2] = silver * 255;
       }
     }
 
@@ -374,6 +446,13 @@ export function processPixels(input, width, height, rawSettings, lut, frameSeed 
         v[1] = 255 - (255 - clamp(v[1])) * Math.max(0, 1 - leak * 0.48);
         v[2] = 255 - (255 - clamp(v[2])) * Math.max(0, 1 - leak * 0.12);
       }
+    }
+
+    if (vignette !== 0) {
+      const midX = (width - 1) / 2, midY = (height - 1) / 2;
+      const distance = ((x - midX) ** 2 + (y - midY) ** 2) / Math.max(1, midX ** 2 + midY ** 2);
+      const amount = Math.abs(vignette) * distance ** 2;
+      v = v.map(value => vignette > 0 ? value * (1 - amount) : value + (255 - value) * amount);
     }
 
     // Organic Dual-Band Film Grain (hỗ trợ frameSeed cho Living Film 24fps)
@@ -497,26 +576,31 @@ export function processPixels(input, width, height, rawSettings, lut, frameSeed 
 export function computeHistogramAndStats(pixels) {
   const rHist = new Uint32Array(256), gHist = new Uint32Array(256), bHist = new Uint32Array(256), lHist = new Uint32Array(256);
   const totalPixels = Math.max(1, pixels.length >>> 2);
-  let rSum = 0, gSum = 0, bSum = 0;
+  let rSum = 0, gSum = 0, bSum = 0, clipped = 0;
   for (let i = 0; i < pixels.length; i += 4) {
     const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
     const l = clamp(Math.round(r * .2126 + g * .7152 + b * .0722));
     rHist[r]++; gHist[g]++; bHist[b]++; lHist[l]++;
     rSum += r; gSum += g; bSum += b;
+    if (Math.max(r, g, b) >= 250) clipped++;
   }
-  let acc = 0, p05 = 0, p50 = 128, p95 = 255;
-  const t05 = totalPixels * 0.05, t50 = totalPixels * 0.50, t95 = totalPixels * 0.95;
-  for (let i = 0; i < 256; i++) {
-    acc += lHist[i];
-    if (acc >= t05 && p05 === 0) p05 = i;
-    if (acc >= t50 && p50 === 128) p50 = i;
-    if (acc >= t95) { p95 = i; break; }
-  }
+  const percentile = fraction => {
+    let accumulated = 0;
+    for (let i = 0; i < 256; i++) {
+      accumulated += lHist[i];
+      if (accumulated >= totalPixels * fraction) return i;
+    }
+    return 0;
+  };
+  const p05 = percentile(0.05), p50 = percentile(0.50), p95 = percentile(0.95);
   const rMean = rSum / totalPixels, gMean = gSum / totalPixels, bMean = bSum / totalPixels;
   return {
     rHist, gHist, bHist, lHist,
     p05, p50, p95,
     rMean, gMean, bMean,
+    maxBin: Math.max(1, ...rHist, ...gHist, ...bHist),
+    evShift: Math.log2(Math.max(1, rMean * .2126 + gMean * .7152 + bMean * .0722) / 128),
+    highlightClipPct: clipped / totalPixels * 100,
     redCast: (rMean - gMean) / 255,
     blueCast: (bMean - gMean) / 255
   };
@@ -527,7 +611,7 @@ export function autoBalanceSettings(pixels, current = defaults) {
   const stats = computeHistogramAndStats(pixels);
   const exposure = clamp(Math.round(((126 - stats.p50) / 96) * 3) / 3, -1.33, 1.33);
   const highlight = stats.p95 > 235 ? -1 : stats.p95 < 185 ? 1 : 0;
-  const shadow = stats.p05 < 20 ? 1 : stats.p05 > 65 ? -1 : 0;
+  const shadow = stats.p05 < 20 ? -1 : stats.p05 > 65 ? 1 : 0;
   const dr = stats.p95 - stats.p05 > 210 ? 400 : stats.p95 - stats.p05 > 165 ? 200 : 100;
   const red = clamp(Math.round(-stats.redCast * 18), -4, 4);
   const blue = clamp(Math.round(-stats.blueCast * 18), -4, 4);
@@ -570,8 +654,24 @@ export function promptToRecipeVi(promptText, base = defaults) {
   return { settings: next, reasonVi: 'Đã tạo công thức Fujifilm Đường Phố Đa Dụng (Classic Chrome + Clarity +15 + Pro-Mist nhẹ).' };
 }
 
-export function encodeRecipeCode(s) {
-  const payload = [
+export function encodeRecipeCode(rawSettings = defaults) {
+  const s = { ...defaults, ...rawSettings };
+  const extra = {};
+  for (const tone of ['shadows', 'midtones', 'highlights']) {
+    for (const [suffix, low, high] of [['Hue', 0, 360], ['Sat', 0, 100], ['Lum', -50, 50]]) {
+      const key = tone + suffix, value = boundedNumber(s[key], low, high);
+      if (value !== 0) extra[key] = value;
+    }
+  }
+  for (const key of ['hslHue', 'hslSat', 'hslLum']) {
+    const values = bandValues(s[key]);
+    if (values.some(value => value !== 0)) extra[key] = values;
+  }
+  if (s.vignette) extra.vignette = boundedNumber(s.vignette, -50, 50);
+  if (Array.isArray(s.curvePoints) && s.curvePoints.some(point => Math.abs(point[0] - point[1]) > 1e-6)) {
+    extra.curvePoints = s.curvePoints.slice(0, 32).map(point => [boundedNumber(point[0], 0, 1), boundedNumber(point[1], 0, 1)]);
+  }
+  const fields = [
     s.film, s.amount, s.lutAmount, s.dr, s.grain, s.grainSize || 1,
     s.chrome || 0, s.chromeBlue || 0, s.halation || 0, s.wb,
     s.red, s.blue, s.highlight, s.shadow, s.color, s.sharpness, s.nr,
@@ -579,7 +679,10 @@ export function encodeRecipeCode(s) {
     s.proMist || 0, s.bleachBypass || 0, s.lightLeak || 0, s.chromatic || 0, s.skinProtect || 0,
     s.clarity || 0, s.texture || 0, s.dehaze || 0, s.swirlyBokeh || 0, s.depthFog || 0,
     s.darkroomProcess || 'None', s.dateStamp ? 1 : 0
-  ].join('|');
+  ];
+  // Keep all legacy IRO1 positions; older codes simply have no final extension.
+  if (Object.keys(extra).length) fields.push(JSON.stringify(extra));
+  const payload = fields.join('|');
   const b64 = typeof Buffer !== 'undefined'
     ? Buffer.from(payload, 'utf8').toString('base64url')
     : btoa(unescape(encodeURIComponent(payload))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -587,20 +690,23 @@ export function encodeRecipeCode(s) {
 }
 
 export function decodeRecipeCode(code) {
-  if (typeof code !== 'string' || !code.startsWith('IRO1-')) throw Error('Mã IRO Recipe không hợp lệ.');
+  if (typeof code !== 'string' || !code.startsWith('IRO1-') || code.length > 16_384) throw Error('Mã IRO Recipe không hợp lệ.');
   const raw = code.slice(5);
   const str = typeof Buffer !== 'undefined'
     ? Buffer.from(raw, 'base64url').toString('utf8')
     : decodeURIComponent(escape(atob(raw.replace(/-/g, '+').replace(/_/g, '/'))));
   const p = str.split('|');
   if (p.length < 19) throw Error('Mã IRO Recipe bị thiếu trường dữ liệu.');
-  return {
-    ...defaults,
-    film: films[p[0]] ? p[0] : 'Original',
+  for (let index = 1; index < Math.min(29, p.length); index++) {
+    if (index !== 9 && !Number.isFinite(Number(p[index]))) throw Error('Mã IRO Recipe chứa thông số không hợp lệ.');
+  }
+  const result = {
+    ...structuredClone(defaults),
+    film: Object.keys(films).find(name => name.toLowerCase() === p[0].toLowerCase()) || 'Original',
     amount: clamp(Number(p[1]), 0, 100),
     lutAmount: clamp(Number(p[2]), 0, 100),
     dr: [100, 200, 400].includes(Number(p[3])) ? Number(p[3]) : 100,
-    grain: [0, 8, 18].includes(Number(p[4])) ? Number(p[4]) : 0,
+    grain: clamp(Number(p[4]), 0, 30),
     grainSize: [1, 2].includes(Number(p[5])) ? Number(p[5]) : 1,
     chrome: [0, 1, 2].includes(Number(p[6])) ? Number(p[6]) : 0,
     chromeBlue: [0, 1, 2].includes(Number(p[7])) ? Number(p[7]) : 0,
@@ -625,9 +731,30 @@ export function decodeRecipeCode(code) {
     dehaze: p[26] !== undefined ? clamp(Number(p[26]), -100, 100) : 0,
     swirlyBokeh: p[27] !== undefined ? clamp(Number(p[27]), 0, 100) : 0,
     depthFog: p[28] !== undefined ? clamp(Number(p[28]), 0, 100) : 0,
-    darkroomProcess: ['None', 'SplitGrade', 'Cyanotype', 'Platinum'].includes(p[29]) ? p[29] : 'None',
+    darkroomProcess: ['None', 'SplitGrade', 'Cyanotype', 'Platinum', 'Selenium'].includes(p[29]) ? p[29] : 'None',
     dateStamp: p[30] === '1'
   };
+  if (p[31]) {
+    let extra;
+    try { extra = JSON.parse(p[31]); } catch { throw Error('Phần LightCraft trong mã recipe không hợp lệ.'); }
+    if (!extra || typeof extra !== 'object' || Array.isArray(extra)) throw Error('Phần LightCraft trong mã recipe không hợp lệ.');
+    for (const tone of ['shadows', 'midtones', 'highlights']) {
+      for (const [suffix, low, high] of [['Hue', 0, 360], ['Sat', 0, 100], ['Lum', -50, 50]]) {
+        const key = tone + suffix;
+        if (key in extra) result[key] = boundedNumber(extra[key], low, high);
+      }
+    }
+    for (const key of ['hslHue', 'hslSat', 'hslLum']) if (key in extra) result[key] = bandValues(extra[key]);
+    if ('vignette' in extra) result.vignette = boundedNumber(extra.vignette, -50, 50);
+    if ('curvePoints' in extra) {
+      if (!Array.isArray(extra.curvePoints) || extra.curvePoints.length < 2 || extra.curvePoints.length > 32 ||
+          extra.curvePoints.some(point => !Array.isArray(point) || point.length !== 2 || point.some(value => !Number.isFinite(value)))) {
+        throw Error('Đường cong trong mã recipe không hợp lệ.');
+      }
+      result.curvePoints = extra.curvePoints.map(point => point.map(value => clamp(value, 0, 1)));
+    }
+  }
+  return result;
 }
 
 export function embedRecipeIntoPixels(pixels, settings) {
@@ -650,7 +777,7 @@ export function embedRecipeIntoPixels(pixels, settings) {
 export function extractRecipeFromPixels(pixels) {
   if (!pixels || pixels.length < 400 * 4) return null;
   const maxBits = Math.floor(pixels.length / 4) * 3;
-  const maxChars = Math.min(320, Math.floor(maxBits / 8));
+  const maxChars = Math.min(16_400, Math.floor(maxBits / 8));
   let chars = '';
   for (let c = 0; c < maxChars; c++) {
     let byte = 0;
@@ -673,7 +800,7 @@ export function extractRecipeFromPixels(pixels) {
   }
 }
 
-export function bakeRecipeToCube(rawSettings, size = 17, title = 'IRO Studio Custom Recipe') {
+export function bakeRecipeToCube(rawSettings, size = 17, title = 'IRO Studio Custom Recipe', lut = null) {
   if (!Number.isInteger(size) || size < 2 || size > 65) throw Error('Kích thước LUT xuất cần từ 2 đến 65.');
   const total = size ** 3;
   const grid = new Uint8ClampedArray(total * 4);
@@ -691,10 +818,10 @@ export function bakeRecipeToCube(rawSettings, size = 17, title = 'IRO Studio Cus
   const cleanSettings = {
     ...defaults, ...rawSettings,
     grain: 0, halation: 0, proMist: 0, lightLeak: 0, chromatic: 0,
-    clarity: 0, texture: 0, swirlyBokeh: 0, depthFog: 0,
+    clarity: 0, texture: 0, swirlyBokeh: 0, depthFog: 0, vignette: 0,
     sharpness: 0, nr: -4, diagnosticMode: 'Off'
   };
-  const baked = processPixels(grid, total, 1, cleanSettings);
+  const baked = processPixels(grid, total, 1, cleanSettings, lut);
   const lines = [
     `TITLE "${title.replace(/"/g, '')}"`,
     `# Generated by IRO Studio 3.0 Flagship`,
@@ -804,19 +931,12 @@ export const PHOTO_FRAMES = [
 ];
 
 export const defaultPhotoInfo = {
-  camera: 'FUJIFILM X-T5',
-  lens: 'XF 35mm F1.4 R',
-  focal: '35mm',
-  aperture: 'f/1.4',
-  shutter: '1/250s',
-  iso: 'ISO 400',
-  date: '2026.10.14',
-  author: 'IRO Studio'
+  camera: '', lens: '', focal: '', aperture: '', shutter: '', iso: '', date: '', author: ''
 };
 
 export function parseFujiRecipe(recipe, base = defaults) {
   const raw = recipe.rawSettings || {};
-  const s = { ...base };
+  const s = { ...structuredClone(defaults), ...(base && typeof base === 'object' ? base : {}) };
   const notes = [];
 
   if (recipe.film) s.film = recipe.film;
@@ -891,7 +1011,11 @@ export function parseFujiRecipe(recipe, base = defaults) {
     }
   }
 
-  return { settings: s, notes, name: recipe.name || 'Fuji Recipe', film: s.film, sensor: (recipe.sensors || []).join(' / ') };
+  return {
+    settings: s, notes, id: recipe.id || `${recipe.sourceUrl || ''}#${recipe.name || 'custom'}`,
+    name: recipe.name || 'Fuji Recipe', film: s.film, wb: s.wb, dr: s.dr,
+    sourceUrl: recipe.sourceUrl || '', sensor: (recipe.sensors || []).join(' / ')
+  };
 }
 
 function resolveFrameIndex(styleIdOrKey) {
@@ -943,14 +1067,14 @@ export function renderPhotoFrame(sourceCanvas, pixels, settings = defaults, info
   const w = sourceCanvas.width;
   const h = sourceCanvas.height;
   const safeInfo = {
-    camera: info?.camera || 'FUJIFILM X-T5',
-    lens: info?.lens || 'XF 35mm F1.4 R',
-    focal: info?.focal || '35mm',
-    aperture: info?.aperture || 'f/1.4',
-    shutter: info?.shutter || '1/250s',
-    iso: info?.iso || 'ISO 400',
-    date: info?.date || '2026.10.14',
-    author: info?.author || (settings.film ? `FUJIFILM ${settings.film}` : 'IRO Studio')
+    camera: info?.camera || '',
+    lens: info?.lens || '',
+    focal: info?.focal || '',
+    aperture: info?.aperture || '',
+    shutter: info?.shutter || '',
+    iso: info?.iso || '',
+    date: info?.date || '',
+    author: info?.author || ''
   };
   const settingsStr = [safeInfo.focal, safeInfo.aperture, safeInfo.shutter, safeInfo.iso].filter(Boolean).join('  ');
   const title = safeInfo.camera || 'PHOTO';

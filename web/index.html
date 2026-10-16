@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>IRO Studio 3.0 — Material Design 3 Expressive Color Lab</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20261016-fix1" />
 </head>
 <body>
   <header class="topbar m3-top-app-bar">
@@ -65,9 +65,11 @@
         <a href="dashboard.html" target="_blank" class="capsule-icon-btn" title="Bảng Điều Khiển Giám Sát Realtime Máy Chủ" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">📊</a>
       </div>
 
-      <input id="referenceInput" type="file" accept="image/*" hidden />
-      <label class="file m3-tonal-btn" id="importLut" title="Nhập tệp 3D LUT (.cube) từ máy">📂 .cube<input id="lut" type="file" accept=".cube" hidden /></label>
-      <label class="file m3-outlined-btn" id="open" title="Mở ảnh từ máy (JPG, PNG, WebP) — Tự động khôi phục công thức ẩn LSB nếu có">📷 Mở ảnh<input id="photo" type="file" accept="image/*" hidden /></label>
+      <input id="referenceInput" type="file" accept="image/*,.heic,.heif" style="position:fixed;top:-9999px;left:-9999px;opacity:0;" />
+      <button type="button" class="file m3-tonal-btn" id="importLutBtn" title="Nhập tệp 3D LUT (.cube) từ máy">📂 .cube</button>
+      <input id="lut" type="file" accept=".cube" style="position:fixed;top:-9999px;left:-9999px;opacity:0;" />
+      <button type="button" class="file m3-outlined-btn" id="openBtn" title="Mở ảnh từ máy (JPG, PNG, WebP, HEIC)">📷 Mở ảnh</button>
+      <input id="photo" type="file" accept="image/*,.heic,.heif,.jpg,.jpeg,.png,.webp,.avif" style="position:fixed;top:-9999px;left:-9999px;opacity:0;" />
       <button id="export" type="button" class="primary m3-filled-cta" disabled>💾 Xuất ảnh</button>
     </div>
   </header>
@@ -351,8 +353,8 @@
             <select id="frameStyle"></select>
           </label>
           <div id="frameExifControls" class="frame-exif-controls" hidden>
-            <input id="frameTitleInput" type="text" placeholder="Tiêu đề / Máy ảnh (VD: FUJIFILM X100VI)" value="FUJIFILM X-TRANS V · IRO STUDIO" />
-            <input id="frameExifInput" type="text" placeholder="Thông số ống kính (VD: 23mm f/2.0 · 1/500s · ISO 400)" value="23mm f/2.0 · 1/500s · ISO 400" />
+            <input id="frameTitleInput" type="text" placeholder="Tiêu đề / Máy ảnh (VD: FUJIFILM X100VI)" value="" />
+            <input id="frameExifInput" type="text" placeholder="Thông số ống kính (VD: 23mm f/2.0 · 1/500s · ISO 400)" value="" />
           </div>
         </div>
       </div>
@@ -418,6 +420,6 @@
     </aside>
   </main>
 
-  <script type="module" src="app.mjs"></script>
+  <script type="module" src="app.mjs?v=20261016-fix1"></script>
 </body>
 </html>

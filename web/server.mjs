@@ -24,7 +24,8 @@ const mimeTypes = {
   '.cube': 'text/plain; charset=utf-8'
 };
 
-const port = Number(process.env.PORT) || 4173;
+const configuredPort = Number(process.env.PORT?.trim() || 4173);
+const port = Number.isInteger(configuredPort) && configuredPort >= 0 && configuredPort <= 65535 ? configuredPort : 4173;
 const host = process.env.HOST || '0.0.0.0';
 
 http.createServer(async (req, res) => {
@@ -52,10 +53,13 @@ http.createServer(async (req, res) => {
     const headers = {
       'Content-Type': contentType,
       'Access-Control-Allow-Origin': '*',
-      'X-Content-Type-Options': 'nosniff'
+      'X-Content-Type-Options': 'nosniff',
+      'Vary': 'Accept-Encoding'
     };
 
-    if (ext === '.html' || ext === '.json') {
+    // These URLs are reused between releases. Revalidate the complete module/UI set
+    // so a fresh HTML document cannot boot against an older engine or stylesheet.
+    if (['.html', '.json', '.css', '.js', '.mjs'].includes(ext)) {
       headers['Cache-Control'] = 'no-cache';
     } else {
       headers['Cache-Control'] = 'public, max-age=86400';
@@ -77,10 +81,11 @@ http.createServer(async (req, res) => {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('404 Not Found');
   }
-}).listen(port, host, () => {
+}).listen(port, host, function () {
+  const listeningPort = this.address().port;
   console.log(`\n======================================================`);
   console.log(`  IRO Studio 3.0 Web Server đang chạy tại:`);
-  console.log(`  Local:   http://localhost:${port}`);
-  console.log(`  Network: http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}`);
+  console.log(`  Local:   http://localhost:${listeningPort}`);
+  console.log(`  Network: http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${listeningPort}`);
   console.log(`======================================================\n`);
 });

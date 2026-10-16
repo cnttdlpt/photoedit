@@ -901,9 +901,9 @@ if ($('themeToggleBtn')) {
 // M3 Segmented Category Tabs kèm hiệu ứng Staggered Cascade
 if ($('categoryTabs')) {
   const allGroups = [...document.querySelectorAll('.control-group')];
-  $('categoryTabs').querySelectorAll('.md3-tab').forEach(tab => {
+  $('categoryTabs').querySelectorAll('.cat-tab').forEach(tab => {
     tab.onclick = () => {
-      $('categoryTabs').querySelectorAll('.md3-tab').forEach(t => t.classList.remove('active'));
+      $('categoryTabs').querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       const cat = tab.dataset.cat;
       allGroups.forEach((grp, idx) => {
@@ -1144,9 +1144,9 @@ if ($('recipeSearchInput')) {
 }
 
 if ($('recipeSensorChips')) {
-  $('recipeSensorChips').querySelectorAll('.recipe-chip').forEach(chip => {
+  $('recipeSensorChips').querySelectorAll('.chip').forEach(chip => {
     chip.onclick = () => {
-      $('recipeSensorChips').querySelectorAll('.recipe-chip').forEach(c => c.classList.remove('active'));
+      $('recipeSensorChips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       currentSensor = chip.dataset.sensor;
       renderRecipeGrid();
@@ -1475,3 +1475,43 @@ initRecipeLibrary();
 initToneCurveWidget();
 initColorWheelsWidget();
 
+// === NEW UX PANEL HANDLERS (Redesigned Darkroom Layout) ===
+
+// Panel collapse toggles
+if ($('toggleLeft')) {
+  $('toggleLeft').onclick = () => {
+    const ws = document.querySelector('.workspace');
+    if (ws) ws.classList.toggle('collapse-left');
+  };
+}
+if ($('toggleRight')) {
+  $('toggleRight').onclick = () => {
+    const ws = document.querySelector('.workspace');
+    if (ws) ws.classList.toggle('collapse-right');
+  };
+}
+
+// Open hint button (shown on drop zone when no image)
+if ($('openHint')) {
+  $('openHint').onclick = () => $('photo').click();
+}
+
+// Hide drop hint once an image is loaded
+const _origSetSource = setSource;
+// Patch: hide drop hint when source is set
+const _hideDropHint = () => {
+  const dh = $('dropHint');
+  if (dh) dh.hidden = true;
+};
+$('photo').addEventListener('change', _hideDropHint);
+drop.addEventListener('drop', _hideDropHint);
+
+// Active film name display in panel header
+const _filmBtns = document.querySelectorAll('.film');
+_filmBtns.forEach(btn => {
+  const _orig = btn.onclick;
+  btn.addEventListener('click', () => {
+    const activeFilmNameEl = $('activeFilmName');
+    if (activeFilmNameEl) activeFilmNameEl.textContent = btn.dataset.film || btn.textContent.trim();
+  });
+});

@@ -81,7 +81,7 @@ enum LightCraftSubTab: Int, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Precision Tick Ruler Slider (Matches Android TickRulerView)
+// MARK: - Precision Tick Ruler Slider (Material Design 3 Expressive Gaussian Wave & Tonal Delta)
 struct TickRulerSlider: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
@@ -93,22 +93,25 @@ struct TickRulerSlider: View {
     @State private var dragStartValue: Double = 0
     @State private var isDragging: Bool = false
 
-    private let tickSpacing: CGFloat = 8.5
+    private let tickSpacing: CGFloat = 9.5
     private let majorTickInterval: Int = 5
 
     var body: some View {
         GeometryReader { geo in
             let width = geo.size.width
+            let height = geo.size.height
             let centerX = width / 2
+            let centerY = height * 0.56
             let span = range.upperBound - range.lowerBound
 
-            ZStack(alignment: .top) {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.white)
+            ZStack {
+                RoundedRectangle(cornerRadius: isDragging ? 18 : 14, style: .continuous)
+                    .fill(Studio.m3SurfaceLow)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .strokeBorder(Studio.line, lineWidth: 1.0)
+                        RoundedRectangle(cornerRadius: isDragging ? 18 : 14, style: .continuous)
+                            .strokeBorder(isDragging ? Studio.ink.opacity(0.35) : Studio.line, lineWidth: 1.0)
                     )
+                    .animation(Studio.m3Spring, value: isDragging)
 
                 Canvas { context, size in
                     guard span > 0 && step > 0 else { return }
@@ -117,52 +120,68 @@ struct TickRulerSlider: View {
                     let defaultStepIndex = (defaultValue - range.lowerBound) / step
                     let centerOffset = CGFloat(currentStepIndex) * tickSpacing
 
+                    // Vẽ dải màu Tonal Delta nối từ mốc mặc định (0.0) đến vị trí hiện tại
+                    let zeroX = centerX + CGFloat(defaultStepIndex - currentStepIndex) * tickSpacing
+                    let deltaLeft = max(10, min(zeroX, centerX))
+                    let deltaRight = min(width - 10, max(zeroX, centerX))
+                    if deltaRight - deltaLeft > 1.5 {
+                        let deltaRect = CGRect(x: deltaLeft, y: centerY - 10, width: deltaRight - deltaLeft, height: 20)
+                        context.fill(
+                            Path(roundedRect: deltaRect, cornerRadius: 4),
+                            with: .color(Studio.m3Amber.opacity(0.20))
+                        )
+                    }
+
                     let minStep = max(0, Int((centerOffset - centerX) / tickSpacing) - 2)
                     let maxStep = min(Int(totalSteps), Int((centerOffset + centerX) / tickSpacing) + 2)
-
                     guard minStep <= maxStep else { return }
 
-                    let activeLo = min(currentStepIndex, defaultStepIndex) - 0.1
-                    let activeHi = max(currentStepIndex, defaultStepIndex) + 0.1
+                    let sigma = tickSpacing * 3.2
+                    let boostFactor: CGFloat = isDragging ? 1.0 : 0.42
 
                     for i in minStep...maxStep {
                         let x = centerX + (CGFloat(i) * tickSpacing - centerOffset)
+                        if x < 8 || x > width - 8 { continue }
+
+                        let dist = abs(x - centerX)
+                        let edgeFade = max(0, 1.0 - (dist / (width * 0.48)))
+                        let gaussianBoost = exp(-(dist * dist) / (2 * sigma * sigma)) * boostFactor
+
                         let isMajor = (i % majorTickInterval == 0)
                         let stepVal = Double(i) * step + range.lowerBound
-                        let isZero = abs(stepVal - defaultValue) < (step * 0.4)
-                        let inActiveSpan = Double(i) >= activeLo && Double(i) <= activeHi && abs(value - defaultValue) >= (step * 0.4)
+                        let isZero = abs(stepVal - defaultValue) < (step * 0.35)
+
+                        let baseHalfH: CGFloat = isZero ? 9.5 : (isMajor ? 8.0 : 4.5)
+                        let halfH = baseHalfH * (1.0 + 0.42 * gaussianBoost)
 
                         var path = Path()
-                        let tickHeight: CGFloat = isMajor ? 16 : 9
-                        let startY: CGFloat = isMajor ? 12 : 16
-                        path.move(to: CGPoint(x: x, y: startY))
-                        path.addLine(to: CGPoint(x: x, y: startY + tickHeight))
+                        path.move(to: CGPoint(x: x, y: centerY - halfH))
+                        path.addLine(to: CGPoint(x: x, y: centerY + halfH))
 
                         let color: Color
-                        if isZero || inActiveSpan {
-                            color = Studio.ink
+                        if isZero {
+                            color = Studio.m3Amber
                         } else if isMajor {
-                            color = Studio.ink.opacity(0.55)
+                            color = Studio.ink.opacity(Double(min(1.0, edgeFade * 0.85 + gaussianBoost * 0.25)))
                         } else {
-                            color = Studio.muted.opacity(0.35)
+                            color = Studio.muted.opacity(Double(min(1.0, edgeFade * 0.50 + gaussianBoost * 0.20)))
                         }
-                        let lineWidth: CGFloat = isZero ? 1.8 : (isMajor ? 1.3 : 0.9)
+                        let lineWidth: CGFloat = isZero ? 2.2 : (isMajor ? 1.5 : 1.0)
                         context.stroke(path, with: .color(color), lineWidth: lineWidth)
+
+                        if isZero {
+                            let dotRect = CGRect(x: x - 2.2, y: centerY - halfH - 6, width: 4.4, height: 4.4)
+                            context.fill(Path(ellipseIn: dotRect), with: .color(Studio.m3Amber))
+                        }
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: isDragging ? 18 : 14, style: .continuous))
 
-                // Needle Indicator at top center
-                VStack(spacing: 0) {
-                    Image(systemName: "arrowtriangle.down.fill")
-                        .font(.system(size: 7.5))
-                        .foregroundStyle(Studio.ink)
-
-                    Rectangle()
-                        .fill(Studio.ink)
-                        .frame(width: 1.5, height: 6)
-                }
-                .offset(y: 2)
+                // Kim chỉ thị trung tâm chuẩn M3 Expressive (tự vươn dài khi kéo)
+                Capsule()
+                    .fill(Studio.ink)
+                    .frame(width: isDragging ? 3.4 : 2.6, height: isDragging ? height - 8 : height - 14)
+                    .animation(Studio.m3Spring, value: isDragging)
             }
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {
@@ -178,12 +197,20 @@ struct TickRulerSlider: View {
                             onEditingChanged?(true)
                         }
                         let stepsDelta = -Double(gesture.translation.width / tickSpacing)
-                        var newVal = dragStartValue + stepsDelta * step
-                        newVal = max(range.lowerBound, min(range.upperBound, newVal))
+                        var rawVal = dragStartValue + stepsDelta * step
+                        // Nam châm hút tự động về mốc mặc định 0.0 (Magnetic Zero-Detent Snap)
+                        if abs(rawVal - defaultValue) < (step * 0.35) {
+                            rawVal = defaultValue
+                        }
+                        var newVal = max(range.lowerBound, min(range.upperBound, rawVal))
                         newVal = (newVal / step).rounded() * step
 
                         if abs(newVal - value) >= (step * 0.8) {
-                            Haptics.selection()
+                            if abs(newVal - defaultValue) < (step * 0.25) {
+                                Haptics.medium()
+                            } else {
+                                Haptics.selection()
+                            }
                             value = newVal
                         }
                     }
@@ -193,7 +220,7 @@ struct TickRulerSlider: View {
                     }
             )
         }
-        .frame(height: 38)
+        .frame(height: 44)
     }
 }
 

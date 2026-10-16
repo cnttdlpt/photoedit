@@ -593,21 +593,37 @@ public final class DesktopWidgets {
             int ticks = 40;
             int midY = h / 2 + 2;
 
+            double norm = (value - min) / Math.max(1e-6, max - min);
+            double defNorm = (defaultValue - min) / Math.max(1e-6, max - min);
+            int px = pad + (int) Math.round(norm * trackW);
+            int zeroX = pad + (int) Math.round(defNorm * trackW);
+
+            // Vẽ thanh Tonal Delta chuẩn M3 nối từ mốc mặc định đến giá trị hiện tại
+            int dLeft = Math.min(zeroX, px);
+            int dRight = Math.max(zeroX, px);
+            if (dRight - dLeft > 2) {
+                g2.setColor(new Color(224, 122, 59, 44));
+                g2.fillRoundRect(dLeft, midY - 10, dRight - dLeft, 20, 6, 6);
+            }
+
+            // Vẽ các vạch chia với hiệu ứng phóng đại sóng Gaussian quanh con trỏ
+            double sigma = 26.0;
             for (int i = 0; i <= ticks; i++) {
                 int tx = pad + (i * trackW) / ticks;
                 boolean major = (i % 5 == 0);
-                int th = major ? 18 : 11;
-                g2.setColor(major ? new Color(0x45, 0x4A, 0x54) : new Color(0xB0, 0xB6, 0xC2));
-                g2.setStroke(new BasicStroke(major ? 1.5f : 1.0f));
+                double dist = Math.abs(tx - px);
+                double gaussian = Math.exp(-(dist * dist) / (2.0 * sigma * sigma));
+                int baseTh = major ? 16 : 9;
+                int th = (int) Math.round(baseTh * (1.0 + 0.42 * gaussian));
+                g2.setColor(major ? new Color(0x35, 0x3A, 0x44) : new Color(0xA6, 0xAE, 0xBC));
+                g2.setStroke(new BasicStroke(major ? 1.6f : 1.05f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
                 g2.drawLine(tx, midY - th / 2, tx, midY + th / 2);
             }
 
-            // Con trỏ tam giác + vạch đen đậm tại vị trí giá trị hiện tại
-            double norm = (value - min) / Math.max(1e-6, max - min);
-            int px = pad + (int) Math.round(norm * trackW);
+            // Con trỏ tam giác + kim chỉ thị M3 tại vị trí giá trị hiện tại
             g2.setColor(INK_DARK);
-            g2.setStroke(new BasicStroke(2.4f));
-            g2.drawLine(px, midY - 12, px, midY + 12);
+            g2.setStroke(new BasicStroke(2.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.drawLine(px, midY - 13, px, midY + 13);
 
             int[] triX = {px - 5, px + 5, px};
             int[] triY = {5, 5, 12};

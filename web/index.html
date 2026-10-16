@@ -1,411 +1,416 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>IRO Studio — Film Color Lab</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>IRO Studio 3.0 — Material Design 3 Expressive Color Lab</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="app">
-
-    <!-- TOP NAV BAR -->
-    <header class="topbar">
+  <header class="topbar m3-top-app-bar">
+    <!-- Cụm Trái: Thương hiệu + Viên thuốc Công thức đang dùng + Tìm nhanh Ctrl+K -->
+    <div class="brand-cluster">
       <div class="brand">
-        <div class="logo">
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-            <circle cx="11" cy="11" r="10" stroke="var(--primary)" stroke-width="2"/>
-            <circle cx="11" cy="11" r="4" fill="var(--primary)"/>
-            <line x1="11" y1="1" x2="11" y2="4" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="11" y1="18" x2="11" y2="21" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="1" y1="11" x2="4" y2="11" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/>
-            <line x1="18" y1="11" x2="21" y2="11" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
+        <div class="brand-badge" aria-hidden="true">
+          <span class="brand-dot"></span>
         </div>
-        <span class="brand-name">IRO</span>
-        <span class="version-chip">Film Lab</span>
+        <div class="brand-copy">
+          <h1>IRO <span class="badge-pro">3.0 M3</span></h1>
+          <p class="subtitle">Fujifilm X-Trans V · LightCraft Darkroom</p>
+        </div>
+      </div>
+      <button id="activeRecipeQuickPill" type="button" class="m3-recipe-hero-pill" title="Nhấn để mở Kho 392 Công thức Fujifilm (Phím L)">
+        <span class="pill-sparkle">✦</span>
+        <span id="topActiveFilmLabel">Classic Chrome · Gốc</span>
+      </button>
+      <button id="quickCmdBtn" type="button" class="m3-cmd-trigger" title="Tìm kiếm nhanh công thức & lệnh (Ctrl+K)">
+        <span>🔍 Tìm nhanh</span>
+        <kbd>Ctrl K</kbd>
+      </button>
+    </div>
+
+    <!-- Cụm Giữa: Viên thuốc Segmented Capsule chuẩn Android Tablet / iOS -->
+    <div class="m3-center-capsule" role="toolbar" aria-label="Công cụ sân khấu">
+      <button id="undoBtn" type="button" class="capsule-icon-btn" title="Hoàn tác (Ctrl+Z)" disabled>↶</button>
+      <button id="redoBtn" type="button" class="capsule-icon-btn" title="Làm lại (Ctrl+Y)" disabled>↷</button>
+      <span class="capsule-divider"></span>
+      <button id="rotate90" type="button" class="capsule-icon-btn" title="Xoay ảnh 90° (Phím R)" disabled>↻</button>
+      <button id="compareBtn" type="button" class="capsule-pill-btn" title="Bật/tắt thanh gạt so sánh Trước/Sau hoặc nhấn giữ Phím Space" disabled>⇄ So sánh</button>
+      <button id="quadViewBtn" type="button" class="capsule-pill-btn" title="Xem lưới 4 phương án màu cùng lúc (Phím Q)" disabled>⊞ Lưới 4</button>
+      <button id="livingFilmBtn" type="button" class="capsule-pill-btn" title="Chạy hạt phim sống 24 hình/giây (Living Film)" disabled>🎞️ 24fps</button>
+    </div>
+
+    <!-- Cụm Phải: AI Co-Pilot + Kho 392 + Giao diện + Mở/Xuất ảnh -->
+    <div class="actions m3-right-actions">
+      <div class="m3-action-group ai-cluster">
+        <button id="aiAuto" type="button" class="btn-ai" title="AI phân tích bối cảnh & cân bằng thông minh" disabled>⚡ AI Auto</button>
+        <button id="promptRecipeBtn" type="button" class="btn-magic" title="Nhập mô tả tiếng Việt để AI pha công thức màu">🪄 Tả cảnh</button>
+        <button id="matchRefBtn" type="button" class="btn- tonal-pill" title="Sao chép bảng màu từ một bức ảnh mẫu bất kỳ" disabled>🎨 Học mẫu</button>
       </div>
 
-      <nav class="top-nav">
-        <button class="nav-btn" id="open">
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M1.5 3.5h4l1.5 1.5h6.5v8H1.5v-9.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-          Mở ảnh
-        </button>
-        <button class="nav-btn" id="recipeLibraryBtn">
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1.5" y="2.5" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><line x1="4" y1="5.5" x2="11" y2="5.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="4" y1="8" x2="9" y2="8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          392 Công thức
-        </button>
-        <button class="nav-btn" id="lightCraftBtn">
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7.5 2v5.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          LightCraft
-        </button>
-        <div class="nav-divider"></div>
-        <button class="nav-btn" id="aiAuto">
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 1L9.18 5.5H14L10.41 8.5L11.91 13L7.5 10.5L3.09 13L4.59 8.5L1 5.5H5.82L7.5 1Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-          AI Cân bằng
-        </button>
-        <button class="nav-btn" id="promptRecipeBtn">
-          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 3.5h11M2 7.5h8M2 11.5h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          Gợi ý AI
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <button class="icon-btn" id="themeToggleBtn" title="Chuyển giao diện">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.2 3.2l1 1M11.8 11.8l1 1M3.2 12.8l1-1M11.8 4.2l1-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </button>
-        <button class="btn-export" id="export">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Xuất ảnh
-        </button>
+      <div class="m3-action-group utility-cluster">
+        <button id="lightCraftBtn" type="button" class="btn-lightcraft" title="Mở Buồng tối LightCraft (Tone Curve, 3-Way Color Wheels, 8-Band HSL)" disabled>🎛️ LightCraft</button>
+        <button id="recipeLibraryBtn" type="button" class="btn-library" title="Khám phá 392 công thức Fujifilm X Weekly">🎞️ Kho 392</button>
+        <button id="surpriseRecipeBtn" type="button" class="capsule-icon-btn" title="Thử ngẫu nhiên 1 trong 392 công thức phim (Phím X)">🎲</button>
+        <button id="dateStampBtn" type="button" class="capsule-icon-btn" title="Dập dấu ngày tháng LED cam thập niên 90" disabled>📅</button>
+        <button id="contactSheetBtn" type="button" class="capsule-icon-btn" title="Xuất bảng 12 biến thể màu Film (Contact Sheet)" disabled>🗂️</button>
+        <button id="exportCube" type="button" class="capsule-icon-btn" title="Xuất công thức hiện tại thành tệp 3D LUT (.cube)" disabled>🧊</button>
+        <button id="shareCode" type="button" class="capsule-icon-btn" title="Sao chép / Dán mã công thức IRO1" disabled>🔗</button>
+        <button id="themeToggleBtn" type="button" class="capsule-icon-btn" title="Chuyển chế độ Sáng (Warm Porcelain) / Tối (Obsidian Darkroom)">☀️</button>
       </div>
-    </header>
 
-    <!-- MAIN WORKSPACE -->
-    <div class="workspace">
+      <input id="referenceInput" type="file" accept="image/*" hidden />
+      <label class="file m3-tonal-btn" id="importLut" title="Nhập tệp 3D LUT (.cube) từ máy">📂 .cube<input id="lut" type="file" accept=".cube" hidden /></label>
+      <label class="file m3-outlined-btn" id="open" title="Mở ảnh từ máy (JPG, PNG, WebP) — Tự động khôi phục công thức ẩn LSB nếu có">📷 Mở ảnh<input id="photo" type="file" accept="image/*" hidden /></label>
+      <button id="export" type="button" class="primary m3-filled-cta" disabled>💾 Xuất ảnh</button>
+    </div>
+  </header>
 
-      <!-- LEFT PANEL: Film Simulations + Histogram -->
-      <aside class="panel panel-left" id="panelLeft">
-        <div class="panel-toggle" id="toggleLeft" title="Ẩn/hiện panel">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8 2L4 6l4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
+  <main class="workspace m3-three-zone-studio">
+    <!-- ZONE 1: THANH ĐIỀU HƯỚNG DỌC MATERIAL 3 (NAVIGATION RAIL) -->
+    <nav class="m3-nav-rail" aria-label="Điều hướng Studio">
+      <button type="button" class="rail-item active" data-rail-target="tabFilm" title="Giả lập Màu phim & Khung EXIF (Phím 1)">
+        <span class="rail-pill"><span class="rail-icon">🎞️</span></span>
+        <span class="rail-label">Màu phim</span>
+      </button>
+      <button type="button" class="rail-item" data-rail-target="tabBasic" title="Ánh sáng, Phơi sáng & Cân bằng trắng (Phím 2)">
+        <span class="rail-pill"><span class="rail-icon">☀️</span></span>
+        <span class="rail-label">Ánh sáng</span>
+      </button>
+      <button type="button" class="rail-item" data-rail-target="tabOptical" title="Quang học 3.0, Hạt phim & Phòng tối (Phím 3)">
+        <span class="rail-pill"><span class="rail-icon">✨</span></span>
+        <span class="rail-label">Quang học</span>
+      </button>
+      <button type="button" class="rail-item" data-rail-action="lightcraft" title="Buồng tối LightCraft: Tone Curve, 3-Way Wheels & HSL (Phím 4)">
+        <span class="rail-pill"><span class="rail-icon">🎛️</span></span>
+        <span class="rail-label">LightCraft</span>
+      </button>
+      <button type="button" class="rail-item" data-rail-action="library" title="Kho 392 công thức màu FujiXWeekly (Phím L)">
+        <span class="rail-pill warm-pill"><span class="rail-icon">📚</span></span>
+        <span class="rail-label">Kho 392</span>
+      </button>
 
-        <!-- Film Simulation Rail -->
-        <div class="panel-section">
-          <div class="section-header">
-            <span class="section-title">Màu phim</span>
-            <span class="section-sub" id="activeFilmName">Classic Chrome</span>
-          </div>
-          <div id="films" class="film-rail"></div>
-        </div>
+      <div class="rail-spacer"></div>
 
-        <!-- LUT 3D -->
-        <div class="panel-section">
-          <div class="section-header">
-            <span class="section-title">3D LUT</span>
-            <button class="text-link" id="importLut">+ Nhập .cube</button>
-          </div>
-          <select class="select-field" id="lutSelect">
-            <option value="">Không dùng LUT 3D</option>
-          </select>
-          <div class="slider-row" id="lutAmountRow">
-            <span class="slider-label">Cường độ</span>
-            <input type="range" id="lutAmount" min="0" max="100" value="100" class="slim-range">
-            <output id="lutValue" class="mono-val">100%</output>
-          </div>
-          <button class="text-link danger" id="removeLut" hidden>Gỡ bỏ LUT</button>
-        </div>
+      <button type="button" class="rail-bottom-btn" id="railSampleCycleBtn" title="Đổi ảnh mẫu Studio kế tiếp">
+        <span>🖼️</span>
+        <small>Ảnh mẫu</small>
+      </button>
+      <button type="button" class="rail-bottom-btn" id="railResetAllBtn" title="Đặt lại toàn bộ thông số về gốc">
+        <span>↺</span>
+        <small>Đặt lại</small>
+      </button>
+    </nav>
 
-        <!-- Histogram -->
-        <div class="panel-section histogram-section">
-          <div class="section-header">
-            <span class="section-title">Histogram</span>
-            <span class="mono-val" id="histPeak">RGB</span>
-          </div>
-          <canvas id="histogram" width="256" height="72"></canvas>
-          <div id="paletteSwatches" class="palette-row"></div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="panel-section quick-actions">
-          <button class="action-btn" id="matchRefBtn">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5" cy="5" r="3" stroke="currentColor" stroke-width="1.3"/><circle cx="9" cy="9" r="3" stroke="currentColor" stroke-width="1.3"/></svg>
-            Học màu ảnh mẫu
-          </button>
-          <button class="action-btn" id="quadViewBtn">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
-            So sánh 4 màu
-          </button>
-          <button class="action-btn" id="livingFilmBtn">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 3.5h12M1 10.5h12M3 1v12M11 1v12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-            Living Film 24fps
-          </button>
-        </div>
-      </aside>
-
-      <!-- CENTER STAGE -->
-      <section class="stage">
-        <!-- Image Toolbar (floating top of stage) -->
-        <div class="stage-toolbar">
-          <div class="stage-info">
-            <h2 class="look-name" id="lookTitle">Classic Chrome</h2>
-            <span class="img-meta" id="filename">Fujifilm Demo</span>
-            <span class="img-tag" id="imageSize">ẢNH MẪU</span>
-          </div>
-          <div class="stage-tools">
-            <label class="compare-wrap">
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="0.5" y="0.5" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1.2"/><line x1="6.5" y1="1" x2="6.5" y2="12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-              <input type="range" id="splitCompare" min="0" max="100" value="0" class="compare-range">
-            </label>
-            <button class="tool-btn" id="compare" title="Giữ xem gốc">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h5.5M12 7H7M7 7V1M7 7v6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-            </button>
-            <button class="tool-btn" id="rotate90" title="Xoay 90°">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 9a6 6 0 1 0 1.5-4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M1 3.5L3.5 6V1L1 3.5z" fill="currentColor"/></svg>
-            </button>
-            <button class="tool-btn" id="dateStampBtn" title="Dấu ngày tháng">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2.5" width="12" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><line x1="1" y1="6" x2="13" y2="6" stroke="currentColor" stroke-width="1.3"/><line x1="4.5" y1="1" x2="4.5" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="9.5" y1="1" x2="9.5" y2="4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-            </button>
-            <button class="tool-btn" id="sampleRecipe" title="Công thức mẫu">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-            </button>
-            <button class="tool-btn" id="reset" title="Đặt lại">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 1 0 1-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 2.5V5H4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
+    <!-- ZONE 2: SÂN KHẤU TRUNG TÂM + THƯỚC CHIA VẠCH GAUSSIAN M3 -->
+    <section class="stage-column">
+      <div class="stage" id="stageContainer">
+        <div id="empty" class="empty-state">
+          <div class="empty-icon">📷</div>
+          <h2>IRO Studio 3.0 · Material Design 3 Expressive</h2>
+          <p>Kéo & thả ảnh vào đây, bấm <b>Mở ảnh</b>, hoặc chọn ngay một bối cảnh mẫu bên dưới để trải nghiệm 392 màu phim Fujifilm và động cơ quang học 3.0.</p>
+          <div class="sample-presets">
+            <button type="button" class="sample-btn" data-sample="portrait">👩 Chân dung Hoàng hôn</button>
+            <button type="button" class="sample-btn" data-sample="street">🏮 Phố đêm Neon</button>
+            <button type="button" class="sample-btn" data-sample="landscape">🏔️ Phong cảnh Núi</button>
           </div>
         </div>
 
-        <!-- Canvas Drop Zone -->
-        <div class="canvas-wrap" id="drop">
-          <canvas id="canvas"></canvas>
-          <span id="imageTag" class="img-badge">IRO / CLASSIC CHROME</span>
-          <div id="busy" class="busy-overlay" hidden>
-            <div class="spinner"></div>
-            <span>Đang xử lý màu phim...</span>
-          </div>
-          <!-- Drop hint (shown when no image) -->
-          <div class="drop-hint" id="dropHint">
-            <div class="drop-icon">
-              <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><circle cx="24" cy="24" r="22" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M24 15v9M24 24l-5 5M24 24l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="canvas-viewport" id="canvasViewport">
+          <div class="canvas-wrapper" id="canvasWrapper" hidden>
+            <canvas id="canvas"></canvas>
+            <canvas id="beforeCanvas" class="before-canvas" hidden></canvas>
+            <div id="splitSlider" class="split-slider" hidden>
+              <div class="split-handle">⇄</div>
+              <span class="split-label before">TRƯỚC (GỐC)</span>
+              <span class="split-label after">SAU (IRO 3.0)</span>
             </div>
-            <p class="drop-title">Kéo thả ảnh vào đây</p>
-            <p class="drop-sub">hoặc nhấn <kbd>Mở ảnh</kbd> để chọn từ máy tính</p>
-            <button class="btn-open-hint" id="openHint">Chọn ảnh</button>
           </div>
         </div>
 
-        <!-- Tick Ruler (Bottom of Stage) -->
-        <div class="ruler-dock">
-          <div class="ruler-header">
-            <span class="ruler-param" id="rulerLabel">BÙ SÁNG EV</span>
-            <span class="ruler-value" id="rulerValue">+0.00</span>
+        <!-- Nút nổi thông báo tỷ lệ Zoom (chỉ hiện khi Zoom > 100%) -->
+        <button id="zoomResetBadge" type="button" class="m3-zoom-badge" hidden title="Nhấp để đặt lại khung nhìn 100%">
+          🔍 100% · Đặt lại
+        </button>
+
+        <!-- Lưới 4 phương án màu (Quad-View Audition) -->
+        <div id="quadViewGrid" class="quad-view-grid" hidden></div>
+
+        <!-- Bảng 12 biến thể màu Film (Contact Sheet) -->
+        <div id="contactSheetModal" class="contact-sheet-modal" hidden>
+          <div class="contact-sheet-header">
+            <h3>🗂️ Bảng 12 biến thể màu Film (Contact Sheet) — Nhấn vào bất kỳ ô nào để áp dụng ngay</h3>
+            <button id="closeContactSheet" type="button">✕ Đóng</button>
           </div>
-          <canvas id="tickRulerCanvas" width="720" height="40"></canvas>
+          <div id="contactSheetGrid" class="contact-sheet-grid"></div>
         </div>
 
-        <!-- Status Bar -->
-        <div class="statusbar">
-          <span id="status">Thử màu trên ảnh mẫu hoặc mở ảnh của bạn</span>
-          <div class="statusbar-right">
-            <button class="status-link" id="shareCode">Mã IRO</button>
-            <button class="status-link" id="exportCube">Xuất .CUBE</button>
-            <button class="status-link" id="contactSheetBtn">Contact Sheet</button>
-            <span class="mono-dim">IRO Studio 3.0</span>
+        <!-- Hộp thoại AI Tả Cảnh Pha Màu (Vietnamese NLP Prompt-to-Recipe) -->
+        <div id="promptModal" class="contact-sheet-modal" hidden>
+          <div class="contact-sheet-header">
+            <h3>🪄 AI Tả Cảnh Pha Màu (Vietnamese NLP Prompt-to-Recipe)</h3>
+            <button id="closePromptModal" type="button">✕ Đóng</button>
+          </div>
+          <div class="prompt-modal-body">
+            <p class="prompt-hint">Nhập cảm xúc, địa điểm hoặc thời tiết bằng tiếng Việt. Động cơ ngữ nghĩa IRO sẽ tự động chọn giả lập Film, cân bằng trắng, Pro-Mist, Halation và hạt phim phù hợp:</p>
+            <div class="prompt-input-row">
+              <input id="promptTextInput" type="text" placeholder="VD: Chiều mưa Đà Lạt buồn điện ảnh, Nắng sớm Hà Nội cổ điển, Đêm Sài Gòn Cyberpunk..." />
+              <button id="applyPromptBtn" type="button" class="primary">✨ Pha màu ngay</button>
+            </div>
+            <div class="prompt-tags">
+              <button type="button" class="prompt-chip" data-prompt="Chiều mưa Đà Lạt buồn điện ảnh mờ sương">🌧️ Chiều mưa Đà Lạt</button>
+              <button type="button" class="prompt-chip" data-prompt="Nắng sớm Hà Nội mùa thu hoài cổ ấm áp">🍂 Nắng thu Hà Nội</button>
+              <button type="button" class="prompt-chip" data-prompt="Đêm Sài Gòn neon rực rỡ điện ảnh">🌃 Đêm Sài Gòn Neon</button>
+              <button type="button" class="prompt-chip" data-prompt="Chân dung nàng thơ trong trẻo dịu dàng">🌸 Chân dung Nàng thơ</button>
+              <button type="button" class="prompt-chip" data-prompt="Phóng sự đường phố đen trắng tương phản gắt">🖤 Đường phố Đen trắng</button>
+              <button type="button" class="prompt-chip" data-prompt="Biển mùa hè trong xanh rực rỡ nắng vàng">🏖️ Biển nắng Mùa hè</button>
+            </div>
           </div>
         </div>
-      </section>
 
-      <!-- RIGHT PANEL: Adjustments -->
-      <aside class="panel panel-right" id="panelRight">
-        <div class="panel-toggle panel-toggle-right" id="toggleRight" title="Ẩn/hiện panel">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <!-- Hộp thoại Tìm kiếm nhanh & Phím tắt (Command Palette Ctrl+K) -->
+        <div id="cmdPaletteModal" class="contact-sheet-modal" hidden>
+          <div class="contact-sheet-header">
+            <h3>🔍 Tìm nhanh Công thức & Lệnh tắt Studio (Ctrl+K)</h3>
+            <button id="closeCmdPaletteBtn" type="button">✕ Đóng</button>
+          </div>
+          <div class="prompt-modal-body">
+            <div class="prompt-input-row">
+              <input id="cmdSearchInput" type="search" placeholder="Gõ tên công thức (Kodachrome, Portra, Reggie, Classic Neg...) hoặc lệnh..." />
+            </div>
+            <div id="cmdQuickResults" class="cmd-results-grid"></div>
+            <div class="shortcut-cheat-grid">
+              <span><kbd>Space</kbd> Nhấn giữ xem Ảnh gốc</span>
+              <span><kbd>Ctrl+Z / Y</kbd> Hoàn tác / Làm lại</span>
+              <span><kbd>Phím R</kbd> Xoay ảnh 90°</span>
+              <span><kbd>Phím Q</kbd> Lưới 4 phương án màu</span>
+              <span><kbd>Phím L</kbd> Kho 392 công thức</span>
+              <span><kbd>Phím X</kbd> Thử công thức ngẫu nhiên</span>
+              <span><kbd>Lăn chuột</kbd> Phóng to / Thu nhỏ 400%</span>
+              <span><kbd>Nhấp đúp</kbd> Đặt lại thông số về 0</span>
+            </div>
+          </div>
         </div>
 
-        <!-- Category Tabs -->
-        <div class="cat-tabs" id="categoryTabs">
-          <button class="cat-tab active" data-cat="all">Tất cả</button>
-          <button class="cat-tab" data-cat="0">Sáng</button>
-          <button class="cat-tab" data-cat="1">Màu</button>
-          <button class="cat-tab" data-cat="2">Optics</button>
+        <!-- Hộp thoại Kho 392 Công thức màu Fujifilm X Weekly -->
+        <div id="recipeLibraryModal" class="contact-sheet-modal" hidden>
+          <div class="contact-sheet-header">
+            <div>
+              <h3>🎞️ Kho 392 Công thức màu Fujifilm X Weekly</h3>
+              <p class="modal-sub">Tích hợp trực tiếp 392 công thức từ cơ sở dữ liệu chuẩn của ứng dụng Android & iOS</p>
+            </div>
+            <div class="modal-header-actions">
+              <button id="modalRandomRecipeBtn" type="button" class="m3-tonal-btn">🎲 Thử ngẫu nhiên</button>
+              <button id="closeRecipeLibrary" type="button">✕ Đóng</button>
+            </div>
+          </div>
+          <div class="library-toolbar">
+            <input id="recipeSearchInput" type="search" placeholder="🔍 Tìm trong 392 công thức (VD: Kodachrome, Portra 400, Classic Neg, Cinestill, Reggie...)" />
+            <div id="recipeFilmFilterChips" class="film-filter-chips"></div>
+          </div>
+          <div id="recipeLibraryGrid" class="recipe-library-grid"></div>
         </div>
 
-        <!-- Adjustment Controls -->
-        <div class="controls-scroll">
-          <div id="controls" class="controls"></div>
-        </div>
+        <!-- Hộp thoại Buồng tối Chuyên nghiệp LightCraft -->
+        <div id="lightCraftModal" class="contact-sheet-modal" hidden>
+          <div class="contact-sheet-header">
+            <div>
+              <h3>🎛️ Buồng tối LightCraft Pro (Curves · 3-Way Color Wheels · 8-Band HSL)</h3>
+              <p class="modal-sub">Đồng bộ kiến trúc toán học với LightCraftEngine.java (Android) & LightCraftEngine.swift (iOS)</p>
+            </div>
+            <div class="lightcraft-header-actions">
+              <button id="resetLightCraftBtn" type="button">↺ Đặt lại LightCraft</button>
+              <button id="closeLightCraft" type="button">✕ Đóng</button>
+            </div>
+          </div>
 
-        <!-- Recipe Actions -->
-        <div class="panel-section recipe-actions">
-          <button class="action-btn-full" id="saveRecipe">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 9.5V11.5h9V9.5M6.5 1.5v7M4 6.5l2.5 2.5 2.5-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Lưu công thức
-          </button>
-          <button class="action-btn-full secondary" id="loadRecipe">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3.5V1.5h9v2M6.5 11.5v-7M4 6.5l2.5-2.5 2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Tải công thức
-          </button>
-          <input type="file" id="recipefile" accept=".json" hidden>
-        </div>
+          <div class="lightcraft-body">
+            <!-- Cột 1: 12 Preset Phòng tối + Bàn xoay 3 vùng màu -->
+            <div class="lc-column">
+              <h4>✨ 12 Preset Phòng tối LightCraft</h4>
+              <div id="lightCraftPresetsGrid" class="lc-presets-grid"></div>
 
-        <!-- Export Options -->
-        <div class="panel-section">
+              <h4 style="margin-top:14px">🎨 Bàn xoay pha màu 3 vùng (Shadows · Midtones · Highlights)</h4>
+              <div class="color-wheels-row">
+                <div class="wheel-box">
+                  <canvas id="wheelShadows" width="124" height="124" data-wheel="shadows"></canvas>
+                  <span>Vùng tối (Shadows)</span>
+                  <input id="lumShadows" type="range" min="-50" max="50" step="1" value="0" title="Độ sáng Vùng tối" />
+                </div>
+                <div class="wheel-box">
+                  <canvas id="wheelMidtones" width="124" height="124" data-wheel="midtones"></canvas>
+                  <span>Trung tính (Midtones)</span>
+                  <input id="lumMidtones" type="range" min="-50" max="50" step="1" value="0" title="Độ sáng Trung tính" />
+                </div>
+                <div class="wheel-box">
+                  <canvas id="wheelHighlights" width="124" height="124" data-wheel="highlights"></canvas>
+                  <span>Vùng sáng (Highlights)</span>
+                  <input id="lumHighlights" type="range" min="-50" max="50" step="1" value="0" title="Độ sáng Vùng sáng" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Cột 2: Bộ trộn 8 dải màu HSL chuẩn phòng tối -->
+            <div class="lc-column">
+              <div class="lc-hsl-header">
+                <h4>🌈 Bộ trộn 8 Dải màu chuyên sâu (8-Band HSL Mixer)</h4>
+                <div class="hsl-mode-tabs">
+                  <button type="button" class="hsl-mode-btn active" data-hsl-mode="hue">Đổi màu (Hue)</button>
+                  <button type="button" class="hsl-mode-btn" data-hsl-mode="sat">Bão hòa (Sat)</button>
+                  <button type="button" class="hsl-mode-btn" data-hsl-mode="lum">Độ sáng (Lum)</button>
+                </div>
+              </div>
+              <div id="hslSlidersContainer" class="hsl-sliders-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- THANH THƯỚC CHIA VẠCH ĐỘ CHÍNH XÁC CAO M3 (PRECISION TICK RULER DOCK) -->
+      <div class="m3-ruler-dock" id="m3RulerDock">
+        <div class="m3-ruler-header">
+          <div class="m3-ruler-title-wrap">
+            <span class="m3-ruler-badge" id="rulerActiveLabel">Phơi sáng (EV)</span>
+            <output class="m3-ruler-readout" id="rulerActiveValue">0</output>
+          </div>
+          <div class="m3-ruler-actions">
+            <span class="m3-ruler-hint">Kéo thước hoặc lăn chuột để tinh chỉnh · Nhấp đúp về 0</span>
+            <button type="button" id="rulerResetParamBtn" class="m3-tonal-chip">↺ Về 0</button>
+          </div>
+        </div>
+        <canvas id="m3TickRulerCanvas" width="760" height="54"></canvas>
+        <div class="m3-param-pill-strip" id="m3ParamPillStrip" role="tablist" aria-label="Chọn nhanh thông số thước đo"></div>
+      </div>
+    </section>
+
+    <!-- ZONE 3: BẢNG ĐIỀU KHIỂN BÊN PHẢI (M3 INSPECTOR CARD) -->
+    <aside class="controls m3-inspector-card">
+      <!-- Khối Biểu đồ RGB Histogram & Bảng màu Chủ đạo -->
+      <div class="inspector-section telemetry-card">
+        <div class="section-header">
+          <span>Biểu đồ RGB & Bảng màu</span>
+          <div class="diagnostic-pills">
+            <button type="button" class="diag-pill active" data-diag="Off" title="Xem ảnh bình thường">Chuẩn</button>
+            <button type="button" class="diag-pill" data-diag="ZoneMap" title="Bản đồ 11 vùng phơi sáng Ansel Adams Zone System">Zone Map</button>
+            <button type="button" class="diag-pill" data-diag="Zebra" title="Cảnh báo sọc đỏ vùng cháy sáng và xanh vùng bệt tối">Zebra</button>
+          </div>
+        </div>
+        <canvas id="histogramCanvas" width="320" height="84"></canvas>
+        <div class="palette-bar" id="dominantPaletteBar" title="5 sắc thái màu chủ đạo trích xuất trực tiếp từ bức ảnh (Nhấn vào ô màu để sao chép mã HEX)"></div>
+        <div class="stats-bar" id="statsBar">
+          <span class="stat-chip">EV: <b id="statEv">0.0</b></span>
+          <span class="stat-chip">DR: <b id="statDr">DR100</b></span>
+          <span class="stat-chip">WB: <b id="statWb">5500K</b></span>
+          <span class="stat-chip">Vùng sáng: <b id="statClip">0%</b></span>
+        </div>
+      </div>
+
+      <!-- Thanh chuyển Tab M3 Segmented Button -->
+      <div class="m3-segmented-tabs" role="tablist">
+        <button type="button" class="m3-seg-btn active" data-tab-target="tabFilm">🎞️ Màu phim</button>
+        <button type="button" class="m3-seg-btn" data-tab-target="tabBasic">☀️ Ánh sáng</button>
+        <button type="button" class="m3-seg-btn" data-tab-target="tabOptical">✨ Quang học</button>
+      </div>
+
+      <!-- TAB 1: MÀU PHIM, PRESET & KHUNG TRIỂN LÃM -->
+      <div id="tabFilm" class="m3-tab-pane active">
+        <div class="inspector-section">
           <div class="section-header">
-            <span class="section-title">Xuất ảnh</span>
-            <button class="text-link" id="editExifBtn">EXIF...</button>
+            <span>Công thức Phim nổi bật</span>
+            <div class="section-header-links">
+              <button id="inlineSurpriseBtn" type="button" class="reset-link" title="Chọn ngẫu nhiên 1 trong 392 công thức">🎲 Ngẫu nhiên</button>
+              <button id="openFullCatalogInline" type="button" class="reset-link">Mở 392 màu ➔</button>
+            </div>
           </div>
+          <div class="preset-ribbon" id="presetRibbon"></div>
+        </div>
 
-          <div class="select-group">
-            <label class="select-label">Khung triển lãm</label>
-            <select class="select-field" id="frameSelect">
-              <option value="0">Không khung</option>
-              <optgroup label="Cơ bản">
-                <option value="1">Classic · dải trắng</option>
-                <option value="2">White · cột thông tin</option>
-                <option value="3">Glass · chữ trên ảnh</option>
-              </optgroup>
-              <optgroup label="Mở rộng">
-                <option value="4">Dark · dải đen</option>
-                <option value="5">Centered · thông số giữa</option>
-                <option value="6">Gallery · viền trắng rộng</option>
-                <option value="7">Noir · viền đen rộng</option>
-                <option value="8">Instant · ảnh lấy liền</option>
-                <option value="9">Vintage · giấy kem</option>
-                <option value="10">Film 35 · viền lỗ phim</option>
-                <option value="11">Cinema · thanh đen</option>
-                <option value="12">Blur · nền ảnh mờ</option>
-                <option value="13">Palette · bảng màu ảnh</option>
-                <option value="14">Postcard · bưu thiếp</option>
-                <option value="15">Editorial · trang tạp chí</option>
-                <option value="16">Double · viền kép</option>
-                <option value="17">Date · dấu ngày màu cam</option>
-                <option value="18">Signature · chữ ký tối giản</option>
-              </optgroup>
-              <optgroup label="Nghệ thuật">
-                <option value="19">Float · ảnh nổi đổ bóng</option>
-                <option value="20">Soft · viền bo tròn</option>
-                <option value="21">Torn · giấy xé</option>
-                <option value="22">Tape · băng dính</option>
-                <option value="23">Wood · khung gỗ</option>
-                <option value="24">Gold · viền kim loại</option>
-                <option value="25">Neon · ánh sáng viền</option>
-                <option value="26">Notebook · giấy kẻ ô</option>
-                <option value="27">Ticket · vé kỷ niệm</option>
-                <option value="28">Blueprint · bản vẽ xanh</option>
-                <option value="29">Arch · vòm triển lãm</option>
-                <option value="30">Corners · góc giữ ảnh</option>
-              </optgroup>
+        <div class="inspector-section">
+          <div class="section-header">
+            <span>Giả lập Film & Khung EXIF</span>
+            <button id="resetAll" type="button" class="reset-link">Đặt lại gốc</button>
+          </div>
+          <label class="select-row">Giả lập Film
+            <select id="film">
+              <option>Original</option><option>Provia</option><option>Velvia</option><option>Astia</option>
+              <option>Classic Chrome</option><option>PRO Neg. Hi</option><option>PRO Neg. Std</option>
+              <option>Classic Neg.</option><option>Nostalgic Neg.</option><option>ETERNA</option>
+              <option>ETERNA Bleach Bypass</option><option>Acros</option><option>Monochrome</option><option>Sepia</option>
             </select>
+          </label>
+          <label class="select-row">Dải tương phản (DR)
+            <select id="dr"><option value="100">DR100 (Chuẩn)</option><option value="200">DR200 (Bảo toàn vùng sáng)</option><option value="400">DR400 (Mở rộng tối đa)</option></select>
+          </label>
+          <label class="select-row">Khung Triển lãm (30 mẫu)
+            <select id="frameStyle"></select>
+          </label>
+          <div id="frameExifControls" class="frame-exif-controls" hidden>
+            <input id="frameTitleInput" type="text" placeholder="Tiêu đề / Máy ảnh (VD: FUJIFILM X100VI)" value="FUJIFILM X-TRANS V · IRO STUDIO" />
+            <input id="frameExifInput" type="text" placeholder="Thông số ống kính (VD: 23mm f/2.0 · 1/500s · ISO 400)" value="23mm f/2.0 · 1/500s · ISO 400" />
           </div>
+        </div>
+      </div>
 
-          <div class="export-row">
-            <div class="select-group flex-1">
-              <label class="select-label">Độ phân giải</label>
-              <select class="select-field" id="exportScale">
-                <option value="1">1× Web</option>
-                <option value="2">2× Print 4K</option>
-              </select>
+      <!-- TAB 2: ÁNH SÁNG, ĐƯỜNG CONG TONE & CÂN BẰNG TRẮNG -->
+      <div id="tabBasic" class="m3-tab-pane" hidden>
+        <div class="inspector-section">
+          <div class="section-header">
+            <span>Đường cong Tone (Spline Curve)</span>
+            <button id="resetCurve" type="button" class="reset-link">Đặt lại</button>
+          </div>
+          <div class="curve-container">
+            <canvas id="curveCanvas" width="260" height="175"></canvas>
+            <div class="curve-presets">
+              <button type="button" data-curve="linear">Tuyến tính</button>
+              <button type="button" data-curve="scurve">S-Curve</button>
+              <button type="button" data-curve="matte">Phim Mờ</button>
+              <button type="button" data-curve="contrast">Tương phản</button>
             </div>
-            <div class="select-group flex-1">
-              <label class="select-label">Định dạng</label>
-              <select class="select-field" id="format">
-                <option value="image/jpeg">JPEG 92%</option>
-                <option value="image/png">PNG + Recipe</option>
-                <option value="image/webp">WebP 92%</option>
-              </select>
-            </div>
           </div>
         </div>
-      </aside>
-    </div><!-- .workspace -->
-  </div><!-- .app -->
 
-  <!-- Hidden inputs -->
-  <input type="file" id="photo" accept="image/*" hidden>
-  <input type="file" id="refPhoto" accept="image/*" hidden>
-  <input type="file" id="lutfile" accept=".cube" hidden>
+        <div class="inspector-section">
+          <div class="section-header"><span>Ánh sáng & Cân bằng trắng</span></div>
+          <div id="slidersBasic" class="sliders"></div>
+        </div>
+      </div>
 
-  <!-- MODAL: 392 Recipes Library -->
-  <div id="recipeModal" class="modal-backdrop" hidden>
-    <div class="modal-dialog modal-wide">
-      <div class="modal-header">
-        <div class="modal-title">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="2" width="16" height="14" rx="2" stroke="var(--primary)" stroke-width="1.5"/><line x1="5" y1="6" x2="13" y2="6" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="9" x2="10" y2="9" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/><line x1="5" y1="12" x2="8" y2="12" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/></svg>
-          <h3>Thư viện 392 Công thức Fuji X Weekly</h3>
-        </div>
-        <button class="modal-close" id="closeRecipeModal">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </button>
-      </div>
-      <div class="modal-search">
-        <div class="search-wrap">
-          <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-          <input type="text" id="recipeSearchInput" placeholder="Tìm theo tên, màu phim, cảm xúc...">
-        </div>
-        <div class="filter-chips" id="recipeSensorChips">
-          <button class="chip active" data-sensor="all">Tất cả <span id="totalRecipeCount">392</span></button>
-          <button class="chip" data-sensor="BAYER">BAYER</button>
-          <button class="chip" data-sensor="X-Trans IV">X-Trans IV</button>
-          <button class="chip" data-sensor="X-Trans V">X-Trans V</button>
-          <button class="chip" data-sensor="X-Trans III">X-Trans III</button>
-          <button class="chip" data-sensor="X-Trans II">X-Trans II</button>
-          <button class="chip" data-sensor="GFX">GFX</button>
-        </div>
-      </div>
-      <div class="modal-body">
-        <div class="recipe-grid" id="recipeGrid"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: LightCraft -->
-  <div id="lightCraftModal" class="modal-backdrop" hidden>
-    <div class="modal-dialog modal-wide">
-      <div class="modal-header">
-        <div class="modal-title">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="7.5" stroke="var(--primary)" stroke-width="1.5"/><path d="M9 4v5l3 3" stroke="var(--primary)" stroke-width="1.5" stroke-linecap="round"/></svg>
-          <h3>LightCraft — Tone Curve & 3-Way Color Wheels</h3>
-        </div>
-        <button class="modal-close" id="closeLightCraftModal">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </button>
-      </div>
-      <div class="modal-body lightcraft-body">
-        <div class="lc-panel">
-          <div class="lc-panel-header">
-            <span>TONE CURVE</span>
-            <button class="text-link" id="resetCurveBtn">Đặt lại</button>
+      <!-- TAB 3: QUANG HỌC 3.0, HẠT PHIM & IN PHÒNG TỐI -->
+      <div id="tabOptical" class="m3-tab-pane" hidden>
+        <div class="inspector-section">
+          <div class="section-header">
+            <span>Quang học 3.0 & Hạt phim</span>
+            <span class="badge-new">3.0 Lab</span>
           </div>
-          <div class="lc-canvas-wrap">
-            <canvas id="toneCurveCanvas" width="300" height="300"></canvas>
-          </div>
-          <p class="lc-hint">Kéo 5 điểm điều khiển. Đúp chuột để đặt lại đường chéo gốc.</p>
-        </div>
-        <div class="lc-panel">
-          <div class="lc-panel-header">
-            <span>3-WAY COLOR WHEELS</span>
-            <button class="text-link" id="resetWheelsBtn">Đặt lại</button>
-          </div>
-          <div class="lc-canvas-wrap">
-            <canvas id="colorWheelsCanvas" width="360" height="280"></canvas>
-          </div>
-          <p class="lc-hint">Kéo núm màu trên 3 đĩa để pha sắc độ điện ảnh. Đúp tâm để reset.</p>
+          <label class="select-row">Kích thước hạt
+            <select id="grainSize">
+              <option value="1">Nhỏ mịn (Small 35mm)</option>
+              <option value="2">To cổ điển (Large 16mm)</option>
+            </select>
+          </label>
+          <label class="select-row">Viền tím quang học
+            <select id="chromatic">
+              <option value="0">Tắt (Ống kính hiện đại)</option>
+              <option value="1">Nhẹ (Vintage 35mm f/1.4)</option>
+              <option value="2">Mạnh (Анаморфот / Helios)</option>
+            </select>
+          </label>
+          <label class="select-row">In Phòng tối Cổ điển
+            <select id="darkroomProcess">
+              <option value="None">Chuẩn màu (Standard Color)</option>
+              <option value="Cyanotype">Xanh Phổ 1842 (Cyanotype Blueprint)</option>
+              <option value="Platinum">Bạch kim Palladium (Platinum Print)</option>
+              <option value="Selenium">Ngâm Selenium Bạc (Selenium Silver)</option>
+              <option value="SplitGrade">In Tách Bậc (Ilford Split-Grade)</option>
+            </select>
+          </label>
+          <div id="slidersOptical" class="sliders"></div>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- MODAL: EXIF Editor -->
-  <div id="exifModal" class="modal-backdrop" hidden>
-    <div class="modal-dialog modal-narrow">
-      <div class="modal-header">
-        <div class="modal-title">
-          <h3>Thông số khung ảnh (EXIF)</h3>
-        </div>
-        <button class="modal-close" id="closeExifModal">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 4l10 10M14 4L4 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="exif-grid">
-          <div class="exif-row"><label>Tên máy ảnh</label><input type="text" id="exifCamera" value="FUJIFILM X-T5"></div>
-          <div class="exif-row"><label>Ống kính</label><input type="text" id="exifLens" value="XF 35mm F1.4 R"></div>
-          <div class="exif-row"><label>Tiêu cự</label><input type="text" id="exifFocal" value="35mm"></div>
-          <div class="exif-row"><label>Khẩu độ</label><input type="text" id="exifAperture" value="f/1.4"></div>
-          <div class="exif-row"><label>Tốc độ</label><input type="text" id="exifShutter" value="1/250s"></div>
-          <div class="exif-row"><label>ISO</label><input type="text" id="exifIso" value="ISO 400"></div>
-          <div class="exif-row"><label>Ngày chụp</label><input type="text" id="exifDate" value="2026.10.14"></div>
-          <div class="exif-row"><label>Tác giả</label><input type="text" id="exifAuthor" value="IRO Studio"></div>
-        </div>
-        <button class="btn-primary full-width" id="saveExifBtn" style="margin-top:16px">Lưu thông số</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Notification -->
-  <div class="toast" id="toast" hidden></div>
+      <p id="status" role="status">Đang khởi tạo IRO Studio 3.0 M3 Expressive...</p>
+    </aside>
+  </main>
 
   <script type="module" src="app.mjs"></script>
 </body>

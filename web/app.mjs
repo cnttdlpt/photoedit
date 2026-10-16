@@ -1,1517 +1,1849 @@
 import {
-  defaults, films, parseCube, processPixels, rotatePixels90,
-  autoBalanceSettings, promptToRecipeVi, encodeRecipeCode, decodeRecipeCode,
-  embedRecipeIntoPixels, extractRecipeFromPixels,
+  defaults, parseCube, processPixels, rotatePixels90,
+  buildMonotoneCurveLut, computeHistogramAndStats,
+  autoBalanceSettings, CURATED_PRESETS,
+  encodeRecipeCode, decodeRecipeCode,
   bakeRecipeToCube, extractDominantPalette, matchColorFromReference,
-  PHOTO_FRAMES, defaultPhotoInfo, parseFujiRecipe, renderPhotoFrame, buildMonotoneCurveLut
+  promptToRecipeVi, embedRecipeIntoPixels, extractRecipeFromPixels,
+  parseFujiRecipe, LIGHTCRAFT_PRESETS, PHOTO_FRAMES, renderFramedImage
 } from './engine.mjs';
 
-const $ = id => document.getElementById(id);
-const canvas = $('canvas'), ctx = canvas.getContext('2d');
-const histCanvas = $('histogram'), histCtx = histCanvas ? histCanvas.getContext('2d') : null;
+const canvas = document.querySelector('#canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const beforeCanvas = document.querySelector('#beforeCanvas');
+const beforeCtx = beforeCanvas.getContext('2d');
+const canvasWrapper = document.querySelector('#canvasWrapper');
+const splitSlider = document.querySelector('#splitSlider');
+const histCanvas = document.querySelector('#histogramCanvas');
+const histCtx = histCanvas.getContext('2d');
+const curveCanvas = document.querySelector('#curveCanvas');
+const curveCtx = curveCanvas.getContext('2d');
+const status = document.querySelector('#status');
+const empty = document.querySelector('#empty');
+const quadViewGrid = document.querySelector('#quadViewGrid');
+const contactSheetModal = document.querySelector('#contactSheetModal');
+const contactSheetGrid = document.querySelector('#contactSheetGrid');
+const promptModal = document.querySelector('#promptModal');
+const promptTextInput = document.querySelector('#promptTextInput');
+const dominantPaletteBar = document.querySelector('#dominantPaletteBar');
+const zoomResetBadge = document.querySelector('#zoomResetBadge');
+const topActiveFilmLabel = document.querySelector('#topActiveFilmLabel');
 
-let settings = { ...defaults }, source, preview, lastRenderedImageData;
-let luts = [], selected = '', compare = false, quadView = false, livingTimer = null, livingFrame = 0, splitRatio = 0;
-let serial = 0, timer, exporting = false, currentName = 'iro-demo';
+// Kho 392 công thức FujiXWeekly & LightCraft Modal & Command Palette
+const recipeLibraryModal = document.querySelector('#recipeLibraryModal');
+const recipeLibraryGrid = document.querySelector('#recipeLibraryGrid');
+const recipeSearchInput = document.querySelector('#recipeSearchInput');
+const recipeFilmFilterChips = document.querySelector('#recipeFilmFilterChips');
+const lightCraftModal = document.querySelector('#lightCraftModal');
+const lightCraftPresetsGrid = document.querySelector('#lightCraftPresetsGrid');
+const hslSlidersContainer = document.querySelector('#hslSlidersContainer');
+const frameStyleSelect = document.querySelector('#frameStyle');
+const frameExifControls = document.querySelector('#frameExifControls');
+const frameTitleInput = document.querySelector('#frameTitleInput');
+const frameExifInput = document.querySelector('#frameExifInput');
+const cmdPaletteModal = document.querySelector('#cmdPaletteModal');
+const cmdSearchInput = document.querySelector('#cmdSearchInput');
+const cmdQuickResults = document.querySelector('#cmdQuickResults');
 
-const worker = new Worker('./worker.mjs', { type: 'module' });
-const pending = new Map();
-
-worker.onmessage = ({ data }) => {
-  const p = pending.get(data.id);
-  if (!p) return;
-  pending.delete(data.id);
-  data.error ? p.reject(Error(data.error)) : p.resolve(data);
+const state = {
+  source: null,
+  lut: null,
+  settings: structuredClone(defaults),
+  activeRecipeName: 'Gốc',
+  history: [],
+  historyIndex: -1,
+  comparingSplit: false,
+  splitRatio: 0.5,
+  quadViewActive: false,
+  livingFilmActive: false,
+  livingFilmTimer: null,
+  livingFilmFrame: 0,
+  curvePoints: [[0, 0], [1, 1]],
+  draggingCurveIdx: -1,
+  fullCatalogRecipes: [],
+  selectedFilmFilter: 'Tất cả',
+  favoriteRecipeIds: new Set(JSON.parse(localStorage.getItem('iro_fav_recipes_v3') || '[]')),
+  activeHslMode: 'hue', // 'hue' | 'sat' | 'lum'
+  frameStyle: 0,
+  stageZoom: 1.0,
+  stagePanX: 0,
+  stagePanY: 0,
+  porcelainTheme: false
 };
 
-worker.onerror = () => {
-  for (const p of pending.values()) {
-    p.reject(Error('Bộ xử lý ảnh gặp lỗi. Hãy tải lại trang.'));
-  }
-  pending.clear();
-};
-
-const toast = message => {
-  $('toast').textContent = message;
-  $('toast').hidden = false;
-  clearTimeout(timer);
-  timer = setTimeout(() => ($('toast').hidden = true), 5000);
-};
-
-// Vẽ dấu ngày tháng LED cam kiểu máy phim thập niên 90 (Quartz Date Stamp)
-function drawQuartzDateStamp(targetCtx, w, h, enabled) {
-  if (!enabled) return;
-  const now = new Date();
-  const yy = String(now.getFullYear()).slice(-2);
-  const mm = String(now.getMonth() + 1).padStart(2, '0');
-  const dd = String(now.getDate()).padStart(2, '0');
-  const stamp = `'${yy} ${mm} ${dd}`;
-  const fontSize = Math.max(14, Math.round(Math.min(w, h) * 0.032));
-  targetCtx.save();
-  targetCtx.font = `700 ${fontSize}px "Courier New", monospace`;
-  targetCtx.shadowColor = 'rgba(255, 68, 0, 0.85)';
-  targetCtx.shadowBlur = Math.round(fontSize * 0.45);
-  targetCtx.fillStyle = '#ff7b1a';
-  targetCtx.fillText(stamp, w - fontSize * 6.4, h - Math.round(fontSize * 1.1));
-  targetCtx.restore();
-}
-
-const LUT_DB_NAME = 'iro-studio-db', LUT_STORE = 'luts';
-function openLutDb() {
-  return new Promise((resolve, reject) => {
-    if (!window.indexedDB) return resolve(null);
-    const req = indexedDB.open(LUT_DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(LUT_STORE, { keyPath: 'id' });
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-async function loadStoredLuts() {
-  try {
-    const db = await openLutDb();
-    if (!db) return;
-    const tx = db.transaction(LUT_STORE, 'readonly');
-    const req = tx.objectStore(LUT_STORE).getAll();
-    req.onsuccess = () => {
-      if (Array.isArray(req.result)) {
-        luts = req.result.map(item => ({ ...item, data: new Float32Array(item.data) }));
-        updateLutList();
-      }
-    };
-  } catch {}
-}
-async function saveLutToDb(lut) {
-  try {
-    const db = await openLutDb();
-    if (!db) return;
-    const tx = db.transaction(LUT_STORE, 'readwrite');
-    tx.objectStore(LUT_STORE).put(lut);
-  } catch {}
-}
-async function deleteLutFromDb(id) {
-  try {
-    const db = await openLutDb();
-    if (!db) return;
-    const tx = db.transaction(LUT_STORE, 'readwrite');
-    tx.objectStore(LUT_STORE).delete(id);
-  } catch {}
-}
-
-const groups = [
-  ['ÁNH SÁNG, KHỬ SƯƠNG & ĐỚI SÁNG', [
-    ['exposure', 'Bù sáng · EV', -3, 3, 1 / 3],
-    ['dr', 'Dynamic Range', [100, 200, 400]],
-    ['highlight', 'Highlight', -2, 4, 1],
-    ['shadow', 'Shadow', -2, 4, 1],
-    ['clarity', 'Clarity (Tương phản vi mô)', -100, 100, 5],
-    ['texture', 'Texture (Chi tiết bề mặt/Da)', -100, 100, 5],
-    ['dehaze', 'Dehaze (Khử mù sương)', -100, 100, 5],
-    ['diagnosticMode', 'Chẩn đoán Đới sáng / Zebra', ['Off', 'ZoneMap', 'Zebra']]
-  ]],
-  ['MÀU SẮC, CHROME & BẢO VỆ DA', [
-    ['amount', 'Cường độ màu phim', 0, 100, 1],
-    ['skinProtect', 'Bảo vệ màu da (Skin Protect)', 0, 100, 5],
-    ['wb', 'Cân bằng trắng', ['Auto', 'Daylight', 'Cloudy', 'Tungsten']],
-    ['temperature', 'Nhiệt độ', -100, 100, 1],
-    ['red', 'WB Shift · Red', -9, 9, 1],
-    ['blue', 'WB Shift · Blue', -9, 9, 1],
-    ['color', 'Color', -4, 4, 1],
-    ['chrome', 'Color Chrome Effect', [0, 1, 2]],
-    ['chromeBlue', 'Color Chrome FX Blue', [0, 1, 2]]
-  ]],
-  ['QUANG HỌC 3D & HÓA CHẤT PHÒNG TỐI', [
-    ['darkroomProcess', 'Giấy ảnh Phòng tối Cổ điển', ['None', 'SplitGrade', 'Cyanotype', 'Platinum']],
-    ['proMist', 'Kính lọc Black Pro-Mist', 0, 100, 5],
-    ['swirlyBokeh', 'Bokeh xoáy Helios 44-2', 0, 100, 5],
-    ['depthFog', 'Sương mù chiều sâu 3D', 0, 100, 5],
-    ['halation', 'Halation (Quầng đỏ phim)', 0, 100, 5],
-    ['bleachBypass', 'Bleach Bypass (Giữ bạc)', 0, 100, 5],
-    ['lightLeak', 'Light Leak (Lọt sáng 35mm)', 0, 100, 5],
-    ['chromatic', 'Viền tím quang học (CA)', 0, 4, 1],
-    ['grain', 'Grain Effect', [0, 8, 18]],
-    ['grainSize', 'Kích thước hạt (Grain Size)', [1, 2]],
-    ['sharpness', 'Sharpness', -4, 4, 1],
-    ['nr', 'Noise Reduction', -4, 4, 1]
-  ]]
+// 18 thanh trượt hậu kỳ chia làm 2 nhóm: Ánh sáng & Quang học 3.0
+const basicSliderSpecs = [
+  ['exposure', 'Phơi sáng (EV)', -3, 3, 0.1],
+  ['highlight', 'Vùng sáng (Highlight)', -2, 4, 0.5],
+  ['shadow', 'Vùng tối (Shadow)', -2, 4, 0.5],
+  ['color', 'Độ bão hòa màu (Color)', -4, 4, 0.5],
+  ['temperature', 'Nhiệt độ màu (WB Temp)', -100, 100, 1],
+  ['red', 'Dịch cân bằng trắng Đỏ (WB R)', -9, 9, 1],
+  ['blue', 'Dịch cân bằng trắng Xanh (WB B)', -9, 9, 1],
+  ['colorChrome', 'Hiệu ứng Color Chrome', 0, 2, 1],
+  ['chromeBlue', 'Color Chrome FX Blue', 0, 2, 1],
+  ['lutAmount', 'Cường độ 3D LUT (%)', 0, 100, 1]
 ];
 
-const labels = {
-  dr: { 100: 'DR100', 200: 'DR200', 400: 'DR400' },
-  grain: { 0: 'Off', 8: 'Weak', 18: 'Strong' },
-  grainSize: { 1: 'Small (Mịn)', 2: 'Large (Thô)' },
-  chrome: { 0: 'Off', 1: 'Weak', 2: 'Strong' },
-  chromeBlue: { 0: 'Off', 1: 'Weak', 2: 'Strong' },
-  wb: { Auto: 'Auto (giữ WB ảnh)', Daylight: 'Daylight', Cloudy: 'Cloudy', Tungsten: 'Tungsten' },
-  diagnosticMode: { Off: 'Tắt (Xem ảnh thật)', ZoneMap: '11-Zone Ansel Adams', Zebra: 'Zebra Cảnh báo Cháy/Bệt' },
-  darkroomProcess: {
-    None: 'Tắt (Màu phim chuẩn)',
-    SplitGrade: 'Split-Grade (Selenium + Sepia)',
-    Cyanotype: 'Cyanotype (In Xanh Phổ 1842)',
-    Platinum: 'Platinum / Palladium Cổ điển'
-  }
-};
+const opticalSliderSpecs = [
+  ['proMist', 'Kính lọc khuếch tán (Black Pro-Mist)', 0, 100, 1],
+  ['halation', 'Quầng đỏ vùng sáng (Halation 800T)', 0, 100, 1],
+  ['bleachBypass', 'Giữ bạc phòng tối (Bleach Bypass)', 0, 100, 1],
+  ['dehaze', 'Khử mù sương quang học (Dehaze)', -100, 100, 1],
+  ['texture', 'Chi tiết vi mô / Mịn da (Texture)', -100, 100, 1],
+  ['clarity', 'Độ trong khối (Clarity)', -50, 50, 1],
+  ['sharpness', 'Độ sắc nét (Sharpness)', -4, 4, 0.5],
+  ['nr', 'Khử nhiễu (High ISO NR)', -4, 4, 0.5],
+  ['grain', 'Cường độ hạt phim (Film Grain)', 0, 30, 1],
+  ['skinProtect', 'Bảo vệ tông màu da (Skin Mask %)', 0, 100, 5],
+  ['swirlyBokeh', 'Bokeh xoáy ống kính cổ (Helios 44-2)', 0, 100, 2],
+  ['depthFog', 'Sương mù chiều sâu 3D (Depth Fog)', 0, 100, 2],
+  ['lightLeak', 'Vệt lọt sáng buồng phim (Light Leak)', 0, 100, 1],
+  ['vignette', 'Tối góc ống kính (Vignette)', -50, 50, 1]
+];
 
-for (const [title, controls] of groups) {
-  const group = document.createElement('section');
-  group.className = 'control-group';
-  const h = document.createElement('div');
-  h.className = 'group-title';
-  h.textContent = title;
-  group.append(h);
-  for (const [key, label, min, max, step] of controls) {
-    const d = document.createElement('div');
-    d.className = 'control';
-    const l = document.createElement('label');
-    l.htmlFor = key;
-    l.textContent = label;
-    const input = document.createElement(Array.isArray(min) ? 'select' : 'input');
-    input.id = key;
-    if (Array.isArray(min)) {
-      const map = labels[key] || {};
-      for (const v of min) {
-        const o = new Option(map[v] || v, v);
-        input.add(o);
-      }
-      d.append(l, input);
-    } else {
-      input.type = 'range';
-      input.min = min;
-      input.max = max;
-      input.step = step;
-      const output = document.createElement('output');
-      output.id = key + 'Value';
-      l.append(output);
-      d.append(l, input);
-    }
-    input.oninput = () => {
-      const strKeys = new Set(['wb', 'diagnosticMode', 'darkroomProcess']);
-      settings[key] = strKeys.has(key) ? input.value : Number(input.value);
-      quadView = false;
-      sync();
-      render();
-    };
-    group.append(d);
-  }
-  $('controls').append(group);
+const allSliderSpecs = [...basicSliderSpecs, ...opticalSliderSpecs];
+
+function saveFavorites() {
+  try {
+    localStorage.setItem('iro_fav_recipes_v3', JSON.stringify([...state.favoriteRecipeIds]));
+  } catch (_) {}
 }
 
-Object.keys(films).forEach((name, i) => {
-  const b = document.createElement('button');
-  b.className = 'film';
-  b.dataset.film = name;
-  const sw = document.createElement('span');
-  sw.className = 'swatch';
-  sw.style.filter = `saturate(${films[name][0]}) contrast(${films[name][1]}) hue-rotate(${i * 5}deg)`;
-  b.append(sw, document.createTextNode(name));
-  const small = document.createElement('small');
-  small.textContent = String(i + 1).padStart(2, '0');
-  b.append(small);
-  b.onclick = () => {
-    settings.film = name;
-    quadView = false;
-    sync();
-    render();
-  };
-  $('films').append(b);
+function updateTopRecipePill() {
+  if (!topActiveFilmLabel) return;
+  const film = state.settings.film || 'Original';
+  const rec = state.activeRecipeName || 'Tùy chỉnh';
+  topActiveFilmLabel.textContent = `${film} · ${rec}`;
+}
+
+function createSliders(containerSelector, specs) {
+  const root = document.querySelector(containerSelector);
+  for (const [key, label, min, max, step] of specs) {
+    const wrap = document.createElement('label');
+    wrap.className = 'slider';
+    wrap.title = 'Nhấp đúp để đặt lại thông số này về mặc định';
+    wrap.innerHTML = `<span>${label}</span><output id="out-${key}">${defaults[key]}</output>
+      <input id="in-${key}" data-key="${key}" type="range" min="${min}" max="${max}" step="${step}" value="${defaults[key]}" />`;
+    wrap.addEventListener('dblclick', () => {
+      state.settings[key] = defaults[key];
+      syncInputsFromSettings();
+      commitHistory(`Đặt lại ${label}`);
+      render();
+    });
+    root.append(wrap);
+  }
+}
+
+createSliders('#slidersBasic', basicSliderSpecs);
+createSliders('#slidersOptical', opticalSliderSpecs);
+
+// =========================================================================
+// THANH ĐIỀU HƯỚNG DỌC MATERIAL 3 (LEFT NAVIGATION RAIL) & TAB SWITCHER
+// =========================================================================
+const segTabBtns = document.querySelectorAll('.m3-seg-btn');
+const tabPanes = document.querySelectorAll('.m3-tab-pane');
+const railItems = document.querySelectorAll('.rail-item');
+
+function activateInspectorTab(targetId) {
+  segTabBtns.forEach(b => b.classList.toggle('active', b.dataset.tabTarget === targetId));
+  tabPanes.forEach(pane => {
+    pane.hidden = pane.id !== targetId;
+  });
+  railItems.forEach(item => {
+    if (item.dataset.railTarget) {
+      item.classList.toggle('active', item.dataset.railTarget === targetId);
+    }
+  });
+}
+
+segTabBtns.forEach(btn => {
+  btn.addEventListener('click', () => activateInspectorTab(btn.dataset.tabTarget));
 });
 
-const pctKeys = new Set(['amount', 'halation', 'proMist', 'bleachBypass', 'lightLeak', 'skinProtect', 'swirlyBokeh', 'depthFog']);
-
-function sync() {
-  for (const [, list] of groups) {
-    for (const [key] of list) {
-      if ($(key)) $(key).value = settings[key];
-      if ($(key + 'Value')) {
-        $(key + 'Value').textContent =
-          pctKeys.has(key)
-            ? settings[key] + '%'
-            : key === 'exposure'
-            ? (settings[key] > 0 ? '+' : '') + Number(settings[key]).toFixed(2)
-            : (settings[key] > 0 ? '+' : '') + settings[key];
+railItems.forEach(item => {
+  item.addEventListener('click', () => {
+    const target = item.dataset.railTarget;
+    const action = item.dataset.railAction;
+    if (target) {
+      activateInspectorTab(target);
+    } else if (action === 'lightcraft') {
+      if (!state.source) {
+        setStatus('Hãy mở ảnh hoặc chọn ảnh mẫu trước khi mở Buồng tối LightCraft.');
+        return;
       }
+      lightCraftModal.hidden = false;
+      drawAllColorWheels();
+      renderHslSliders();
+    } else if (action === 'library') {
+      openRecipeLibraryModal();
     }
-  }
-  document.querySelectorAll('.film').forEach(b =>
-    b.classList.toggle('active', b.dataset.film === settings.film)
-  );
-  const filmName = settings.film || 'Original';
-  $('lookTitle').textContent = quadView ? 'So sánh 4 Màu Phim (Quad-View)' : filmName;
-  $('imageTag').textContent = 'IRO / ' + (compare ? 'ORIGINAL' : livingTimer ? 'LIVING FILM 24FPS' : quadView ? 'QUAD-VIEW' : filmName.toUpperCase());
-  $('lutAmount').value = settings.lutAmount;
-  $('lutValue').textContent = settings.lutAmount + '%';
-  if ($('frameSelect')) $('frameSelect').value = settings.frame || 'None';
-}
-
-function job(data) {
-  return new Promise((resolve, reject) => {
-    const id = ++serial;
-    pending.set(id, { resolve, reject });
-    worker.postMessage({ ...data, id });
   });
-}
-
-function drawHistogram(hist, pixels) {
-  if (!histCtx || !hist) return;
-  const w = histCanvas.width, h = histCanvas.height;
-  histCtx.clearRect(0, 0, w, h);
-  let maxVal = 1;
-  for (let i = 4; i < 252; i++) {
-    maxVal = Math.max(maxVal, hist.rHist[i], hist.gHist[i], hist.bHist[i]);
-  }
-  histCtx.globalCompositeOperation = 'screen';
-  const channels = [
-    [hist.rHist, 'rgba(255, 75, 75, 0.75)'],
-    [hist.gHist, 'rgba(75, 230, 115, 0.75)'],
-    [hist.bHist, 'rgba(80, 155, 255, 0.75)']
-  ];
-  for (const [arr, color] of channels) {
-    histCtx.fillStyle = color;
-    histCtx.beginPath();
-    histCtx.moveTo(0, h);
-    for (let i = 0; i < 256; i++) {
-      const barH = Math.min(h, (arr[i] / maxVal) * (h - 6));
-      histCtx.lineTo(i, h - barH);
-    }
-    histCtx.lineTo(255, h);
-    histCtx.closePath();
-    histCtx.fill();
-  }
-  histCtx.globalCompositeOperation = 'source-over';
-
-  const swatchBox = $('paletteSwatches');
-  if (swatchBox && pixels) {
-    const pal = extractDominantPalette(pixels, 5);
-    swatchBox.innerHTML = '';
-    for (const c of pal) {
-      const dot = document.createElement('div');
-      dot.style.cssText = `flex:1;border-radius:4px;background:${c.hex};border:1px solid rgba(255,255,255,0.2)`;
-      dot.title = c.hex.toUpperCase();
-      swatchBox.append(dot);
-    }
-  }
-}
-
-function renderQuadViewCanvas() {
-  if (!preview) return;
-  const rot = settings.rotation
-    ? rotatePixels90(preview.data, preview.width, preview.height, settings.rotation)
-    : { pixels: preview.data, width: preview.width, height: preview.height };
-  const w = rot.width, h = rot.height;
-  canvas.width = w; canvas.height = h;
-  const halfW = Math.floor(w / 2), halfH = Math.floor(h / 2);
-  const scaleCanvas = document.createElement('canvas');
-  scaleCanvas.width = halfW; scaleCanvas.height = halfH;
-  const sCtx = scaleCanvas.getContext('2d');
-  const tmpFull = document.createElement('canvas');
-  tmpFull.width = w; tmpFull.height = h;
-  tmpFull.getContext('2d').putImageData(new ImageData(rot.pixels, w, h), 0, 0);
-  sCtx.drawImage(tmpFull, 0, 0, halfW, halfH);
-  const subData = sCtx.getImageData(0, 0, halfW, halfH);
-
-  const quadFilms = ['Classic Chrome', 'Classic Neg.', 'Nostalgic Neg.', 'ACROS'];
-  const activeLut = luts.find(l => l.id === selected);
-  quadFilms.forEach((fName, idx) => {
-    const qx = (idx % 2) * halfW, qy = Math.floor(idx / 2) * halfH;
-    const outPx = processPixels(subData.data, halfW, halfH, { ...settings, film: fName, diagnosticMode: 'Off' }, activeLut);
-    ctx.putImageData(new ImageData(outPx, halfW, halfH), qx, qy);
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
-    ctx.fillRect(qx + 10, qy + 10, 145, 26);
-    ctx.fillStyle = '#fff';
-    ctx.font = '600 12px system-ui, sans-serif';
-    ctx.fillText(fName.toUpperCase(), qx + 18, qy + 27);
-  });
-}
-
-let renderTimer, version = 0;
-function render() {
-  const v = ++version;
-  clearTimeout(renderTimer);
-  if (!preview) return;
-  if (quadView) {
-    renderQuadViewCanvas();
-    $('busy').hidden = true;
-    return;
-  }
-  if (compare) {
-    const rotOrig = settings.rotation
-      ? rotatePixels90(preview.data, preview.width, preview.height, settings.rotation)
-      : { pixels: preview.data, width: preview.width, height: preview.height };
-    paint(new ImageData(rotOrig.pixels, rotOrig.width, rotOrig.height));
-    $('busy').hidden = true;
-    return;
-  }
-  renderTimer = setTimeout(async () => {
-    $('busy').hidden = false;
-    try {
-      const result = await job({
-        pixels: preview.data,
-        width: preview.width,
-        height: preview.height,
-        settings: { ...settings },
-        lut: luts.find(l => l.id === selected),
-        withHistogram: true
-      });
-      if (v === version && !compare && !quadView) {
-        lastRenderedImageData = new ImageData(result.pixels, result.width, result.height);
-        paint(lastRenderedImageData);
-        drawHistogram(result.hist, result.pixels);
-      }
-    } catch (e) {
-      toast(e.message);
-    } finally {
-      if (v === version) $('busy').hidden = true;
-    }
-  }, 45);
-}
-
-function paint(data) {
-  canvas.width = data.width;
-  canvas.height = data.height;
-  ctx.putImageData(data, 0, 0);
-  drawQuartzDateStamp(ctx, data.width, data.height, settings.dateStamp);
-  if (splitRatio > 0 && !compare && !quadView && preview) {
-    const rotOrig = settings.rotation
-      ? rotatePixels90(preview.data, preview.width, preview.height, settings.rotation)
-      : { pixels: preview.data, width: preview.width, height: preview.height };
-    const splitX = Math.round((splitRatio / 100) * data.width);
-    ctx.putImageData(new ImageData(rotOrig.pixels, rotOrig.width, rotOrig.height), 0, 0, 0, 0, splitX, data.height);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(splitX - 1, 0, 2, data.height);
-  }
-}
-
-// Bật/tắt chế độ Living Film 24fps (Hạt muối bạc và ánh sáng phim chuyển động 24fps)
-if ($('livingFilmBtn')) {
-  $('livingFilmBtn').onclick = () => {
-    if (livingTimer) {
-      clearInterval(livingTimer);
-      livingTimer = null;
-      sync();
-      render();
-      toast('Đã dừng chế độ Living Film 24fps.');
-      return;
-    }
-    if (!preview) return;
-    if (settings.grain === 0) settings.grain = 8;
-    quadView = false;
-    const rot = settings.rotation
-      ? rotatePixels90(preview.data, preview.width, preview.height, settings.rotation)
-      : { pixels: preview.data, width: preview.width, height: preview.height };
-    const activeLut = luts.find(l => l.id === selected);
-    livingTimer = setInterval(() => {
-      livingFrame = (livingFrame + 1) % 240;
-      const px = processPixels(rot.pixels, rot.width, rot.height, settings, activeLut, livingFrame);
-      paint(new ImageData(px, rot.width, rot.height));
-    }, 1000 / 24);
-    sync();
-    toast('Đang phát Living Film 24fps (hạt muối bạc & quầng sáng chuyển động trực tiếp)!');
-  };
-}
-
-// Bật/tắt dấu ngày tháng LED cam Quartz Date ('26 10 14)
-if ($('dateStampBtn')) {
-  $('dateStampBtn').onclick = () => {
-    settings.dateStamp = !settings.dateStamp;
-    if (lastRenderedImageData) paint(lastRenderedImageData);
-    toast(settings.dateStamp ? 'Đã bật dấu ngày tháng máy phim Quartz Date.' : 'Đã tắt dấu ngày tháng.');
-  };
-}
-
-function setSource(c, name, demo = false) {
-  source = c;
-  currentName = name;
-  const fullData = c.getContext('2d').getImageData(0, 0, Math.min(c.width, 600), Math.min(c.height, 4)).data;
-  const embedded = extractRecipeFromPixels(fullData);
-  if (embedded && !demo) {
-    settings = { ...settings, ...embedded };
-    toast(`Đã tự động khôi phục công thức màu (${embedded.film}) nhúng ẩn trong ảnh!`);
-  }
-
-  const p = document.createElement('canvas');
-  const scale = Math.min(1, 1400 / Math.max(c.width, c.height));
-  p.width = Math.round(c.width * scale);
-  p.height = Math.round(c.height * scale);
-  const x = p.getContext('2d');
-  x.drawImage(c, 0, 0, p.width, p.height);
-  preview = x.getImageData(0, 0, p.width, p.height);
-  $('filename').textContent = name;
-  $('imageSize').textContent = demo ? 'ẢNH MẪU MINH HỌA' : `${c.width} x ${c.height}`;
-  $('status').textContent = embedded
-    ? `Đã khôi phục công thức ẩn từ ảnh · Phim ${settings.film}`
-    : demo
-    ? 'Thử màu trên ảnh mẫu hoặc mở ảnh của bạn'
-    : 'Đã mở ảnh · mọi thay đổi đều có thể đặt lại';
-  sync();
-  render();
-}
-
-function demo() {
-  const c = document.createElement('canvas');
-  c.width = 1200; c.height = 900;
-  const x = c.getContext('2d');
-  const sky = x.createLinearGradient(0, 0, 0, 900);
-  sky.addColorStop(0, '#5c8e94');
-  sky.addColorStop(.57, '#d0ccb0');
-  sky.addColorStop(1, '#b49a76');
-  x.fillStyle = sky;
-  x.fillRect(0, 0, 1200, 900);
-  x.fillStyle = '#e9d4a1';
-  x.beginPath();
-  x.arc(850, 215, 65, 0, 7);
-  x.fill();
-  for (let n = 0; n < 4; n++) {
-    x.fillStyle = ['#718781', '#526d65', '#3d5a4d', '#2c4437'][n];
-    x.beginPath();
-    x.moveTo(0, 440 + n * 85);
-    for (let a = 0; a <= 1200; a += 20)
-      x.lineTo(a, 410 + n * 85 + Math.sin(a / 180 + n * 2) * 55 + Math.cos(a / 83) * 15);
-    x.lineTo(1200, 900);
-    x.lineTo(0, 900);
-    x.fill();
-  }
-  x.fillStyle = '#cab98f';
-  x.beginPath();
-  x.moveTo(60, 580);
-  x.lineTo(240, 470);
-  x.lineTo(410, 580);
-  x.fill();
-  setSource(c, 'Fujifilm Classic Chrome Demo', true);
-}
-
-function updateLutList() {
-  const s = $('lutSelect');
-  s.innerHTML = '<option value="">Không dùng LUT 3D</option>';
-  for (const l of luts) {
-    const o = new Option(`${l.name} (${l.size}x${l.size}x${l.size})`, l.id);
-    o.selected = l.id === selected;
-    s.add(o);
-  }
-  $('removeLut').hidden = !selected;
-}
-
-$('open').onclick = () => $('photo').click();
-$('drop').onclick = () => $('photo').click();
-$('photo').onchange = e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  const img = new Image(), url = URL.createObjectURL(f);
-  img.onload = () => {
-    URL.revokeObjectURL(url);
-    const c = document.createElement('canvas');
-    c.width = img.naturalWidth;
-    c.height = img.naturalHeight;
-    c.getContext('2d').drawImage(img, 0, 0);
-    settings.rotation = 0;
-    setSource(c, f.name);
-    $('photo').value = '';
-  };
-  img.onerror = () => toast('Không thể đọc tệp ảnh này.');
-  img.src = url;
-};
-
-if ($('matchRefBtn') && $('refPhoto')) {
-  $('matchRefBtn').onclick = () => $('refPhoto').click();
-  $('refPhoto').onchange = e => {
-    const f = e.target.files[0];
-    if (!f || !preview) return;
-    const img = new Image(), url = URL.createObjectURL(f);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const c = document.createElement('canvas');
-      c.width = 256; c.height = 256;
-      c.getContext('2d').drawImage(img, 0, 0, 256, 256);
-      const refData = c.getContext('2d').getImageData(0, 0, 256, 256).data;
-      const matched = matchColorFromReference(preview.data, refData, settings);
-      settings = matched.settings;
-      quadView = false;
-      sync();
-      render();
-      $('status').textContent = matched.reasonVi;
-      toast(matched.reasonVi);
-      $('refPhoto').value = '';
-    };
-    img.src = url;
-  };
-}
-
-if ($('promptRecipeBtn')) {
-  $('promptRecipeBtn').onclick = () => {
-    const text = prompt(
-      'Nhập cảm xúc hoặc quy trình phòng tối bạn muốn (ví dụ: "Chiều mưa Đà Lạt sương mù", "Nắng cổ điển Hà Nội Helios", "In xanh phổ Cyanotype 1842", "Đen trắng phóng sự"):',
-      'Nắng cổ điển Hà Nội Helios'
-    );
-    if (!text) return;
-    const res = promptToRecipeVi(text, settings);
-    settings = res.settings;
-    quadView = false;
-    sync();
-    render();
-    $('status').textContent = res.reasonVi;
-    toast(res.reasonVi);
-  };
-}
-
-if ($('quadViewBtn')) {
-  $('quadViewBtn').onclick = () => {
-    quadView = !quadView;
-    sync();
-    render();
-    toast(quadView ? 'Đang bật chế độ So sánh 4 Màu Phim (Quad-View).' : 'Đã quay lại chế độ xem đơn.');
-  };
-}
-
-if ($('contactSheetBtn')) {
-  $('contactSheetBtn').onclick = () => {
-    if (!preview) return;
-    const thumbW = 360, thumbH = Math.round((preview.height / preview.width) * thumbW);
-    const pad = 28, headerH = 70, labelH = 34;
-    const sheet = document.createElement('canvas');
-    sheet.width = pad * 4 + thumbW * 3;
-    sheet.height = headerH + pad * 4 + (thumbH + labelH) * 3;
-    const g = sheet.getContext('2d');
-    g.fillStyle = '#0d0e11';
-    g.fillRect(0, 0, sheet.width, sheet.height);
-
-    g.fillStyle = '#f59e0b';
-    g.font = '700 20px monospace';
-    g.fillText(`IRO DARKROOM CONTACT SHEET · ${currentName.toUpperCase()}`, pad, 44);
-
-    const tmpSrc = document.createElement('canvas');
-    tmpSrc.width = preview.width; tmpSrc.height = preview.height;
-    tmpSrc.getContext('2d').putImageData(preview, 0, 0);
-    const smallCanvas = document.createElement('canvas');
-    smallCanvas.width = thumbW; smallCanvas.height = thumbH;
-    smallCanvas.getContext('2d').drawImage(tmpSrc, 0, 0, thumbW, thumbH);
-    const smallData = smallCanvas.getContext('2d').getImageData(0, 0, thumbW, thumbH);
-
-    Object.keys(films).forEach((filmName, idx) => {
-      const col = idx % 3, row = Math.floor(idx / 3);
-      const x = pad + col * (thumbW + pad);
-      const y = headerH + pad + row * (thumbH + labelH + pad);
-      const rendered = processPixels(smallData.data, thumbW, thumbH, { ...settings, film: filmName, diagnosticMode: 'Off' });
-      const cellCanvas = document.createElement('canvas');
-      cellCanvas.width = thumbW; cellCanvas.height = thumbH;
-      cellCanvas.getContext('2d').putImageData(new ImageData(rendered, thumbW, thumbH), 0, 0);
-      g.drawImage(cellCanvas, x, y);
-
-      g.fillStyle = '#f59e0b';
-      g.font = '600 13px monospace';
-      g.fillText(`${String(idx + 1).padStart(2, '0')}A · ${filmName.toUpperCase()}`, x, y + thumbH + 22);
-    });
-
-    sheet.toBlob(blob => {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `${currentName.replace(/\.[^/.]+$/, '')}-IRO-ContactSheet.jpg`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      toast('Đã xuất bản in tiếp xúc Contact Sheet 9 màu phim!');
-    }, 'image/jpeg', 0.94);
-  };
-}
-
-if ($('exportCube')) {
-  $('exportCube').onclick = () => {
-    try {
-      const cubeContent = bakeRecipeToCube(settings, 17, `IRO ${settings.film}`);
-      const blob = new Blob([cubeContent], { type: 'text/plain;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `IRO-${settings.film.toLowerCase().replace(/\s+/g, '-')}.cube`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      toast('Đã xuất công thức thành tệp 3D LUT (.cube) cho Video/Premiere/CapCut!');
-    } catch (err) {
-      toast(err.message);
-    }
-  };
-}
-
-const drop = $('drop');
-['dragenter', 'dragover'].forEach(e =>
-  drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('drag'); })
-);
-['dragleave', 'drop'].forEach(e =>
-  drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('drag'); })
-);
-drop.addEventListener('drop', e => {
-  const f = e.dataTransfer.files[0];
-  if (f && f.type.startsWith('image/')) {
-    $('photo').files = e.dataTransfer.files;
-    $('photo').dispatchEvent(new Event('change'));
-  }
 });
 
-$('importLut').onclick = () => $('lutfile').click();
-$('lutfile').onchange = async e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  try {
-    const text = await f.text();
-    const parsed = parseCube(text);
-    const lut = {
-      ...parsed,
-      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-      name: parsed.title && parsed.title !== 'Custom LUT' ? parsed.title : f.name.replace(/\.cube$/i, '')
-    };
-    luts.push(lut);
-    selected = lut.id;
-    await saveLutToDb(lut);
-    updateLutList();
-    sync();
-    render();
-    toast(`Đã lưu LUT vào IndexedDB: ${lut.name}`);
-  } catch (err) {
-    toast(err.message);
-  }
-  $('lutfile').value = '';
-};
+document.querySelector('#railSampleCycleBtn')?.addEventListener('click', () => {
+  const samples = ['portrait', 'street', 'landscape'];
+  const next = samples[(Math.floor(Date.now() / 1000) + 1) % samples.length];
+  generateSampleImage(next);
+});
 
-$('lutSelect').onchange = e => { selected = e.target.value; updateLutList(); sync(); render(); };
-$('lutAmount').oninput = e => { settings.lutAmount = +e.target.value; sync(); render(); };
-$('removeLut').onclick = async () => {
-  if (!selected) return;
-  const removedId = selected;
-  luts = luts.filter(l => l.id !== removedId);
-  selected = '';
-  await deleteLutFromDb(removedId);
-  updateLutList();
-  sync();
-  render();
-  toast('Đã gỡ bỏ LUT 3D.');
-};
+document.querySelector('#railResetAllBtn')?.addEventListener('click', () => {
+  document.querySelector('#resetAll').click();
+});
 
-if ($('rotate90')) {
-  $('rotate90').onclick = () => {
-    settings.rotation = ((settings.rotation || 0) + 90) % 360;
-    render();
-    toast(`Đã xoay ảnh: ${settings.rotation}°`);
-  };
-}
-
-if ($('splitCompare')) {
-  $('splitCompare').oninput = e => {
-    splitRatio = Number(e.target.value);
-    if (lastRenderedImageData) paint(lastRenderedImageData);
-  };
-}
-
-if ($('aiAuto')) {
-  $('aiAuto').onclick = async () => {
-    if (!preview) return;
-    const result = autoBalanceSettings(preview.data, settings);
-    settings = result.settings;
-    quadView = false;
-    sync();
-    render();
-    $('status').textContent = result.reasonVi;
-    toast(result.reasonVi);
-  };
-}
-
-if ($('shareCode')) {
-  $('shareCode').onclick = () => {
-    const code = encodeRecipeCode(settings);
-    const input = prompt('Sao chép mã công thức IRO dưới đây hoặc dán mã IRO1-... khác để nạp:', code);
-    if (input && input.trim() !== code) {
-      try {
-        settings = { ...settings, ...decodeRecipeCode(input.trim()) };
-        sync();
-        render();
-        toast('Đã nạp mã công thức IRO thành công!');
-      } catch (err) {
-        toast(err.message);
-      }
-    }
-  };
-}
-
-if ($('frameSelect')) {
-  $('frameSelect').onchange = e => {
-    settings.frameStyle = Number(e.target.value);
-    settings.frame = e.target.options[e.target.selectedIndex].text;
-    toast(`Khung ảnh khi xuất: ${settings.frame}`);
-  };
-}
-
-$('reset').onclick = () => { settings = { ...defaults }; quadView = false; sync(); render(); toast('Đã đặt lại toàn bộ thông số.'); };
-$('compare').onmousedown = () => { compare = true; sync(); render(); };
-$('compare').onmouseup = () => { compare = false; sync(); render(); };
-$('compare').ontouchstart = e => { e.preventDefault(); compare = true; sync(); render(); };
-$('compare').ontouchend = () => { compare = false; sync(); render(); };
-
-$('sampleRecipe').onclick = () => {
-  settings = {
-    ...defaults,
-    film: 'Classic Chrome', dr: 200, grain: 8, grainSize: 2,
-    chrome: 1, chromeBlue: 1, halation: 20, proMist: 20, clarity: 20, skinProtect: 50,
-    red: 1, blue: -1, highlight: -1, shadow: 1, color: 2, sharpness: 2, nr: -2, exposure: 2 / 3
-  };
-  quadView = false;
-  sync();
-  render();
-  toast('Đã áp dụng công thức Fujifilm Street Classic Pro 3.0');
-};
-
-$('saveRecipe').onclick = () => {
-  const blob = new Blob([JSON.stringify({ app: 'IRO', version: 1, code: encodeRecipeCode(settings), settings }, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `${settings.film.toLowerCase().replace(/\s+/g, '-')}-recipe.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-};
-
-$('loadRecipe').onclick = () => $('recipefile').click();
-$('recipefile').onchange = async e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  try {
-    const r = JSON.parse(await f.text());
-    if (r.app !== 'IRO' || r.version !== 1 || !r.settings) throw Error('Recipe không đúng định dạng IRO.');
-    if (r.settings.lutAmount !== undefined) {
-      const amount = r.settings.lutAmount;
-      if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0 || amount > 100) {
-        throw Error('Cường độ LUT không hợp lệ.');
-      }
-    }
-    for (const [key, , min, max] of groups.flatMap(g => g[1])) {
-      const val = r.settings[key];
-      if (val === undefined) continue;
-      if (Array.isArray(min)) {
-        if (!min.includes(val)) throw Error('Thông số không hợp lệ: ' + key);
-      } else if (typeof val !== 'number' || !Number.isFinite(val) || val < min || val > max) {
-        throw Error('Thông số nằm ngoài khoảng cho phép: ' + key);
-      }
-    }
-    settings = { ...defaults, ...r.settings };
-    sync();
-    render();
-    toast('Đã tải công thức màu thành công.');
-  } catch (err) {
-    toast(err.message);
-  }
-  $('recipefile').value = '';
-};
-
-let currentPhotoInfo = { ...defaultPhotoInfo };
-
-function renderFramedCanvas(rawCanvas, rawPixels, s) {
-  drawQuartzDateStamp(rawCanvas.getContext('2d'), rawCanvas.width, rawCanvas.height, s.dateStamp);
-  const styleIdx = s.frameStyle !== undefined ? Number(s.frameStyle) : (typeof s.frame === 'number' ? s.frame : 0);
-  if (!styleIdx || styleIdx === 0) return rawCanvas;
-  return renderPhotoFrame(rawCanvas, rawPixels, s, currentPhotoInfo, styleIdx);
-}
-
-$('export').onclick = async () => {
-  if (!source || exporting) return;
-  exporting = true;
-  $('busy').hidden = false;
-  try {
-    const fmt = $('format').value;
-    const ext = fmt === 'image/jpeg' ? '.jpg' : fmt === 'image/webp' ? '.webp' : '.png';
-    const scaleFactor = Number($('exportScale')?.value || 1);
-    let srcCanvas = source;
-    if (scaleFactor > 1) {
-      const scaled = document.createElement('canvas');
-      scaled.width = source.width * scaleFactor;
-      scaled.height = source.height * scaleFactor;
-      const sctx = scaled.getContext('2d');
-      sctx.imageSmoothingQuality = 'high';
-      sctx.drawImage(source, 0, 0, scaled.width, scaled.height);
-      srcCanvas = scaled;
-    }
-
-    const result = await job({
-      pixels: srcCanvas.getContext('2d').getImageData(0, 0, srcCanvas.width, srcCanvas.height).data,
-      width: srcCanvas.width,
-      height: srcCanvas.height,
-      settings: { ...settings, diagnosticMode: 'Off' },
-      lut: luts.find(l => l.id === selected)
-    });
-    const outPixels = fmt === 'image/png'
-      ? embedRecipeIntoPixels(result.pixels, settings)
-      : result.pixels;
-    const rawOut = document.createElement('canvas');
-    rawOut.width = result.width;
-    rawOut.height = result.height;
-    rawOut.getContext('2d').putImageData(new ImageData(outPixels, result.width, result.height), 0, 0);
-    const finalCanvas = renderFramedCanvas(rawOut, outPixels, settings);
-
-    finalCanvas.toBlob(blob => {
-      const a = document.createElement('a');
-      const base = currentName.replace(/\.[^/.]+$/, '');
-      a.href = URL.createObjectURL(blob);
-      a.download = `${base}-IRO${scaleFactor > 1 ? '-2X' : ''}${ext}`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      exporting = false;
-      $('busy').hidden = true;
-      toast(`Đã xuất ảnh thành công (${finalCanvas.width}x${finalCanvas.height})!`);
-    }, fmt, fmt === 'image/png' ? undefined : 0.94);
-  } catch (e) {
-    exporting = false;
-    $('busy').hidden = true;
-    toast(e.message);
-  }
-};
-
-loadStoredLuts();
-sync();
-demo();
-
-
-// === MATERIAL DESIGN 3 EXPRESSIVE UX & ANIMATION ENGINE (RIPPLE, THEME, TABS & TICK RULER) ===
-
-function attachMd3Ripples() {
-  document.querySelectorAll('button').forEach(btn => {
-    if (btn.dataset.md3RippleAttached) return;
-    btn.dataset.md3RippleAttached = '1';
-    btn.addEventListener('pointerdown', ev => {
-      const rect = btn.getBoundingClientRect();
-      const ripple = document.createElement('span');
-      const size = Math.max(rect.width, rect.height);
-      ripple.className = 'md3-ripple';
-      ripple.style.width = ripple.style.height = `${size}px`;
-      ripple.style.left = `${ev.clientX - rect.left - size / 2}px`;
-      ripple.style.top = `${ev.clientY - rect.top - size / 2}px`;
-      btn.appendChild(ripple);
-      setTimeout(() => ripple.remove(), 540);
-    });
-  });
-}
-
-function triggerCanvasSpringPop() {
-  canvas.classList.remove('canvas-pop');
-  void canvas.offsetWidth;
-  canvas.classList.add('canvas-pop');
-  setTimeout(() => canvas.classList.remove('canvas-pop'), 240);
-}
-
-// Chuyển đổi giao diện M3 Dark Darkroom <-> M3 Warm Porcelain (đồng bộ StudioStyle.java)
-if ($('themeToggleBtn')) {
-  $('themeToggleBtn').onclick = () => {
-    document.body.classList.toggle('theme-porcelain');
-    const isLight = document.body.classList.contains('theme-porcelain');
+// =========================================================================
+// CHẾ ĐỘ SÁNG / TỐI (WARM PORCELAIN & OBSIDIAN DARKROOM)
+// =========================================================================
+const themeToggleBtn = document.querySelector('#themeToggleBtn');
+if (themeToggleBtn) {
+  themeToggleBtn.addEventListener('click', () => {
+    state.porcelainTheme = !state.porcelainTheme;
+    document.body.classList.toggle('theme-porcelain', state.porcelainTheme);
+    themeToggleBtn.textContent = state.porcelainTheme ? '🌙' : '☀️';
     drawTickRuler();
-    toast(isLight ? 'Đã chuyển sang giao diện M3 Warm Porcelain (Sáng).' : 'Đã chuyển sang giao diện M3 Darkroom (Tối).');
-  };
-}
-
-// M3 Segmented Category Tabs kèm hiệu ứng Staggered Cascade
-if ($('categoryTabs')) {
-  const allGroups = [...document.querySelectorAll('.control-group')];
-  $('categoryTabs').querySelectorAll('.cat-tab').forEach(tab => {
-    tab.onclick = () => {
-      $('categoryTabs').querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const cat = tab.dataset.cat;
-      allGroups.forEach((grp, idx) => {
-        const show = cat === 'all' || Number(cat) === idx;
-        grp.style.display = show ? 'flex' : 'none';
-        if (show) {
-          grp.style.animation = 'none';
-          void grp.offsetWidth;
-          grp.style.animation = `md3CascadeIn 320ms cubic-bezier(0.05, 0.7, 0.1, 1) ${idx * 45}ms both`;
-        }
-      });
-    };
+    drawCurveEditor();
+    setStatus(state.porcelainTheme
+      ? 'Đã chuyển sang giao diện Sáng (Warm Porcelain M3 Studio).'
+      : 'Đã chuyển sang giao diện Phòng tối (Obsidian Darkroom M3 Studio).');
   });
 }
 
-// Thanh trượt thước chia vạch độ chính xác cao chuẩn M3 Expressive (Web TickRulerView)
-const rulerCanvas = $('tickRulerCanvas');
-const rulerCtx = rulerCanvas ? rulerCanvas.getContext('2d') : null;
-let activeRulerControl = ['exposure', 'Bù sáng · EV', -3, 3, 1 / 3];
-let rulerDragging = false, rulerStartX = 0, rulerStartVal = 0;
+// =========================================================================
+// THƯỚC CHIA VẠCH GAUSSIAN M3 (PRECISION TICK RULER DOCK)
+// =========================================================================
+const tickRulerCanvas = document.querySelector('#m3TickRulerCanvas');
+const tickRulerCtx = tickRulerCanvas ? tickRulerCanvas.getContext('2d') : null;
+const rulerActiveLabel = document.querySelector('#rulerActiveLabel');
+const rulerActiveValue = document.querySelector('#rulerActiveValue');
+const rulerResetParamBtn = document.querySelector('#rulerResetParamBtn');
+const m3ParamPillStrip = document.querySelector('#m3ParamPillStrip');
 
-function bindControlToTickRuler(ctrl) {
-  activeRulerControl = ctrl;
-  document.querySelectorAll('.control').forEach(c => c.classList.remove('focused-control'));
-  const inputEl = $(ctrl[0]);
-  if (inputEl && inputEl.closest('.control')) {
-    inputEl.closest('.control').classList.add('focused-control');
+let activeRulerSpec = basicSliderSpecs[0];
+let rulerDragging = false;
+let rulerDragStartX = 0;
+let rulerDragStartVal = 0;
+
+function formatParamReadout(key, val) {
+  const num = Number(val);
+  if (key === 'colorChrome' || key === 'chromeBlue') {
+    return num === 0 ? 'Tắt' : (num === 1 ? 'Nhẹ' : 'Mạnh');
   }
+  if (key === 'lutAmount' || key === 'skinProtect') {
+    return `${Math.round(num)}%`;
+  }
+  const rounded = Math.round(num * 10) / 10;
+  return (rounded > 0 ? '+' : '') + rounded;
+}
+
+function initM3RulerDock() {
+  if (!m3ParamPillStrip || !tickRulerCanvas) return;
+  m3ParamPillStrip.innerHTML = '';
+  for (const spec of allSliderSpecs) {
+    const [key, label] = spec;
+    const shortName = label.split(' (')[0];
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'm3-param-pill' + (key === activeRulerSpec[0] ? ' active' : '');
+    pill.dataset.paramKey = key;
+    pill.textContent = shortName;
+    pill.addEventListener('click', () => {
+      activeRulerSpec = spec;
+      syncRulerHeader();
+      drawTickRuler();
+    });
+    m3ParamPillStrip.append(pill);
+  }
+  syncRulerHeader();
   drawTickRuler();
 }
 
-for (const [, list] of groups) {
-  for (const ctrl of list) {
-    if (!Array.isArray(ctrl[2])) {
-      const el = $(ctrl[0]);
-      if (el) {
-        el.addEventListener('focus', () => bindControlToTickRuler(ctrl));
-        el.addEventListener('pointerdown', () => bindControlToTickRuler(ctrl));
-        el.addEventListener('input', () => {
-          const outBadge = $(ctrl[0] + 'Value');
-          if (outBadge) {
-            outBadge.classList.add('pulse');
-            setTimeout(() => outBadge.classList.remove('pulse'), 180);
-          }
-          drawTickRuler();
-        });
-      }
-    }
+function syncRulerHeader() {
+  if (!rulerActiveLabel || !rulerActiveValue) return;
+  const [key, label] = activeRulerSpec;
+  const val = Number(state.settings[key] ?? defaults[key] ?? 0);
+  rulerActiveLabel.textContent = label;
+  rulerActiveValue.textContent = formatParamReadout(key, val);
+  if (m3ParamPillStrip) {
+    m3ParamPillStrip.querySelectorAll('.m3-param-pill').forEach(btn => {
+      const k = btn.dataset.paramKey;
+      btn.classList.toggle('active', k === key);
+      const cur = Number(state.settings[k] ?? defaults[k] ?? 0);
+      const def = Number(defaults[k] ?? 0);
+      btn.classList.toggle('modified', Math.abs(cur - def) > 0.01);
+    });
   }
 }
 
 function drawTickRuler() {
-  if (!rulerCtx || !activeRulerControl) return;
-  const [key, label, min, max, step] = activeRulerControl;
-  const val = Number(settings[key] || 0);
-  if ($('rulerLabel')) $('rulerLabel').textContent = `M3 TICK RULER · ${label.toUpperCase()}`;
-  if ($('rulerValue')) {
-    $('rulerValue').textContent = key === 'exposure'
-      ? (val >= 0 ? '+' : '') + val.toFixed(2) + ' EV'
-      : (val >= 0 ? '+' : '') + Math.round(val * 100) / 100;
-  }
+  if (!tickRulerCtx || !tickRulerCanvas) return;
+  const w = tickRulerCanvas.width;
+  const h = tickRulerCanvas.height;
+  tickRulerCtx.clearRect(0, 0, w, h);
 
-  const w = rulerCanvas.width, h = rulerCanvas.height;
-  rulerCtx.clearRect(0, 0, w, h);
-  const centerX = w * 0.5, centerY = h * 0.54;
+  const [key, , min, max, step] = activeRulerSpec;
+  const val = Number(state.settings[key] ?? defaults[key] ?? 0);
+  const defVal = Number(defaults[key] ?? 0);
+  const totalSteps = Math.max(1, Math.round((max - min) / step));
+  const currentStep = (val - min) / step;
+  const zeroStep = (defVal - min) / step;
   const tickSpacing = 12;
-  const totalSteps = Math.round((max - min) / step);
-  const currentStepFloat = (val - min) / step;
-  const zeroStepFloat = (0 - min) / step;
-  const isLight = document.body.classList.contains('theme-porcelain');
-  const accent = isLight ? '#e07a3b' : '#f59e0b';
+  const centerX = w / 2;
+  const centerY = h * 0.56;
 
-  // Thanh Tonal Delta nối từ 0 đến giá trị hiện tại
-  if (min < 0 && max > 0) {
-    const zeroX = centerX + (zeroStepFloat - currentStepFloat) * tickSpacing;
-    const left = Math.max(10, Math.min(zeroX, centerX));
-    const right = Math.min(w - 10, Math.max(zeroX, centerX));
-    rulerCtx.fillStyle = isLight ? 'rgba(224, 122, 59, 0.18)' : 'rgba(245, 158, 11, 0.18)';
-    rulerCtx.fillRect(left, centerY - 11, right - left, 22);
+  // Dải Tonal Delta nối từ vị trí mặc định (0) đến vị trí hiện tại
+  const zeroX = centerX + (zeroStep - currentStep) * tickSpacing;
+  const deltaLeft = Math.max(12, Math.min(zeroX, centerX));
+  const deltaRight = Math.min(w - 12, Math.max(zeroX, centerX));
+  if (deltaRight - deltaLeft > 1.5) {
+    tickRulerCtx.fillStyle = state.porcelainTheme
+      ? 'rgba(217, 119, 6, 0.18)'
+      : 'rgba(240, 154, 62, 0.22)';
+    tickRulerCtx.beginPath();
+    tickRulerCtx.roundRect(deltaLeft, centerY - 12, deltaRight - deltaLeft, 24, 6);
+    tickRulerCtx.fill();
   }
 
+  // Các vạch chia với hiệu ứng phóng đại sóng Gaussian quanh kim trung tâm
   const sigma = tickSpacing * 3.4;
   for (let i = 0; i <= totalSteps; i++) {
-    const x = centerX + (i - currentStepFloat) * tickSpacing;
-    if (x < 8 || x > w - 8) continue;
+    const x = centerX + (i - currentStep) * tickSpacing;
+    if (x < 10 || x > w - 10) continue;
     const dist = Math.abs(x - centerX);
-    const edgeFade = Math.max(0.1, 1 - dist / (w * 0.48));
-    const gauss = Math.exp(-(dist * dist) / (2 * sigma * sigma));
-    const tickVal = min + i * step;
-    const isZero = Math.abs(tickVal) < step * 0.25;
-    const isMajor = (i % 5 === 0) || isZero;
-    const halfH = (isMajor ? 9.5 : 5) * (1 + 0.45 * gauss);
+    const fade = Math.max(0, 1 - dist / (w * 0.48));
+    const gaussian = Math.exp(-(dist * dist) / (2 * sigma * sigma)) * (rulerDragging ? 1.0 : 0.45);
+    const isMajor = i % 5 === 0;
+    const isZero = Math.abs((min + i * step) - defVal) < step * 0.25;
 
-    rulerCtx.strokeStyle = isZero ? accent : isLight ? `rgba(24,26,31,${edgeFade * 0.75})` : `rgba(238,240,245,${edgeFade * 0.75})`;
-    rulerCtx.lineWidth = isZero ? 2.4 : isMajor ? 1.7 : 1.1;
-    rulerCtx.beginPath();
-    rulerCtx.moveTo(x, centerY - halfH);
-    rulerCtx.lineTo(x, centerY + halfH);
-    rulerCtx.stroke();
+    const baseHalfH = isZero ? 13 : (isMajor ? 10 : 5.5);
+    const tickHalfH = baseHalfH * (1 + 0.42 * gaussian);
+
+    tickRulerCtx.strokeStyle = isZero
+      ? '#f09a3e'
+      : state.porcelainTheme
+        ? `rgba(22, 24, 29, ${(fade * (isMajor ? 0.78 : 0.35)).toFixed(2)})`
+        : `rgba(243, 244, 248, ${(fade * (isMajor ? 0.85 : 0.38)).toFixed(2)})`;
+    tickRulerCtx.lineWidth = isZero ? 2.5 : (isMajor ? 1.8 : 1.15);
+    tickRulerCtx.beginPath();
+    tickRulerCtx.moveTo(x, centerY - tickHalfH);
+    tickRulerCtx.lineTo(x, centerY + tickHalfH);
+    tickRulerCtx.stroke();
+
+    if (isZero) {
+      tickRulerCtx.fillStyle = '#f09a3e';
+      tickRulerCtx.beginPath();
+      tickRulerCtx.arc(x, centerY - tickHalfH - 4, 2.6, 0, Math.PI * 2);
+      tickRulerCtx.fill();
+    }
   }
 
-  // Kim chỉ thị trung tâm M3 Expressive
-  rulerCtx.fillStyle = accent;
-  rulerCtx.fillRect(centerX - 1.5, 4, 3, h - 8);
+  // Kim chỉ thị trung tâm chuẩn M3 Expressive (vươn dài khi kéo)
+  tickRulerCtx.fillStyle = '#f09a3e';
+  const needleTop = rulerDragging ? 4 : 7;
+  const needleBot = h - (rulerDragging ? 4 : 7);
+  tickRulerCtx.beginPath();
+  tickRulerCtx.roundRect(centerX - 1.8, needleTop, 3.6, needleBot - needleTop, 2);
+  tickRulerCtx.fill();
 }
 
-if (rulerCanvas) {
-  rulerCanvas.addEventListener('pointerdown', ev => {
+if (tickRulerCanvas) {
+  tickRulerCanvas.addEventListener('pointerdown', e => {
+    if (!state.source) return;
     rulerDragging = true;
-    rulerStartX = ev.clientX;
-    rulerStartVal = Number(settings[activeRulerControl[0]] || 0);
-    rulerCanvas.setPointerCapture(ev.pointerId);
+    rulerDragStartX = e.clientX;
+    const [key] = activeRulerSpec;
+    rulerDragStartVal = Number(state.settings[key] ?? defaults[key] ?? 0);
+    tickRulerCanvas.setPointerCapture(e.pointerId);
+    drawTickRuler();
   });
-  rulerCanvas.addEventListener('pointermove', ev => {
-    if (!rulerDragging) return;
-    const [key, , min, max, step] = activeRulerControl;
-    const dx = ev.clientX - rulerStartX;
-    let raw = rulerStartVal - (dx / 12) * step;
-    if (min < 0 && max > 0 && Math.abs(raw) < step * 0.35) raw = 0;
+
+  tickRulerCanvas.addEventListener('pointermove', e => {
+    if (!rulerDragging || !state.source) return;
+    const [key, , min, max, step] = activeRulerSpec;
+    const defVal = Number(defaults[key] ?? 0);
+    const dx = e.clientX - rulerDragStartX;
+    let raw = rulerDragStartVal - (dx / 12) * step;
+    // Nam châm hút nhẹ về giá trị mặc định (Magnetic Zero-Detent Snap)
+    if (Math.abs(raw - defVal) < step * 0.35) {
+      raw = defVal;
+    }
     const snapped = Math.max(min, Math.min(max, Math.round(raw / step) * step));
-    if (snapped !== settings[key]) {
-      settings[key] = Number(snapped.toFixed(4));
-      sync();
-      drawTickRuler();
+    const fixed = Number(snapped.toFixed(2));
+    if (state.settings[key] !== fixed) {
+      state.settings[key] = fixed;
+      syncInputsFromSettings();
       render();
     }
   });
-  const endDrag = () => { rulerDragging = false; };
-  rulerCanvas.addEventListener('pointerup', endDrag);
-  rulerCanvas.addEventListener('pointercancel', endDrag);
+
+  const endRulerDrag = () => {
+    if (!rulerDragging) return;
+    rulerDragging = false;
+    drawTickRuler();
+    commitHistory(`Chỉnh ${activeRulerSpec[1]}`);
+  };
+  tickRulerCanvas.addEventListener('pointerup', endRulerDrag);
+  tickRulerCanvas.addEventListener('pointercancel', endRulerDrag);
+
+  tickRulerCanvas.addEventListener('wheel', e => {
+    if (!state.source) return;
+    e.preventDefault();
+    const [key, , min, max, step] = activeRulerSpec;
+    const dir = e.deltaY < 0 ? 1 : -1;
+    const cur = Number(state.settings[key] ?? defaults[key] ?? 0);
+    const next = Math.max(min, Math.min(max, Number((cur + dir * step).toFixed(2))));
+    state.settings[key] = next;
+    syncInputsFromSettings();
+    render();
+  }, { passive: false });
+
+  tickRulerCanvas.addEventListener('dblclick', () => {
+    if (!state.source) return;
+    const [key, label] = activeRulerSpec;
+    state.settings[key] = defaults[key];
+    syncInputsFromSettings();
+    commitHistory(`Đặt lại ${label}`);
+    render();
+  });
 }
 
-attachMd3Ripples();
-drawTickRuler();
+if (rulerResetParamBtn) {
+  rulerResetParamBtn.addEventListener('click', () => {
+    if (!state.source) return;
+    const [key, label] = activeRulerSpec;
+    state.settings[key] = defaults[key];
+    syncInputsFromSettings();
+    commitHistory(`Đặt lại ${label}`);
+    render();
+  });
+}
+
+initM3RulerDock();
 
 // =========================================================================
-// THƯ VIỆN 392 CÔNG THỨC MÀU PHIM FUJI X WEEKLY (1-CLICK LOAD)
+// PHÓNG TO & KÉO TRƯỢT TRÊN SÂN KHẤU TRUNG TÂM (INTERACTIVE STAGE ZOOM & PAN)
 // =========================================================================
-let allRecipes = [];
-let currentSensor = 'all';
+const stageContainer = document.querySelector('#stageContainer');
+let isPanningStage = false;
+let panStartClientX = 0;
+let panStartClientY = 0;
 
-async function initRecipeLibrary() {
+function applyStageTransform() {
+  if (!canvasWrapper) return;
+  if (state.stageZoom <= 1.01) {
+    state.stageZoom = 1.0;
+    state.stagePanX = 0;
+    state.stagePanY = 0;
+    canvasWrapper.style.transform = '';
+    if (zoomResetBadge) zoomResetBadge.hidden = true;
+  } else {
+    canvasWrapper.style.transform = `translate(${state.stagePanX}px, ${state.stagePanY}px) scale(${state.stageZoom})`;
+    if (zoomResetBadge) {
+      zoomResetBadge.hidden = false;
+      zoomResetBadge.textContent = `🔍 ${Math.round(state.stageZoom * 100)}% · Đặt lại`;
+    }
+  }
+}
+
+stageContainer.addEventListener('wheel', e => {
+  if (!state.source || canvasWrapper.hidden) return;
+  // Không chặn cuộn nếu đang mở hộp thoại modal
+  if (!recipeLibraryModal.hidden || !lightCraftModal.hidden || !contactSheetModal.hidden || !promptModal.hidden || !cmdPaletteModal.hidden) {
+    return;
+  }
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.12 : (1 / 1.12);
+  state.stageZoom = Math.max(1.0, Math.min(4.0, state.stageZoom * factor));
+  applyStageTransform();
+}, { passive: false });
+
+canvasWrapper.addEventListener('pointerdown', e => {
+  if (e.target === splitSlider || splitSlider.contains(e.target)) return;
+  if (state.stageZoom <= 1.01) return;
+  isPanningStage = true;
+  panStartClientX = e.clientX - state.stagePanX;
+  panStartClientY = e.clientY - state.stagePanY;
+  canvasWrapper.setPointerCapture(e.pointerId);
+});
+
+canvasWrapper.addEventListener('pointermove', e => {
+  if (!isPanningStage) return;
+  state.stagePanX = e.clientX - panStartClientX;
+  state.stagePanY = e.clientY - panStartClientY;
+  applyStageTransform();
+});
+
+canvasWrapper.addEventListener('pointerup', () => { isPanningStage = false; });
+canvasWrapper.addEventListener('dblclick', () => {
+  state.stageZoom = state.stageZoom > 1.05 ? 1.0 : 2.0;
+  state.stagePanX = 0;
+  state.stagePanY = 0;
+  applyStageTransform();
+});
+
+zoomResetBadge?.addEventListener('click', () => {
+  state.stageZoom = 1.0;
+  state.stagePanX = 0;
+  state.stagePanY = 0;
+  applyStageTransform();
+});
+
+// =========================================================================
+// KHỞI TẠO RIBBON PRESET & NẠP 392 CÔNG THỨC TỪ RECIPES.JSON
+// =========================================================================
+const presetRibbon = document.querySelector('#presetRibbon');
+for (const preset of CURATED_PRESETS) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'preset-pill';
+  btn.innerHTML = `<span class="p-name">${preset.name}</span><span class="p-sub">${preset.subtitle}</span>`;
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const currentDiag = state.settings.diagnosticMode;
+    const currentDate = state.settings.dateStamp;
+    state.settings = {
+      ...structuredClone(defaults),
+      ...structuredClone(preset.settings),
+      diagnosticMode: currentDiag,
+      dateStamp: currentDate
+    };
+    state.activeRecipeName = preset.name;
+    state.curvePoints = structuredClone(preset.settings.curvePoints || [[0, 0], [1, 1]]);
+    syncInputsFromSettings();
+    drawCurveEditor();
+    commitHistory(`Preset: ${preset.name}`);
+    render();
+  });
+  presetRibbon.append(btn);
+}
+
+// Khởi tạo 30 mẫu Khung ảnh Triển lãm (PhotoFrame.java Parity)
+for (const frame of PHOTO_FRAMES) {
+  const opt = document.createElement('option');
+  opt.value = String(frame.id);
+  opt.textContent = `${frame.id === 0 ? '🚫 ' : '🖼️ #' + frame.id + ' · '}${frame.name}`;
+  frameStyleSelect.append(opt);
+}
+
+frameStyleSelect.addEventListener('change', e => {
+  state.frameStyle = Number(e.target.value) || 0;
+  frameExifControls.hidden = state.frameStyle === 0;
+  render();
+});
+frameTitleInput.addEventListener('input', () => render());
+frameExifInput.addEventListener('input', () => render());
+
+// Tải kho 392 công thức từ recipes.json
+async function load392Catalog() {
   try {
     const res = await fetch('./recipes.json');
     if (!res.ok) return;
-    const data = await res.json();
-    allRecipes = Array.isArray(data.recipes) ? data.recipes : [];
-    if ($('totalRecipeCount')) $('totalRecipeCount').textContent = allRecipes.length;
-    renderRecipeGrid();
-  } catch (err) {
-    console.warn('recipes.json chưa sẵn sàng:', err);
+    const rawList = await res.json();
+    state.fullCatalogRecipes = rawList.map(parseFujiRecipe);
+    buildFilmFilterChips();
+  } catch (_) {}
+}
+load392Catalog();
+
+function applyCatalogRecipe(rec) {
+  const keepDiag = state.settings.diagnosticMode;
+  const keepDate = state.settings.dateStamp;
+  state.settings = {
+    ...structuredClone(defaults),
+    ...structuredClone(rec.settings),
+    diagnosticMode: keepDiag,
+    dateStamp: keepDate
+  };
+  state.activeRecipeName = rec.name;
+  state.curvePoints = structuredClone(rec.settings.curvePoints || [[0, 0], [1, 1]]);
+  syncInputsFromSettings();
+  drawCurveEditor();
+  commitHistory(`Công thức: ${rec.name}`);
+  render();
+  setStatus(`🎞️ Đã áp dụng công thức "${rec.name}" (${rec.film} · DR${rec.dr} · WB ${rec.wb}).`);
+}
+
+function applySurpriseRandomRecipe() {
+  if (!state.fullCatalogRecipes.length) {
+    setStatus('Đang tải kho 392 công thức, vui lòng thử lại sau giây lát...');
+    return;
+  }
+  const randomRec = state.fullCatalogRecipes[Math.floor(Math.random() * state.fullCatalogRecipes.length)];
+  applyCatalogRecipe(randomRec);
+}
+
+document.querySelector('#surpriseRecipeBtn')?.addEventListener('click', applySurpriseRandomRecipe);
+document.querySelector('#inlineSurpriseBtn')?.addEventListener('click', applySurpriseRandomRecipe);
+document.querySelector('#modalRandomRecipeBtn')?.addEventListener('click', () => {
+  applySurpriseRandomRecipe();
+  renderRecipeLibraryGrid();
+});
+
+function buildFilmFilterChips() {
+  const films = [
+    'Tất cả', '★ Yêu thích', 'Classic Chrome', 'Classic Neg', 'Velvia',
+    'Provia', 'Astia', 'Nostalgic Neg', 'Eterna', 'Acros', 'Monochrome', 'Pro Neg'
+  ];
+  recipeFilmFilterChips.innerHTML = '';
+  for (const f of films) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'film-chip' + (f === state.selectedFilmFilter ? ' active' : '');
+    btn.textContent = f === 'Tất cả' ? `Tất cả (${state.fullCatalogRecipes.length})` : f;
+    btn.addEventListener('click', () => {
+      state.selectedFilmFilter = f;
+      recipeFilmFilterChips.querySelectorAll('.film-chip').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderRecipeLibraryGrid();
+    });
+    recipeFilmFilterChips.append(btn);
   }
 }
 
-function renderRecipeGrid() {
-  const grid = $('recipeGrid');
-  if (!grid) return;
-  const search = ($('recipeSearchInput')?.value || '').toLowerCase().trim();
-  const filtered = allRecipes.filter(r => {
-    const matchSensor = currentSensor === 'all' || (r.sensors && r.sensors.some(s => s.toLowerCase().includes(currentSensor.toLowerCase())));
-    if (!matchSensor) return false;
-    if (!search) return true;
-    const nameMatch = (r.name || '').toLowerCase().includes(search);
-    const filmMatch = (r.film || '').toLowerCase().includes(search);
-    return nameMatch || filmMatch;
+function renderRecipeLibraryGrid() {
+  const q = (recipeSearchInput.value || '').trim().toLowerCase();
+  const filmFilter = state.selectedFilmFilter;
+  const filtered = state.fullCatalogRecipes.filter(r => {
+    const matchFav = filmFilter === '★ Yêu thích' ? state.favoriteRecipeIds.has(r.id) : true;
+    const matchFilm = (filmFilter === 'Tất cả' || filmFilter === '★ Yêu thích') ||
+      r.film.toLowerCase().includes(filmFilter.toLowerCase()) ||
+      r.settings.film.toLowerCase().includes(filmFilter.toLowerCase());
+    const matchQuery = !q ||
+      r.name.toLowerCase().includes(q) ||
+      r.film.toLowerCase().includes(q) ||
+      r.wb.toLowerCase().includes(q);
+    return matchFav && matchFilm && matchQuery;
   });
 
-  grid.innerHTML = '';
-  const toRender = filtered.slice(0, 80);
-  for (const r of toRender) {
+  recipeLibraryGrid.innerHTML = '';
+  for (const rec of filtered) {
+    const isFav = state.favoriteRecipeIds.has(rec.id);
+    const isCurrent = state.activeRecipeName === rec.name;
     const card = document.createElement('div');
-    card.className = 'recipe-card';
-    const thumbUrl = r.sampleImageUrl || (r.sampleImages && r.sampleImages[0]) || '';
-    const filmName = r.film || 'Classic Chrome';
-    const sensorsStr = (r.sensors || []).join(' / ');
-    const raw = r.rawSettings || {};
-    const hl = raw.Highlight || '0';
-    const sh = raw.Shadow || '0';
-    const wb = raw['White Balance'] ? raw['White Balance'].split(',')[0] : 'Auto';
-
+    card.className = 'recipe-lib-card' + (isCurrent ? ' active' : '');
     card.innerHTML = `
-      <div class="recipe-card-thumb">
-        ${thumbUrl ? `<img src="${thumbUrl}" loading="lazy" alt="${r.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">` : ''}
-        <div class="fallback-art" style="${thumbUrl ? 'display:none;' : ''}">🎞️</div>
-        <span class="recipe-card-badge">${filmName}</span>
+      <div class="r-head">
+        <span class="r-title">${rec.name}</span>
+        <button type="button" class="fav-star-btn ${isFav ? 'is-fav' : ''}" title="Đánh dấu Yêu thích">${isFav ? '★' : '☆'}</button>
       </div>
-      <div class="recipe-card-content">
-        <h4 class="recipe-card-title">${r.name}</h4>
-        <div class="recipe-card-sensor">${sensorsStr}</div>
-        <div class="recipe-card-specs">
-          <span class="spec-badge">HL: ${hl}</span>
-          <span class="spec-badge">SH: ${sh}</span>
-          <span class="spec-badge">WB: ${wb}</span>
-        </div>
-        <button class="recipe-card-btn">Áp dụng công thức</button>
+      <span class="r-film">🎞️ ${rec.film}</span>
+      <div class="r-meta">
+        <span>DR${rec.dr}</span>
+        <span>H:${rec.settings.highlight > 0 ? '+' : ''}${rec.settings.highlight} S:${rec.settings.shadow > 0 ? '+' : ''}${rec.settings.shadow}</span>
+        <span>WB: ${rec.wb}</span>
       </div>
     `;
-
-    card.querySelector('.recipe-card-btn').onclick = (e) => {
+    const starBtn = card.querySelector('.fav-star-btn');
+    starBtn.addEventListener('click', e => {
       e.stopPropagation();
-      applyFujiRecipe(r);
-    };
-    card.onclick = () => applyFujiRecipe(r);
-    grid.appendChild(card);
-  }
-}
-
-function applyFujiRecipe(recipe) {
-  const parsed = parseFujiRecipe(recipe, defaults);
-  settings = { ...settings, ...parsed.settings };
-  quadView = false;
-  sync();
-  render();
-  if ($('recipeModal')) $('recipeModal').hidden = true;
-  toast(`Đã nạp công thức "${recipe.name}" (${parsed.film})!`);
-}
-
-if ($('recipeLibraryBtn')) {
-  $('recipeLibraryBtn').onclick = () => {
-    if ($('recipeModal')) $('recipeModal').hidden = false;
-    if (allRecipes.length === 0) initRecipeLibrary();
-  };
-}
-
-if ($('closeRecipeModal')) {
-  $('closeRecipeModal').onclick = () => {
-    if ($('recipeModal')) $('recipeModal').hidden = true;
-  };
-}
-if ($('recipeModal')) {
-  $('recipeModal').onclick = (e) => {
-    if (e.target === $('recipeModal')) $('recipeModal').hidden = true;
-  };
-}
-
-if ($('recipeSearchInput')) {
-  $('recipeSearchInput').oninput = () => renderRecipeGrid();
-}
-
-if ($('recipeSensorChips')) {
-  $('recipeSensorChips').querySelectorAll('.chip').forEach(chip => {
-    chip.onclick = () => {
-      $('recipeSensorChips').querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      currentSensor = chip.dataset.sensor;
-      renderRecipeGrid();
-    };
-  });
-}
-
-// =========================================================================
-// LIGHTCRAFT SUITE (TONE CURVE & 3-WAY COLOR WHEELS INTERACTIVE WIDGETS)
-// =========================================================================
-let redrawToneCurve = null;
-let redrawColorWheels = null;
-
-function initToneCurveWidget() {
-  const c = $('toneCurveCanvas');
-  if (!c) return;
-  const tctx = c.getContext('2d');
-  let draggingIdx = -1;
-
-  function drawCurve() {
-    const w = c.width, h = c.height;
-    tctx.clearRect(0, 0, w, h);
-
-    tctx.fillStyle = '#111318';
-    tctx.fillRect(0, 0, w, h);
-
-    // Grid 4x4
-    tctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-    tctx.lineWidth = 1;
-    for (let i = 1; i < 4; i++) {
-      const p = (i / 4) * w;
-      tctx.beginPath(); tctx.moveTo(p, 0); tctx.lineTo(p, h); tctx.stroke();
-      tctx.beginPath(); tctx.moveTo(0, p); tctx.lineTo(w, p); tctx.stroke();
-    }
-
-    // Diagonal
-    tctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
-    tctx.setLineDash([4, 4]);
-    tctx.beginPath(); tctx.moveTo(0, h); tctx.lineTo(w, 0); tctx.stroke();
-    tctx.setLineDash([]);
-
-    // Curve
-    const lut = buildMonotoneCurveLut(settings.curvePoints);
-    tctx.strokeStyle = '#f59e0b';
-    tctx.lineWidth = 2.5;
-    tctx.beginPath();
-    for (let x = 0; x < w; x++) {
-      const inVal = Math.round((x / w) * 255);
-      const outVal = lut[inVal];
-      const y = h - (outVal / 255) * h;
-      if (x === 0) tctx.moveTo(x, y); else tctx.lineTo(x, y);
-    }
-    tctx.stroke();
-
-    // Control points
-    settings.curvePoints.forEach(([px, py], i) => {
-      const cx = px * w, cy = h - py * h;
-      tctx.beginPath();
-      tctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
-      tctx.fillStyle = (i === draggingIdx) ? '#ffea00' : '#ffffff';
-      tctx.fill();
-      tctx.strokeStyle = '#f59e0b';
-      tctx.lineWidth = 2;
-      tctx.stroke();
-    });
-  }
-
-  function getCoords(e) {
-    const rect = c.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const y = Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height));
-    return { x, y };
-  }
-
-  const onDown = e => {
-    const { x, y } = getCoords(e);
-    let bestIdx = -1, bestDist = 0.09;
-    settings.curvePoints.forEach(([px, py], i) => {
-      const d = Math.hypot(px - x, py - y);
-      if (d < bestDist) { bestDist = d; bestIdx = i; }
-    });
-    draggingIdx = bestIdx;
-    if (draggingIdx >= 0) e.preventDefault();
-  };
-
-  const onMove = e => {
-    if (draggingIdx < 0) return;
-    e.preventDefault();
-    const { x, y } = getCoords(e);
-    if (draggingIdx === 0) settings.curvePoints[0] = [0, y];
-    else if (draggingIdx === settings.curvePoints.length - 1) settings.curvePoints[draggingIdx] = [1, y];
-    else {
-      const prevX = settings.curvePoints[draggingIdx - 1][0] + 0.02;
-      const nextX = settings.curvePoints[draggingIdx + 1][0] - 0.02;
-      settings.curvePoints[draggingIdx] = [Math.max(prevX, Math.min(nextX, x)), y];
-    }
-    drawCurve();
-    render();
-  };
-
-  const onUp = () => { draggingIdx = -1; };
-
-  c.onmousedown = onDown;
-  window.addEventListener('mousemove', onMove);
-  window.addEventListener('mouseup', onUp);
-  c.ontouchstart = onDown;
-  window.addEventListener('touchmove', onMove, { passive: false });
-  window.addEventListener('touchend', onUp);
-
-  c.ondblclick = () => {
-    settings.curvePoints = [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]];
-    drawCurve();
-    render();
-    toast('Đã đặt lại đường cong Tone Curve về mặc định!');
-  };
-
-  if ($('resetCurveBtn')) {
-    $('resetCurveBtn').onclick = () => {
-      settings.curvePoints = [[0, 0], [0.25, 0.25], [0.5, 0.5], [0.75, 0.75], [1, 1]];
-      drawCurve();
-      render();
-      toast('Đã đặt lại đường cong Tone Curve.');
-    };
-  }
-
-  drawCurve();
-  redrawToneCurve = drawCurve;
-}
-
-function initColorWheelsWidget() {
-  const c = $('colorWheelsCanvas');
-  if (!c) return;
-  const wctx = c.getContext('2d');
-  const wheelLabels = ['SHADOWS', 'MIDTONES', 'HIGHLIGHTS'];
-  let activeWheel = -1;
-
-  function drawWheels() {
-    const w = c.width, h = c.height;
-    wctx.clearRect(0, 0, w, h);
-    const radius = Math.min(w / 3.4, h * 0.38);
-    const centerY = h * 0.54;
-
-    for (let i = 0; i < 3; i++) {
-      const cx = (w / 3) * (i + 0.5);
-
-      for (let angle = 0; angle < 360; angle += 4) {
-        const rad1 = (angle * Math.PI) / 180;
-        const rad2 = ((angle + 4.5) * Math.PI) / 180;
-        wctx.beginPath();
-        wctx.moveTo(cx, centerY);
-        wctx.arc(cx, centerY, radius, rad1, rad2);
-        wctx.closePath();
-        wctx.fillStyle = `hsl(${angle}, 85%, 55%)`;
-        wctx.fill();
+      if (state.favoriteRecipeIds.has(rec.id)) {
+        state.favoriteRecipeIds.delete(rec.id);
+      } else {
+        state.favoriteRecipeIds.add(rec.id);
       }
-
-      const radial = wctx.createRadialGradient(cx, centerY, 0, cx, centerY, radius);
-      radial.addColorStop(0, '#ffffff');
-      radial.addColorStop(0.35, 'rgba(255, 255, 255, 0.85)');
-      radial.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      wctx.fillStyle = radial;
-      wctx.beginPath();
-      wctx.arc(cx, centerY, radius, 0, Math.PI * 2);
-      wctx.fill();
-
-      wctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
-      wctx.lineWidth = 1.5;
-      wctx.stroke();
-
-      wctx.fillStyle = '#9ca3b0';
-      wctx.font = '700 10px system-ui, sans-serif';
-      wctx.textAlign = 'center';
-      wctx.fillText(wheelLabels[i], cx, centerY - radius - 8);
-
-      const hue = i === 0 ? settings.shadowsHue : i === 1 ? settings.midtonesHue : settings.highlightsHue;
-      const sat = i === 0 ? settings.shadowsSat : i === 1 ? settings.midtonesSat : settings.highlightsSat;
-      const rPuck = (sat / 100) * radius;
-      const angRad = (hue * Math.PI) / 180;
-      const px = cx + Math.cos(angRad) * rPuck;
-      const py = centerY + Math.sin(angRad) * rPuck;
-
-      wctx.beginPath();
-      wctx.arc(px, py, 5.5, 0, Math.PI * 2);
-      wctx.fillStyle = sat > 0 ? `hsl(${hue}, 90%, 55%)` : '#333333';
-      wctx.fill();
-      wctx.strokeStyle = '#ffffff';
-      wctx.lineWidth = 2;
-      wctx.stroke();
-    }
+      saveFavorites();
+      renderRecipeLibraryGrid();
+    });
+    card.addEventListener('click', () => {
+      applyCatalogRecipe(rec);
+      recipeLibraryModal.hidden = true;
+    });
+    recipeLibraryGrid.append(card);
   }
+}
 
-  function handlePointer(e) {
-    const rect = c.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const x = (clientX - rect.left) * (c.width / rect.width);
-    const y = (clientY - rect.top) * (c.height / rect.height);
-    const radius = Math.min(c.width / 3.4, c.height * 0.38);
-    const centerY = c.height * 0.54;
+function openRecipeLibraryModal() {
+  recipeLibraryModal.hidden = false;
+  renderRecipeLibraryGrid();
+  recipeSearchInput.focus();
+}
 
-    if (activeWheel < 0) {
-      for (let i = 0; i < 3; i++) {
-        const cx = (c.width / 3) * (i + 0.5);
-        if (Math.hypot(x - cx, y - centerY) <= radius * 1.15) {
-          activeWheel = i;
-          break;
+document.querySelector('#recipeLibraryBtn').addEventListener('click', openRecipeLibraryModal);
+document.querySelector('#activeRecipeQuickPill')?.addEventListener('click', openRecipeLibraryModal);
+document.querySelector('#openFullCatalogInline').addEventListener('click', openRecipeLibraryModal);
+document.querySelector('#closeRecipeLibrary').addEventListener('click', () => { recipeLibraryModal.hidden = true; });
+recipeSearchInput.addEventListener('input', () => renderRecipeLibraryGrid());
+
+// =========================================================================
+// COMMAND PALETTE (TÌM NHANH CÔNG THỨC & LỆNH STUDIO — CTRL+K)
+// =========================================================================
+function renderCmdPaletteResults() {
+  if (!cmdQuickResults) return;
+  const q = (cmdSearchInput.value || '').trim().toLowerCase();
+  const list = state.fullCatalogRecipes
+    .filter(r => !q || r.name.toLowerCase().includes(q) || r.film.toLowerCase().includes(q))
+    .slice(0, 12);
+
+  cmdQuickResults.innerHTML = '';
+  for (const rec of list) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'preset-pill';
+    btn.innerHTML = `<span class="p-name">🎞️ ${rec.name}</span><span class="p-sub">${rec.film} · DR${rec.dr}</span>`;
+    btn.addEventListener('click', () => {
+      applyCatalogRecipe(rec);
+      cmdPaletteModal.hidden = true;
+    });
+    cmdQuickResults.append(btn);
+  }
+}
+
+function openCmdPalette() {
+  if (!cmdPaletteModal) return;
+  cmdPaletteModal.hidden = false;
+  renderCmdPaletteResults();
+  cmdSearchInput.focus();
+}
+
+document.querySelector('#quickCmdBtn')?.addEventListener('click', openCmdPalette);
+document.querySelector('#closeCmdPaletteBtn')?.addEventListener('click', () => { cmdPaletteModal.hidden = true; });
+cmdSearchInput?.addEventListener('input', renderCmdPaletteResults);
+
+// =========================================================================
+// BUỒNG TỐI CHUYÊN NGHIỆP LIGHTCRAFT (3-WAY COLOR WHEELS & 8-BAND HSL)
+// =========================================================================
+const HSL_BAND_NAMES = [
+  ['Đỏ (Red)', '#ef4444'],
+  ['Cam (Orange)', '#f97316'],
+  ['Vàng (Yellow)', '#eab308'],
+  ['Lục (Green)', '#22c55e'],
+  ['Lam ngọc (Aqua)', '#06b6d4'],
+  ['Xanh dương (Blue)', '#3b82f6'],
+  ['Tím (Purple)', '#a855f7'],
+  ['Hồng (Magenta)', '#ec4899']
+];
+
+function initLightCraftModal() {
+  lightCraftPresetsGrid.innerHTML = '';
+  for (const p of LIGHTCRAFT_PRESETS) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'lc-preset-btn';
+    btn.innerHTML = `<strong>${p.name}</strong><small>${p.sub}</small>`;
+    btn.addEventListener('click', () => {
+      state.settings.colorWheels = structuredClone(defaults.colorWheels);
+      state.settings.hslHue = [...defaults.hslHue];
+      state.settings.hslSat = [...defaults.hslSat];
+      state.settings.hslLum = [...defaults.hslLum];
+      if (p.curve) {
+        state.curvePoints = structuredClone(p.curve);
+        state.settings.curveLut = buildMonotoneCurveLut(state.curvePoints);
+      }
+      if (p.wheels) {
+        for (const k of ['shadows', 'midtones', 'highlights']) {
+          if (p.wheels[k]) Object.assign(state.settings.colorWheels[k], p.wheels[k]);
         }
       }
-    }
+      if (p.hslSat) state.settings.hslSat = [...p.hslSat];
+      if (p.hslLum) state.settings.hslLum = [...p.hslLum];
+      if (p.clarity !== undefined) state.settings.clarity = p.clarity;
+      if (p.vignette !== undefined) state.settings.vignette = p.vignette;
+      syncInputsFromSettings();
+      drawCurveEditor();
+      drawAllColorWheels();
+      renderHslSliders();
+      commitHistory(`LightCraft: ${p.name}`);
+      render();
+      setStatus(`🎛️ Đã áp dụng Preset phòng tối LightCraft: "${p.name}".`);
+    });
+    lightCraftPresetsGrid.append(btn);
+  }
 
-    if (activeWheel >= 0) {
-      const cx = (c.width / 3) * (activeWheel + 0.5);
-      const dx = x - cx, dy = y - centerY;
-      const dist = Math.min(radius, Math.hypot(dx, dy));
-      const sat = Math.round((dist / radius) * 100);
-      let angle = Math.round((Math.atan2(dy, dx) * 180) / Math.PI);
+  document.querySelectorAll('.hsl-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.hsl-mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.activeHslMode = btn.dataset.hslMode;
+      renderHslSliders();
+    });
+  });
+
+  ['wheelShadows', 'wheelMidtones', 'wheelHighlights'].forEach(id => {
+    const wCanvas = document.getElementById(id);
+    const wheelKey = wCanvas.dataset.wheel;
+    let dragging = false;
+    const updateFromMouse = e => {
+      const rect = wCanvas.getBoundingClientRect();
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const dx = e.clientX - rect.left - cx;
+      const dy = e.clientY - rect.top - cy;
+      const radius = cx - 6;
+      const dist = Math.min(1, Math.hypot(dx, dy) / radius);
+      let angle = Math.atan2(dy, dx) * (180 / Math.PI);
       if (angle < 0) angle += 360;
-
-      if (activeWheel === 0) { settings.shadowsHue = angle; settings.shadowsSat = sat; }
-      else if (activeWheel === 1) { settings.midtonesHue = angle; settings.midtonesSat = sat; }
-      else { settings.highlightsHue = angle; settings.highlightsSat = sat; }
-
-      drawWheels();
+      state.settings.colorWheels[wheelKey].hue = Math.round(angle);
+      state.settings.colorWheels[wheelKey].sat = Math.round(dist * 100);
+      drawColorWheel(wCanvas, state.settings.colorWheels[wheelKey]);
       render();
-    }
+    };
+    wCanvas.addEventListener('pointerdown', e => { dragging = true; wCanvas.setPointerCapture(e.pointerId); updateFromMouse(e); });
+    wCanvas.addEventListener('pointermove', e => { if (dragging) updateFromMouse(e); });
+    wCanvas.addEventListener('pointerup', () => { dragging = false; commitHistory(`Bàn xoay màu ${wheelKey}`); });
+    wCanvas.addEventListener('dblclick', () => {
+      state.settings.colorWheels[wheelKey] = { hue: 0, sat: 0, lum: 0 };
+      drawColorWheel(wCanvas, state.settings.colorWheels[wheelKey]);
+      render();
+    });
+  });
+
+  [['lumShadows', 'shadows'], ['lumMidtones', 'midtones'], ['lumHighlights', 'highlights']].forEach(([inputId, key]) => {
+    const el = document.getElementById(inputId);
+    el.addEventListener('input', () => {
+      state.settings.colorWheels[key].lum = Number(el.value);
+      render();
+    });
+  });
+
+  renderHslSliders();
+  drawAllColorWheels();
+}
+
+function drawColorWheel(wCanvas, wheelState) {
+  const c = wCanvas.getContext('2d');
+  const w = wCanvas.width, h = wCanvas.height;
+  const cx = w / 2, cy = h / 2, r = cx - 6;
+  c.clearRect(0, 0, w, h);
+
+  for (let angle = 0; angle < 360; angle += 2) {
+    const startAngle = (angle - 1.5) * Math.PI / 180;
+    const endAngle = (angle + 1.5) * Math.PI / 180;
+    const grad = c.createRadialGradient(cx, cy, 0, cx, cy, r);
+    grad.addColorStop(0, '#2a2e39');
+    grad.addColorStop(1, `hsl(${angle}, 85%, 52%)`);
+    c.beginPath();
+    c.moveTo(cx, cy);
+    c.arc(cx, cy, r, startAngle, endAngle);
+    c.closePath();
+    c.fillStyle = grad;
+    c.fill();
   }
 
-  c.onmousedown = handlePointer;
-  window.addEventListener('mousemove', e => { if (activeWheel >= 0) { e.preventDefault(); handlePointer(e); } });
-  window.addEventListener('mouseup', () => { activeWheel = -1; });
-  c.ontouchstart = handlePointer;
-  window.addEventListener('touchmove', e => { if (activeWheel >= 0) { e.preventDefault(); handlePointer(e); } }, { passive: false });
-  window.addEventListener('touchend', () => { activeWheel = -1; });
+  c.strokeStyle = 'rgba(255,255,255,0.22)';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.arc(cx, cy, r, 0, Math.PI * 2);
+  c.stroke();
 
-  c.ondblclick = e => {
-    const rect = c.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (c.width / rect.width);
-    for (let i = 0; i < 3; i++) {
-      const cx = (c.width / 3) * (i + 0.5);
-      if (Math.abs(x - cx) < c.width / 6) {
-        if (i === 0) { settings.shadowsHue = 0; settings.shadowsSat = 0; }
-        else if (i === 1) { settings.midtonesHue = 0; settings.midtonesSat = 0; }
-        else { settings.highlightsHue = 0; settings.highlightsSat = 0; }
-        drawWheels();
-        render();
-        toast(`Đã đặt lại bánh xe màu ${wheelLabels[i]}.`);
-        break;
-      }
-    }
-  };
+  const rad = (wheelState.hue || 0) * Math.PI / 180;
+  const dist = ((wheelState.sat || 0) / 100) * r;
+  const px = cx + Math.cos(rad) * dist;
+  const py = cy + Math.sin(rad) * dist;
 
-  if ($('resetWheelsBtn')) {
-    $('resetWheelsBtn').onclick = () => {
-      settings.shadowsHue = 0; settings.shadowsSat = 0;
-      settings.midtonesHue = 0; settings.midtonesSat = 0;
-      settings.highlightsHue = 0; settings.highlightsSat = 0;
-      drawWheels();
+  c.fillStyle = '#fff';
+  c.strokeStyle = '#000';
+  c.lineWidth = 2;
+  c.beginPath();
+  c.arc(px, py, 5.5, 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+}
+
+function drawAllColorWheels() {
+  if (!state.settings.colorWheels) state.settings.colorWheels = structuredClone(defaults.colorWheels);
+  drawColorWheel(document.getElementById('wheelShadows'), state.settings.colorWheels.shadows);
+  drawColorWheel(document.getElementById('wheelMidtones'), state.settings.colorWheels.midtones);
+  drawColorWheel(document.getElementById('wheelHighlights'), state.settings.colorWheels.highlights);
+  document.getElementById('lumShadows').value = state.settings.colorWheels.shadows.lum || 0;
+  document.getElementById('lumMidtones').value = state.settings.colorWheels.midtones.lum || 0;
+  document.getElementById('lumHighlights').value = state.settings.colorWheels.highlights.lum || 0;
+}
+
+function renderHslSliders() {
+  hslSlidersContainer.innerHTML = '';
+  const prop = state.activeHslMode === 'hue' ? 'hslHue' : (state.activeHslMode === 'sat' ? 'hslSat' : 'hslLum');
+  if (!state.settings[prop]) state.settings[prop] = [0, 0, 0, 0, 0, 0, 0, 0];
+
+  HSL_BAND_NAMES.forEach(([label, hex], idx) => {
+    const val = state.settings[prop][idx] || 0;
+    const row = document.createElement('div');
+    row.className = 'hsl-row';
+    row.innerHTML = `
+      <span class="hsl-band-label"><i class="hsl-dot" style="background:${hex}"></i>${label.split(' ')[0]}</span>
+      <input type="range" min="-100" max="100" step="1" value="${val}" />
+      <output style="font-family:monospace;font-size:11px;text-align:right;color:var(--accent)">${val > 0 ? '+' + val : val}</output>
+    `;
+    const input = row.querySelector('input');
+    const out = row.querySelector('output');
+    input.addEventListener('input', () => {
+      const v = Number(input.value);
+      state.settings[prop][idx] = v;
+      out.textContent = v > 0 ? '+' + v : String(v);
       render();
-      toast('Đã đặt lại bộ 3 bánh xe màu về trung tính.');
-    };
+    });
+    input.addEventListener('dblclick', () => {
+      state.settings[prop][idx] = 0;
+      input.value = 0;
+      out.textContent = '0';
+      render();
+    });
+    hslSlidersContainer.append(row);
+  });
+}
+
+initLightCraftModal();
+
+document.querySelector('#lightCraftBtn').addEventListener('click', () => {
+  lightCraftModal.hidden = !lightCraftModal.hidden;
+  if (!lightCraftModal.hidden) {
+    drawAllColorWheels();
+    renderHslSliders();
   }
+});
+document.querySelector('#closeLightCraft').addEventListener('click', () => { lightCraftModal.hidden = true; });
+document.querySelector('#resetLightCraftBtn').addEventListener('click', () => {
+  state.settings.colorWheels = structuredClone(defaults.colorWheels);
+  state.settings.hslHue = [0, 0, 0, 0, 0, 0, 0, 0];
+  state.settings.hslSat = [0, 0, 0, 0, 0, 0, 0, 0];
+  state.settings.hslLum = [0, 0, 0, 0, 0, 0, 0, 0];
+  drawAllColorWheels();
+  renderHslSliders();
+  render();
+  setStatus('Đã đặt lại toàn bộ thông số Buồng tối LightCraft về mặc định.');
+});
 
-  drawWheels();
-  redrawColorWheels = drawWheels;
+// =========================================================================
+// UNDO / REDO HISTORY STACK
+// =========================================================================
+function commitHistory(actionName = 'Chỉnh sửa') {
+  if (!state.source) return;
+  const snapshot = {
+    settings: structuredClone(state.settings),
+    curvePoints: structuredClone(state.curvePoints),
+    activeRecipeName: state.activeRecipeName,
+    actionName
+  };
+  state.history = state.history.slice(0, state.historyIndex + 1);
+  state.history.push(snapshot);
+  if (state.history.length > 30) state.history.shift();
+  state.historyIndex = state.history.length - 1;
+  updateHistoryButtons();
 }
 
-if ($('lightCraftBtn')) {
-  $('lightCraftBtn').onclick = () => {
-    if ($('lightCraftModal')) $('lightCraftModal').hidden = false;
-    if (redrawToneCurve) redrawToneCurve();
-    if (redrawColorWheels) redrawColorWheels();
-  };
-}
-if ($('closeLightCraftModal')) {
-  $('closeLightCraftModal').onclick = () => {
-    if ($('lightCraftModal')) $('lightCraftModal').hidden = true;
-  };
-}
-if ($('lightCraftModal')) {
-  $('lightCraftModal').onclick = (e) => {
-    if (e.target === $('lightCraftModal')) $('lightCraftModal').hidden = true;
-  };
+function updateHistoryButtons() {
+  document.querySelector('#undoBtn').disabled = state.historyIndex <= 0;
+  document.querySelector('#redoBtn').disabled = state.historyIndex >= state.history.length - 1;
 }
 
-// EXIF modal
-if ($('editExifBtn')) {
-  $('editExifBtn').onclick = () => {
-    if ($('exifModal')) {
-      $('exifCamera').value = currentPhotoInfo.camera || '';
-      $('exifLens').value = currentPhotoInfo.lens || '';
-      $('exifFocal').value = currentPhotoInfo.focal || '';
-      $('exifAperture').value = currentPhotoInfo.aperture || '';
-      $('exifShutter').value = currentPhotoInfo.shutter || '';
-      $('exifIso').value = currentPhotoInfo.iso || '';
-      $('exifDate').value = currentPhotoInfo.date || '';
-      $('exifAuthor').value = currentPhotoInfo.author || '';
-      $('exifModal').hidden = false;
+document.querySelector('#undoBtn').addEventListener('click', () => {
+  if (state.historyIndex > 0) {
+    state.historyIndex--;
+    const snap = state.history[state.historyIndex];
+    state.settings = structuredClone(snap.settings);
+    state.curvePoints = structuredClone(snap.curvePoints);
+    state.activeRecipeName = snap.activeRecipeName || 'Tùy chỉnh';
+    syncInputsFromSettings();
+    drawCurveEditor();
+    updateHistoryButtons();
+    render();
+    setStatus(`↶ Đã hoàn tác: ${snap.actionName}`);
+  }
+});
+
+document.querySelector('#redoBtn').addEventListener('click', () => {
+  if (state.historyIndex < state.history.length - 1) {
+    state.historyIndex++;
+    const snap = state.history[state.historyIndex];
+    state.settings = structuredClone(snap.settings);
+    state.curvePoints = structuredClone(snap.curvePoints);
+    state.activeRecipeName = snap.activeRecipeName || 'Tùy chỉnh';
+    syncInputsFromSettings();
+    drawCurveEditor();
+    updateHistoryButtons();
+    render();
+    setStatus(`↷ Đã làm lại: ${snap.actionName}`);
+  }
+});
+
+// =========================================================================
+// ĐỒNG BỘ THANH TRƯỢT & SELECT
+// =========================================================================
+function syncInputsFromSettings() {
+  for (const [key] of allSliderSpecs) {
+    const input = document.querySelector(`#in-${key}`);
+    const out = document.querySelector(`#out-${key}`);
+    if (input && out) {
+      input.value = state.settings[key] ?? defaults[key];
+      out.textContent = formatParamReadout(key, state.settings[key] ?? defaults[key]);
     }
-  };
-}
-if ($('closeExifModal')) {
-  $('closeExifModal').onclick = () => {
-    if ($('exifModal')) $('exifModal').hidden = true;
-  };
-}
-if ($('saveExifBtn')) {
-  $('saveExifBtn').onclick = () => {
-    currentPhotoInfo = {
-      camera: $('exifCamera').value.trim() || 'FUJIFILM X-T5',
-      lens: $('exifLens').value.trim() || 'XF 35mm F1.4 R',
-      focal: $('exifFocal').value.trim() || '35mm',
-      aperture: $('exifAperture').value.trim() || 'f/1.4',
-      shutter: $('exifShutter').value.trim() || '1/250s',
-      iso: $('exifIso').value.trim() || 'ISO 400',
-      date: $('exifDate').value.trim() || '2026.10.14',
-      author: $('exifAuthor').value.trim() || 'IRO Studio'
-    };
-    if ($('exifModal')) $('exifModal').hidden = true;
-    toast('Đã lưu thông số máy ảnh & EXIF cho khung ảnh!');
-  };
+  }
+  document.querySelector('#film').value = state.settings.film;
+  document.querySelector('#dr').value = String(state.settings.dr);
+  document.querySelector('#grainSize').value = String(state.settings.grainSize);
+  document.querySelector('#chromatic').value = String(state.settings.chromatic || 0);
+  document.querySelector('#darkroomProcess').value = String(state.settings.darkroomProcess || 'None');
+  document.querySelector('#dateStampBtn').classList.toggle('active', Boolean(state.settings.dateStamp));
+  document.querySelectorAll('.diag-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.diag === (state.settings.diagnosticMode || 'Off'));
+  });
+  updateTopRecipePill();
+  syncRulerHeader();
+  drawTickRuler();
 }
 
-initRecipeLibrary();
-initToneCurveWidget();
-initColorWheelsWidget();
-
-// === NEW UX PANEL HANDLERS (Redesigned Darkroom Layout) ===
-
-// Panel collapse toggles
-if ($('toggleLeft')) {
-  $('toggleLeft').onclick = () => {
-    const ws = document.querySelector('.workspace');
-    if (ws) ws.classList.toggle('collapse-left');
-  };
-}
-if ($('toggleRight')) {
-  $('toggleRight').onclick = () => {
-    const ws = document.querySelector('.workspace');
-    if (ws) ws.classList.toggle('collapse-right');
-  };
+for (const el of document.querySelectorAll('[data-key]')) {
+  el.addEventListener('input', e => {
+    const key = e.target.dataset.key;
+    state.settings[key] = Number(e.target.value);
+    document.querySelector(`#out-${key}`).textContent = formatParamReadout(key, state.settings[key]);
+    const matchedSpec = allSliderSpecs.find(s => s[0] === key);
+    if (matchedSpec) activeRulerSpec = matchedSpec;
+    syncRulerHeader();
+    drawTickRuler();
+    render();
+  });
+  el.addEventListener('change', e => {
+    commitHistory(`Chỉnh ${e.target.dataset.key}`);
+  });
 }
 
-// Open hint button (shown on drop zone when no image)
-if ($('openHint')) {
-  $('openHint').onclick = () => $('photo').click();
-}
+document.querySelector('#film').addEventListener('change', e => {
+  state.settings.film = e.target.value;
+  state.activeRecipeName = 'Tùy chỉnh';
+  updateTopRecipePill();
+  commitHistory(`Đổi Film: ${e.target.value}`);
+  render();
+});
 
-// Hide drop hint once an image is loaded
-const _origSetSource = setSource;
-// Patch: hide drop hint when source is set
-const _hideDropHint = () => {
-  const dh = $('dropHint');
-  if (dh) dh.hidden = true;
-};
-$('photo').addEventListener('change', _hideDropHint);
-drop.addEventListener('drop', _hideDropHint);
+document.querySelector('#dr').addEventListener('change', e => {
+  state.settings.dr = Number(e.target.value);
+  commitHistory(`Đổi DR${e.target.value}`);
+  render();
+});
 
-// Active film name display in panel header
-const _filmBtns = document.querySelectorAll('.film');
-_filmBtns.forEach(btn => {
-  const _orig = btn.onclick;
+document.querySelector('#grainSize').addEventListener('change', e => {
+  state.settings.grainSize = Number(e.target.value);
+  commitHistory('Đổi kích thước hạt');
+  render();
+});
+
+document.querySelector('#chromatic').addEventListener('change', e => {
+  state.settings.chromatic = Number(e.target.value);
+  commitHistory('Chỉnh viền tím quang học');
+  render();
+});
+
+document.querySelector('#darkroomProcess').addEventListener('change', e => {
+  state.settings.darkroomProcess = e.target.value;
+  commitHistory(`In Phòng tối: ${e.target.value}`);
+  render();
+});
+
+document.querySelectorAll('.diag-pill').forEach(btn => {
   btn.addEventListener('click', () => {
-    const activeFilmNameEl = $('activeFilmName');
-    if (activeFilmNameEl) activeFilmNameEl.textContent = btn.dataset.film || btn.textContent.trim();
+    document.querySelectorAll('.diag-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.settings.diagnosticMode = btn.dataset.diag;
+    render();
   });
 });
+
+document.querySelector('#dateStampBtn').addEventListener('click', () => {
+  state.settings.dateStamp = !state.settings.dateStamp;
+  document.querySelector('#dateStampBtn').classList.toggle('active', state.settings.dateStamp);
+  commitHistory(state.settings.dateStamp ? 'Bật dấu ngày tháng LED' : 'Tắt dấu ngày tháng LED');
+  render();
+});
+
+// =========================================================================
+// TƯƠNG TÁC ĐƯỜNG CONG TONE CURVE SPLINE
+// =========================================================================
+function drawCurveEditor() {
+  const w = curveCanvas.width, h = curveCanvas.height;
+  curveCtx.clearRect(0, 0, w, h);
+
+  curveCtx.strokeStyle = state.porcelainTheme ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)';
+  curveCtx.lineWidth = 1;
+  for (let i = 1; i <= 3; i++) {
+    curveCtx.beginPath();
+    curveCtx.moveTo((w / 4) * i, 0); curveCtx.lineTo((w / 4) * i, h);
+    curveCtx.moveTo(0, (h / 4) * i); curveCtx.lineTo(w, (h / 4) * i);
+    curveCtx.stroke();
+  }
+
+  curveCtx.strokeStyle = state.porcelainTheme ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.18)';
+  curveCtx.setLineDash([4, 4]);
+  curveCtx.beginPath();
+  curveCtx.moveTo(0, h); curveCtx.lineTo(w, 0);
+  curveCtx.stroke();
+  curveCtx.setLineDash([]);
+
+  const lut = buildMonotoneCurveLut(state.curvePoints);
+  state.settings.curveLut = lut;
+
+  curveCtx.strokeStyle = '#f09a3e';
+  curveCtx.lineWidth = 2.4;
+  curveCtx.beginPath();
+  for (let x = 0; x < 256; x++) {
+    const px = (x / 255) * w;
+    const py = h - lut[x] * h;
+    if (x === 0) curveCtx.moveTo(px, py);
+    else curveCtx.lineTo(px, py);
+  }
+  curveCtx.stroke();
+
+  for (const [nx, ny] of state.curvePoints) {
+    const px = nx * w, py = (1 - ny) * h;
+    curveCtx.fillStyle = '#161920';
+    curveCtx.strokeStyle = '#f09a3e';
+    curveCtx.lineWidth = 2.2;
+    curveCtx.beginPath();
+    curveCtx.arc(px, py, 5, 0, Math.PI * 2);
+    curveCtx.fill();
+    curveCtx.stroke();
+  }
+}
+
+curveCanvas.addEventListener('pointerdown', e => {
+  const rect = curveCanvas.getBoundingClientRect();
+  const nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const ny = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
+  const hitIdx = state.curvePoints.findIndex(([px, py]) => Math.hypot(px - nx, py - ny) < 0.08);
+  if (hitIdx >= 0) {
+    state.draggingCurveIdx = hitIdx;
+  } else if (state.curvePoints.length < 7) {
+    state.curvePoints.push([nx, ny]);
+    state.curvePoints.sort((a, b) => a[0] - b[0]);
+    state.draggingCurveIdx = state.curvePoints.findIndex(([px, py]) => px === nx && py === ny);
+  }
+  curveCanvas.setPointerCapture(e.pointerId);
+  drawCurveEditor();
+  render();
+});
+
+curveCanvas.addEventListener('pointermove', e => {
+  if (state.draggingCurveIdx < 0) return;
+  const rect = curveCanvas.getBoundingClientRect();
+  let nx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const ny = Math.max(0, Math.min(1, 1 - (e.clientY - rect.top) / rect.height));
+  const idx = state.draggingCurveIdx;
+  if (idx === 0) nx = 0;
+  else if (idx === state.curvePoints.length - 1) nx = 1;
+  else {
+    nx = Math.max(state.curvePoints[idx - 1][0] + 0.03, Math.min(state.curvePoints[idx + 1][0] - 0.03, nx));
+  }
+  state.curvePoints[idx] = [nx, ny];
+  drawCurveEditor();
+  render();
+});
+
+curveCanvas.addEventListener('pointerup', () => {
+  if (state.draggingCurveIdx >= 0) {
+    state.draggingCurveIdx = -1;
+    commitHistory('Chỉnh đường cong Tone Curve');
+  }
+});
+
+curveCanvas.addEventListener('dblclick', () => {
+  state.curvePoints = [[0, 0], [1, 1]];
+  drawCurveEditor();
+  commitHistory('Đặt lại Tone Curve');
+  render();
+});
+
+document.querySelector('#resetCurve').addEventListener('click', () => {
+  state.curvePoints = [[0, 0], [1, 1]];
+  drawCurveEditor();
+  commitHistory('Đặt lại Tone Curve');
+  render();
+});
+
+document.querySelectorAll('[data-curve]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const type = btn.dataset.curve;
+    if (type === 'linear') state.curvePoints = [[0, 0], [1, 1]];
+    else if (type === 'scurve') state.curvePoints = [[0, 0], [0.25, 0.18], [0.75, 0.83], [1, 1]];
+    else if (type === 'matte') state.curvePoints = [[0, 0.09], [0.25, 0.22], [0.75, 0.78], [1, 0.94]];
+    else if (type === 'contrast') state.curvePoints = [[0, 0], [0.2, 0.12], [0.8, 0.89], [1, 1]];
+    drawCurveEditor();
+    commitHistory(`Tone Curve: ${btn.textContent}`);
+    render();
+  });
+});
+
+// =========================================================================
+// BIỂU ĐỒ RGB HISTOGRAM & BẢNG MÀU CHỦ ĐẠO 5 Ô
+// =========================================================================
+function drawHistogram(pixels) {
+  const { rHist, gHist, bHist, maxBin, evShift, highlightClipPct } = computeHistogramAndStats(pixels);
+  const w = histCanvas.width, h = histCanvas.height;
+  histCtx.clearRect(0, 0, w, h);
+
+  const drawChannel = (hist, color) => {
+    histCtx.fillStyle = color;
+    histCtx.beginPath();
+    histCtx.moveTo(0, h);
+    for (let i = 0; i < 64; i++) {
+      const x = (i / 63) * w;
+      const y = h - Math.pow(hist[i] / maxBin, 0.65) * (h - 8);
+      histCtx.lineTo(x, y);
+    }
+    histCtx.lineTo(w, h);
+    histCtx.closePath();
+    histCtx.fill();
+  };
+
+  histCtx.globalCompositeOperation = 'screen';
+  drawChannel(rHist, 'rgba(239, 68, 68, 0.55)');
+  drawChannel(gHist, 'rgba(34, 197, 94, 0.55)');
+  drawChannel(bHist, 'rgba(59, 130, 246, 0.65)');
+  histCtx.globalCompositeOperation = 'source-over';
+
+  document.querySelector('#statEv').textContent = `${evShift >= 0 ? '+' : ''}${evShift.toFixed(1)} EV`;
+  document.querySelector('#statDr').textContent = `DR${state.settings.dr}`;
+  const kelvin = Math.round(5500 + state.settings.temperature * 25);
+  document.querySelector('#statWb').textContent = `${kelvin}K`;
+  document.querySelector('#statClip').textContent = `${highlightClipPct.toFixed(1)}%`;
+
+  const palette = extractDominantPalette(pixels, 5);
+  dominantPaletteBar.innerHTML = '';
+  for (const sw of palette) {
+    const div = document.createElement('div');
+    div.className = 'palette-swatch';
+    div.style.background = sw.hex;
+    div.textContent = sw.hex.toUpperCase();
+    div.title = `Nhấn để sao chép mã màu ${sw.hex.toUpperCase()} (${sw.pct}%)`;
+    div.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(sw.hex.toUpperCase());
+        setStatus(`🎨 Đã sao chép mã màu ${sw.hex.toUpperCase()} vào bộ nhớ tạm.`);
+      } catch (_) {}
+    });
+    dominantPaletteBar.append(div);
+  }
+}
+
+// =========================================================================
+// CÁC TÍNH NĂNG ĐỘT PHÁ IRO STUDIO 3.0
+// =========================================================================
+
+// 1. AI Auto-Tone & Scene Co-Pilot
+document.querySelector('#aiAuto').addEventListener('click', () => {
+  if (!state.source) return;
+  const { settings: nextSettings, reasonVi } = autoBalanceSettings(state.source.data, state.settings);
+  state.settings = nextSettings;
+  state.curvePoints = structuredClone(nextSettings.curvePoints || [[0, 0], [1, 1]]);
+  syncInputsFromSettings();
+  drawCurveEditor();
+  commitHistory('AI Auto-Tone');
+  render();
+  setStatus(reasonVi);
+});
+
+// 2. Xoay ảnh 90°
+document.querySelector('#rotate90').addEventListener('click', () => {
+  if (!state.source) return;
+  const rotated = rotatePixels90(state.source.data, state.source.width, state.source.height);
+  state.source = new ImageData(rotated.pixels, rotated.width, rotated.height);
+  commitHistory('Xoay ảnh 90°');
+  render();
+  setStatus(`↻ Đã xoay ảnh 90° (${state.source.width}×${state.source.height}px).`);
+});
+
+// 3. Thanh gạt chia đôi Trước / Sau (Split-Screen Comparison)
+const compareBtn = document.querySelector('#compareBtn');
+compareBtn.addEventListener('click', () => {
+  if (!state.source) return;
+  state.comparingSplit = !state.comparingSplit;
+  compareBtn.classList.toggle('active', state.comparingSplit);
+  beforeCanvas.hidden = !state.comparingSplit;
+  splitSlider.hidden = !state.comparingSplit;
+  updateSplitClip();
+});
+
+function updateSplitClip() {
+  const pct = (state.splitRatio * 100).toFixed(1);
+  beforeCanvas.style.clipPath = `inset(0 ${100 - state.splitRatio * 100}% 0 0)`;
+  splitSlider.style.left = `${pct}%`;
+}
+
+let draggingSplit = false;
+splitSlider.addEventListener('pointerdown', e => {
+  draggingSplit = true;
+  splitSlider.setPointerCapture(e.pointerId);
+});
+splitSlider.addEventListener('pointermove', e => {
+  if (!draggingSplit) return;
+  const rect = canvasWrapper.getBoundingClientRect();
+  state.splitRatio = Math.max(0.05, Math.min(0.95, (e.clientX - rect.left) / rect.width));
+  updateSplitClip();
+});
+splitSlider.addEventListener('pointerup', () => { draggingSplit = false; });
+
+// 4. Lưới 4 phương án màu cùng lúc (Quad-View Audition)
+const quadViewBtn = document.querySelector('#quadViewBtn');
+quadViewBtn.addEventListener('click', () => {
+  if (!state.source) return;
+  state.quadViewActive = !state.quadViewActive;
+  quadViewBtn.classList.toggle('active', state.quadViewActive);
+  if (state.quadViewActive) {
+    canvasWrapper.hidden = true;
+    quadViewGrid.hidden = false;
+    renderQuadView();
+    setStatus('⊞ Chế độ So sánh 4 bản màu (Quad-View) — Nhấn vào bất kỳ phương án nào để chọn làm bản chính.');
+  } else {
+    quadViewGrid.hidden = true;
+    canvasWrapper.hidden = false;
+    render();
+  }
+});
+
+function renderQuadView() {
+  if (!state.source || !state.quadViewActive) return;
+  quadViewGrid.innerHTML = '';
+
+  const variants = [
+    { title: '1. Ảnh gốc (Original)', sub: 'Chưa qua xử lý', settings: { ...defaults, film: 'Original' } },
+    { title: `2. Đang chọn (${state.settings.film})`, sub: state.activeRecipeName, settings: structuredClone(state.settings) },
+    {
+      title: '3. Kodachrome 64 + Pro-Mist',
+      sub: 'Classic Chrome ấm cổ điển',
+      settings: { ...structuredClone(state.settings), film: 'Classic Chrome', temperature: 16, proMist: 28, colorChrome: 2 }
+    },
+    {
+      title: '4. CineStill 800T + Halation',
+      sub: 'Điện ảnh đêm lạnh & quầng đỏ',
+      settings: { ...structuredClone(state.settings), film: 'ETERNA', temperature: -22, halation: 45, proMist: 32, bleachBypass: 18 }
+    }
+  ];
+
+  const scale = Math.min(1, 360 / Math.max(state.source.width, state.source.height));
+  const tw = Math.max(1, Math.round(state.source.width * scale));
+  const th = Math.max(1, Math.round(state.source.height * scale));
+  const tmpSrc = document.createElement('canvas');
+  tmpSrc.width = tw; tmpSrc.height = th;
+  const tmpCtx = tmpSrc.getContext('2d');
+  const fullTmp = document.createElement('canvas');
+  fullTmp.width = state.source.width; fullTmp.height = state.source.height;
+  fullTmp.getContext('2d').putImageData(state.source, 0, 0);
+  tmpCtx.drawImage(fullTmp, 0, 0, tw, th);
+  const smallData = tmpCtx.getImageData(0, 0, tw, th);
+
+  for (const v of variants) {
+    const card = document.createElement('div');
+    card.className = 'quad-card';
+    const c = document.createElement('canvas');
+    c.width = tw; c.height = th;
+    const outPixels = processPixels(smallData.data, tw, th, v.settings, state.lut);
+    c.getContext('2d').putImageData(new ImageData(outPixels, tw, th), 0, 0);
+    const footer = document.createElement('div');
+    footer.className = 'quad-card-footer';
+    footer.innerHTML = `<b>${v.title}</b><span>${v.sub}</span>`;
+    card.append(c, footer);
+    card.addEventListener('click', () => {
+      state.settings = structuredClone(v.settings);
+      state.quadViewActive = false;
+      quadViewBtn.classList.remove('active');
+      quadViewGrid.hidden = true;
+      canvasWrapper.hidden = false;
+      syncInputsFromSettings();
+      commitHistory(`Chọn từ Quad-View: ${v.title}`);
+      render();
+    });
+    quadViewGrid.append(card);
+  }
+}
+
+// 5. Bảng 12 biến thể màu Film (Contact Sheet)
+document.querySelector('#contactSheetBtn').addEventListener('click', () => {
+  if (!state.source) return;
+  contactSheetModal.hidden = false;
+  contactSheetGrid.innerHTML = '';
+
+  const scale = Math.min(1, 220 / Math.max(state.source.width, state.source.height));
+  const tw = Math.max(1, Math.round(state.source.width * scale));
+  const th = Math.max(1, Math.round(state.source.height * scale));
+
+  const tmpCanvas = document.createElement('canvas');
+  tmpCanvas.width = tw; tmpCanvas.height = th;
+  const tmpCtx = tmpCanvas.getContext('2d');
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width = state.source.width; srcCanvas.height = state.source.height;
+  srcCanvas.getContext('2d').putImageData(state.source, 0, 0);
+  tmpCtx.drawImage(srcCanvas, 0, 0, tw, th);
+  const thumbData = tmpCtx.getImageData(0, 0, tw, th);
+
+  for (const preset of CURATED_PRESETS) {
+    const item = document.createElement('div');
+    item.className = 'sheet-item';
+    const c = document.createElement('canvas');
+    c.width = tw; c.height = th;
+    const pSettings = { ...structuredClone(defaults), ...structuredClone(preset.settings) };
+    pSettings.curveLut = buildMonotoneCurveLut(preset.settings.curvePoints || [[0, 0], [1, 1]]);
+    const out = processPixels(thumbData.data, tw, th, pSettings, null);
+    c.getContext('2d').putImageData(new ImageData(out, tw, th), 0, 0);
+    const title = document.createElement('div');
+    title.className = 'sheet-item-title';
+    title.textContent = `${preset.name} · ${preset.subtitle}`;
+    item.append(c, title);
+    item.addEventListener('click', () => {
+      state.settings = pSettings;
+      state.activeRecipeName = preset.name;
+      state.curvePoints = structuredClone(preset.settings.curvePoints || [[0, 0], [1, 1]]);
+      syncInputsFromSettings();
+      drawCurveEditor();
+      contactSheetModal.hidden = true;
+      commitHistory(`Contact Sheet: ${preset.name}`);
+      render();
+      setStatus(`Đã chọn công thức "${preset.name}" từ Bảng 12 biến thể Film.`);
+    });
+    contactSheetGrid.append(item);
+  }
+});
+
+document.querySelector('#closeContactSheet').addEventListener('click', () => {
+  contactSheetModal.hidden = true;
+});
+
+// 6. Hạt phim Sống 24 hình/giây (24fps Living Film Projector)
+const livingFilmBtn = document.querySelector('#livingFilmBtn');
+livingFilmBtn.addEventListener('click', () => {
+  if (!state.source) return;
+  state.livingFilmActive = !state.livingFilmActive;
+  livingFilmBtn.classList.toggle('active', state.livingFilmActive);
+  if (state.livingFilmActive) {
+    if (state.settings.grain < 6) {
+      state.settings.grain = 12;
+      syncInputsFromSettings();
+    }
+    state.livingFilmTimer = setInterval(() => {
+      if (!state.source || !state.livingFilmActive) return;
+      state.livingFilmFrame = (state.livingFilmFrame + 1) % 240;
+      render(true);
+    }, 1000 / 18);
+    setStatus('🎞️ Đang chạy máy chiếu Hạt phim Sống 24fps (Living Film) — Hạt bạc 35mm chuyển động hữu cơ theo thời gian thực.');
+  } else {
+    clearInterval(state.livingFilmTimer);
+    state.livingFilmTimer = null;
+    state.livingFilmFrame = 0;
+    render();
+    setStatus('Đã dừng chế độ máy chiếu 24fps Living Film.');
+  }
+});
+
+// 7. AI Tả Cảnh Pha Màu Tiếng Việt (Prompt-to-Recipe NLP)
+document.querySelector('#promptRecipeBtn').addEventListener('click', () => {
+  promptModal.hidden = false;
+  promptTextInput.focus();
+});
+
+document.querySelector('#closePromptModal').addEventListener('click', () => {
+  promptModal.hidden = true;
+});
+
+function runPromptRecipe(text) {
+  const { settings: nextSettings, reasonVi } = promptToRecipeVi(text);
+  const keepDiag = state.settings.diagnosticMode;
+  state.settings = { ...nextSettings, diagnosticMode: keepDiag };
+  state.activeRecipeName = 'AI Tả cảnh';
+  state.curvePoints = structuredClone(nextSettings.curvePoints || [[0, 0], [1, 1]]);
+  syncInputsFromSettings();
+  drawCurveEditor();
+  promptModal.hidden = true;
+  if (!state.source) generateSampleImage('street');
+  else {
+    commitHistory(`AI Tả cảnh: ${text.slice(0, 24)}`);
+    render();
+  }
+  setStatus(reasonVi);
+}
+
+document.querySelector('#applyPromptBtn').addEventListener('click', () => {
+  runPromptRecipe(promptTextInput.value);
+});
+
+promptTextInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') runPromptRecipe(promptTextInput.value);
+});
+
+document.querySelectorAll('.prompt-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    promptTextInput.value = chip.dataset.prompt;
+    runPromptRecipe(chip.dataset.prompt);
+  });
+});
+
+// 8. Sao chép bảng màu từ Ảnh Mẫu (Reference Image Color Transfer)
+const referenceInput = document.querySelector('#referenceInput');
+document.querySelector('#matchRefBtn').addEventListener('click', () => {
+  if (!state.source) return;
+  referenceInput.click();
+});
+
+referenceInput.addEventListener('change', async e => {
+  const [file] = e.target.files;
+  if (!file || !state.source) return;
+  try {
+    const bmp = await createImageBitmap(file);
+    const tmp = document.createElement('canvas');
+    tmp.width = Math.min(400, bmp.width);
+    tmp.height = Math.min(400, bmp.height);
+    const tCtx = tmp.getContext('2d');
+    tCtx.drawImage(bmp, 0, 0, tmp.width, tmp.height);
+    const refData = tCtx.getImageData(0, 0, tmp.width, tmp.height);
+    const { settings: matchedSettings, reasonVi } = matchColorFromReference(state.source.data, refData.data, state.settings);
+    state.settings = matchedSettings;
+    state.activeRecipeName = `Học mẫu: ${file.name.slice(0, 12)}`;
+    syncInputsFromSettings();
+    commitHistory(`Học màu từ ${file.name}`);
+    render();
+    setStatus(reasonVi);
+  } catch (err) {
+    setStatus('Không thể phân tích ảnh mẫu: ' + err.message, true);
+  }
+});
+
+// 9. Xuất công thức thành tệp 3D LUT (.cube) chuẩn quốc tế
+document.querySelector('#exportCube').addEventListener('click', () => {
+  const title = `IRO_${state.settings.film.replace(/\s+/g, '_')}`;
+  const cubeContent = bakeRecipeToCube(state.settings, 17, title);
+  const blob = new Blob([cubeContent], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${title.toLowerCase()}.cube`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setStatus(`🧊 Đã kết xuất công thức hiện tại thành tệp 3D LUT "${title.toLowerCase()}.cube" (17×17×17).`);
+});
+
+// 10. Chia sẻ / Nhập mã công thức IRO1
+document.querySelector('#shareCode').addEventListener('click', async () => {
+  const currentCode = encodeRecipeCode({ ...state.settings, curvePoints: state.curvePoints });
+  const input = window.prompt(
+    '🔗 Mã công thức IRO của bạn (Sao chép mã này để chia sẻ, hoặc dán một mã IRO1-... khác vào đây để áp dụng):',
+    currentCode
+  );
+  if (!input || input.trim() === currentCode) {
+    if (navigator.clipboard && input) {
+      try { await navigator.clipboard.writeText(currentCode); } catch (_) {}
+      setStatus('📋 Đã sao chép mã công thức IRO1 vào bộ nhớ tạm!');
+    }
+    return;
+  }
+  const decoded = decodeRecipeCode(input);
+  if (!decoded) {
+    setStatus('Mã công thức IRO1 không hợp lệ.', true);
+    return;
+  }
+  state.settings = { ...structuredClone(defaults), ...decoded };
+  state.curvePoints = structuredClone(decoded.curvePoints || [[0, 0], [1, 1]]);
+  syncInputsFromSettings();
+  drawCurveEditor();
+  commitHistory('Nhập mã công thức IRO1');
+  render();
+  setStatus('✨ Đã áp dụng thành công công thức từ mã chia sẻ IRO1!');
+});
+
+// Đặt lại toàn bộ thông số về gốc
+document.querySelector('#resetAll').addEventListener('click', () => {
+  state.settings = structuredClone(defaults);
+  state.activeRecipeName = 'Gốc';
+  state.curvePoints = [[0, 0], [1, 1]];
+  state.frameStyle = 0;
+  frameStyleSelect.value = '0';
+  frameExifControls.hidden = true;
+  document.querySelectorAll('.preset-pill').forEach(b => b.classList.remove('active'));
+  syncInputsFromSettings();
+  drawCurveEditor();
+  commitHistory('Đặt lại gốc');
+  render();
+  setStatus('Đã đặt lại toàn bộ thông số về nguyên bản.');
+});
+
+// =========================================================================
+// PHÍM TẮT STUDIO (SPACEBAR, R, Q, L, X, CTRL+K, CTRL+Z/Y, ESC)
+// =========================================================================
+window.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    openCmdPalette();
+    return;
+  }
+  if (e.key === 'Escape') {
+    recipeLibraryModal.hidden = true;
+    lightCraftModal.hidden = true;
+    contactSheetModal.hidden = true;
+    promptModal.hidden = true;
+    cmdPaletteModal.hidden = true;
+    return;
+  }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+  if (e.code === 'Space' && state.source && !e.repeat) {
+    e.preventDefault();
+    ctx.putImageData(state.source, 0, 0);
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    document.querySelector('#undoBtn').click();
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+    e.preventDefault();
+    document.querySelector('#redoBtn').click();
+  } else if (e.key.toLowerCase() === 'r' && state.source) {
+    document.querySelector('#rotate90').click();
+  } else if (e.key.toLowerCase() === 'q' && state.source) {
+    document.querySelector('#quadViewBtn').click();
+  } else if (e.key.toLowerCase() === 'l') {
+    openRecipeLibraryModal();
+  } else if (e.key.toLowerCase() === 'x') {
+    applySurpriseRandomRecipe();
+  } else if (e.key === '1') {
+    activateInspectorTab('tabFilm');
+  } else if (e.key === '2') {
+    activateInspectorTab('tabBasic');
+  } else if (e.key === '3') {
+    activateInspectorTab('tabOptical');
+  }
+});
+
+window.addEventListener('keyup', e => {
+  if (e.code === 'Space' && state.source) {
+    render();
+  }
+});
+
+// =========================================================================
+// TẠO ẢNH MẪU STUDIO & MỞ TỆP ẢNH / KÉO THẢ
+// =========================================================================
+function generateSampleImage(type = 'portrait') {
+  const w = 960, h = 640;
+  const off = document.createElement('canvas');
+  off.width = w; off.height = h;
+  const c = off.getContext('2d');
+
+  if (type === 'portrait') {
+    const sky = c.createLinearGradient(0, 0, 0, h);
+    sky.addColorStop(0, '#1e3a8a');
+    sky.addColorStop(0.45, '#d97706');
+    sky.addColorStop(1, '#3f2e21');
+    c.fillStyle = sky;
+    c.fillRect(0, 0, w, h);
+
+    const sun = c.createRadialGradient(w * 0.72, h * 0.34, 15, w * 0.72, h * 0.34, 240);
+    sun.addColorStop(0, 'rgba(255, 248, 220, 1)');
+    sun.addColorStop(0.4, 'rgba(251, 146, 60, 0.65)');
+    sun.addColorStop(1, 'rgba(251, 146, 60, 0)');
+    c.fillStyle = sun;
+    c.fillRect(0, 0, w, h);
+
+    c.fillStyle = '#e6b89c';
+    c.beginPath();
+    c.arc(w * 0.42, h * 0.45, 92, 0, Math.PI * 2);
+    c.fill();
+
+    c.fillStyle = '#b91c1c';
+    c.beginPath();
+    c.arc(w * 0.42, h * 0.82, 165, Math.PI, 0);
+    c.fill();
+  } else if (type === 'street') {
+    const bg = c.createLinearGradient(0, 0, w, h);
+    bg.addColorStop(0, '#090d16');
+    bg.addColorStop(0.5, '#111827');
+    bg.addColorStop(1, '#1f2937');
+    c.fillStyle = bg;
+    c.fillRect(0, 0, w, h);
+
+    const neonColors = ['#ef4444', '#06b6d4', '#f59e0b', '#ec4899', '#3b82f6'];
+    for (let i = 0; i < 18; i++) {
+      const x = (i * 137) % w;
+      const y = 120 + ((i * 89) % (h - 220));
+      const r = 24 + (i % 4) * 18;
+      const g = c.createRadialGradient(x, y, 2, x, y, r);
+      const col = neonColors[i % neonColors.length];
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.3, col);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = g;
+      c.beginPath();
+      c.arc(x, y, r, 0, Math.PI * 2);
+      c.fill();
+    }
+  } else {
+    const sky = c.createLinearGradient(0, 0, 0, h * 0.65);
+    sky.addColorStop(0, '#0284c7');
+    sky.addColorStop(0.6, '#7dd3fc');
+    sky.addColorStop(1, '#fef08a');
+    c.fillStyle = sky;
+    c.fillRect(0, 0, w, h);
+
+    c.fillStyle = '#1e293b';
+    c.beginPath();
+    c.moveTo(0, h * 0.68);
+    c.lineTo(w * 0.28, h * 0.32);
+    c.lineTo(w * 0.55, h * 0.62);
+    c.lineTo(w * 0.82, h * 0.26);
+    c.lineTo(w, h * 0.65);
+    c.lineTo(w, h);
+    c.lineTo(0, h);
+    c.closePath();
+    c.fill();
+
+    c.fillStyle = '#15803d';
+    c.fillRect(0, h * 0.68, w, h * 0.32);
+  }
+
+  loadSourceImageData(c.getImageData(0, 0, w, h), `Ảnh mẫu Studio (${type})`);
+}
+
+document.querySelectorAll('[data-sample]').forEach(btn => {
+  btn.addEventListener('click', () => generateSampleImage(btn.dataset.sample));
+});
+
+function loadSourceImageData(imageData, label) {
+  state.source = imageData;
+  empty.hidden = true;
+  canvasWrapper.hidden = false;
+
+  const enableIds = [
+    '#export', '#compareBtn', '#rotate90', '#aiAuto',
+    '#contactSheetBtn', '#quadViewBtn', '#dateStampBtn',
+    '#shareCode', '#exportCube', '#matchRefBtn', '#livingFilmBtn', '#lightCraftBtn'
+  ];
+  for (const sel of enableIds) {
+    const el = document.querySelector(sel);
+    if (el) el.disabled = false;
+  }
+
+  const embedded = extractRecipeFromPixels(imageData.data);
+  if (embedded) {
+    state.settings = { ...structuredClone(defaults), ...embedded };
+    state.activeRecipeName = 'Khôi phục LSB';
+    state.curvePoints = structuredClone(embedded.curvePoints || [[0, 0], [1, 1]]);
+    syncInputsFromSettings();
+    drawCurveEditor();
+    state.history = [];
+    state.historyIndex = -1;
+    commitHistory(`Khôi phục công thức ẩn từ ${label}`);
+    render();
+    setStatus(`🧬 Phát hiện ảnh xuất từ IRO Studio! Đã tự động khôi phục công thức màu ẩn (Film: ${state.settings.film}).`);
+    return;
+  }
+
+  state.history = [];
+  state.historyIndex = -1;
+  commitHistory(`Mở ${label}`);
+  render();
+  setStatus(`Đã nạp ${label} (${imageData.width}×${imageData.height}px) — Sẵn sàng hậu kỳ.`);
+}
+
+async function handleImageFile(file) {
+  if (!file) return;
+  try {
+    const bmp = await createImageBitmap(file);
+    const maxDim = 1920;
+    const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * scale));
+    const h = Math.max(1, Math.round(bmp.height * scale));
+    canvas.width = w; canvas.height = h;
+    ctx.drawImage(bmp, 0, 0, w, h);
+    loadSourceImageData(ctx.getImageData(0, 0, w, h), file.name);
+  } catch (err) {
+    setStatus('Không đọc được ảnh: ' + err.message, true);
+  }
+}
+
+document.querySelector('#photo').addEventListener('change', e => handleImageFile(e.target.files[0]));
+
+stageContainer.addEventListener('dragover', e => {
+  e.preventDefault();
+  stageContainer.style.borderColor = '#f09a3e';
+});
+stageContainer.addEventListener('dragleave', () => {
+  stageContainer.style.borderColor = '';
+});
+stageContainer.addEventListener('drop', e => {
+  e.preventDefault();
+  stageContainer.style.borderColor = '';
+  const file = e.dataTransfer?.files?.[0];
+  if (file) handleImageFile(file);
+});
+
+document.querySelector('#lut').addEventListener('change', async e => {
+  const [file] = e.target.files;
+  if (!file) return;
+  try {
+    state.lut = parseCube(await file.text());
+    commitHistory(`Nạp LUT ${file.name}`);
+    render();
+    setStatus(`Đã nạp 3D LUT: ${state.lut.title} (${state.lut.size}³).`);
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+});
+
+document.querySelector('#export').addEventListener('click', () => {
+  if (!state.source) return;
+  render();
+  if (state.frameStyle === 0) {
+    const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const stegoPixels = embedRecipeIntoPixels(currentImageData.data, {
+      ...state.settings,
+      curvePoints: state.curvePoints
+    });
+    ctx.putImageData(new ImageData(stegoPixels, canvas.width, canvas.height), 0, 0);
+  }
+
+  canvas.toBlob(blob => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `iro-studio-${state.settings.film.toLowerCase().replace(/\s+/g, '-')}.png`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    setStatus('💾 Đã xuất ảnh PNG kèm chữ ký công thức ẩn LSB (Invisible Recipe DNA)!');
+  }, 'image/png');
+});
+
+function render(isLivingFrame = false) {
+  if (!state.source) return;
+  if (state.quadViewActive && !isLivingFrame) {
+    renderQuadView();
+    return;
+  }
+
+  const out = processPixels(
+    state.source.data,
+    state.source.width,
+    state.source.height,
+    state.settings,
+    state.lut,
+    state.livingFilmActive ? state.livingFilmFrame : 0
+  );
+
+  if (state.frameStyle > 0 && !state.comparingSplit) {
+    const framedCanvas = renderFramedImage(
+      out,
+      state.source.width,
+      state.source.height,
+      state.frameStyle,
+      {
+        title: frameTitleInput.value,
+        exif: frameExifInput.value,
+        film: state.settings.film
+      }
+    );
+    canvas.width = framedCanvas.width;
+    canvas.height = framedCanvas.height;
+    ctx.drawImage(framedCanvas, 0, 0);
+  } else {
+    canvas.width = state.source.width;
+    canvas.height = state.source.height;
+    ctx.putImageData(new ImageData(out, state.source.width, state.source.height), 0, 0);
+  }
+
+  beforeCanvas.width = state.source.width;
+  beforeCanvas.height = state.source.height;
+  beforeCtx.putImageData(state.source, 0, 0);
+  if (!isLivingFrame) {
+    drawHistogram(out);
+    syncRulerHeader();
+    drawTickRuler();
+  }
+}
+
+function setStatus(msg, isError = false) {
+  status.textContent = msg;
+  status.classList.toggle('error', isError);
+}
+
+// Khởi tạo trạng thái ban đầu và tự động nạp ảnh mẫu Chân dung Hoàng hôn để hiển thị ngay
+drawCurveEditor();
+generateSampleImage('portrait');

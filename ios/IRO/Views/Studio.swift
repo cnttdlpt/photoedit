@@ -2,13 +2,19 @@ import SwiftUI
 import UIKit
 
 enum Studio {
-    // Minimal Studio Palette — Neutral Grays & Crisp Ink (Matches Android StudioStyle.java)
+    // Minimal Studio & Material Design 3 Expressive Palette (Matches Android StudioStyle.java)
     static let background = Color(red: 246/255, green: 247/255, blue: 249/255)       // #F6F7F9
     static let surface = Color(red: 239/255, green: 241/255, blue: 245/255)          // #EFF1F5
     static let surfaceContainer = Color(red: 230/255, green: 233/255, blue: 239/255) // #E6E9EF
+    static let m3SurfaceLow = Color(red: 243/255, green: 244/255, blue: 248/255)     // #F3F4F8
+    static let m3SurfaceHigh = Color(red: 220/255, green: 223/255, blue: 231/255)    // #DCDFE7
     static let line = Color(red: 225/255, green: 228/255, blue: 234/255)             // #E1E4EA
     static let ink = Color(red: 24/255, green: 26/255, blue: 31/255)                 // #181A1F
     static let muted = Color(red: 110/255, green: 115/255, blue: 125/255)            // #6E737D
+
+    // Material Design 3 Expressive Tonal Accents
+    static let m3Amber = Color(red: 224/255, green: 122/255, blue: 59/255)           // #E07A3B
+    static let m3AmberContainer = Color(red: 255/255, green: 219/255, blue: 202/255) // #FFDBCA
 
     // Primary Studio Accent — Charcoal Black
     static let accent = ink
@@ -28,6 +34,11 @@ enum Studio {
     static let googleRed = Color(red: 234/255, green: 67/255, blue: 53/255)          // #EA4335
     static let googleYellow = Color(red: 251/255, green: 188/255, blue: 4/255)       // #FBBC04
     static let googleGreen = Color(red: 52/255, green: 168/255, blue: 83/255)        // #34A853
+
+    // Material Design 3 Expressive Spring Animations (Matches MotionStudio.java)
+    static let m3Spring = Animation.spring(response: 0.28, dampingFraction: 0.72, blendDuration: 0)
+    static let m3GentleSpring = Animation.spring(response: 0.34, dampingFraction: 0.82, blendDuration: 0)
+    static let m3Emphasized = Animation.timingCurve(0.2, 0.0, 0.0, 1.0, duration: 0.28)
 }
 
 enum Haptics {
@@ -63,17 +74,44 @@ enum EditorToolTab: String, CaseIterable, Identifiable {
     }
 }
 
-// MARK: - Clean Flat Neutral Studio Background (Zero color cast distraction)
+// MARK: - Material Design 3 Expressive Spring Button Style
+struct M3ExpressiveButtonStyle: ButtonStyle {
+    var scaleAmount: CGFloat = 0.95
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scaleAmount : 1.0)
+            .animation(Studio.m3Spring, value: configuration.isPressed)
+    }
+}
+
+// MARK: - Material Design 3 Ambient Tonal Studio Background
 struct AntigravityBackground: View {
     var body: some View {
-        Studio.porcelain
-            .ignoresSafeArea()
+        ZStack {
+            Studio.porcelain
+
+            RadialGradient(
+                colors: [Studio.m3Amber.opacity(0.045), Color.clear],
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 420
+            )
+
+            RadialGradient(
+                colors: [Studio.googleBlue.opacity(0.035), Color.clear],
+                center: .bottomLeading,
+                startRadius: 20,
+                endRadius: 460
+            )
+        }
+        .ignoresSafeArea()
     }
 }
 
 // MARK: - Minimal Studio View Modifiers
 extension View {
-    /// Clean Minimal Studio Card
+    /// Clean Minimal Studio Card (M3 Surface Container Lowest + Outline Variant)
     func liquidGlassCard(cornerRadius: CGFloat = 24) -> some View {
         self
             .background(
@@ -212,7 +250,7 @@ struct EmptyPhoto: View {
                         )
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(M3ExpressiveButtonStyle(scaleAmount: 0.98))
 
             Button {
                 Haptics.light()
@@ -223,7 +261,7 @@ struct EmptyPhoto: View {
                     .foregroundStyle(Studio.ink)
                     .liquidGlassCircle(size: 38)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(M3ExpressiveButtonStyle())
 
             Menu {
                 Button("Mở ảnh từ Thư viện", systemImage: "photo.badge.plus") { onPickPhoto() }
@@ -272,7 +310,7 @@ struct EmptyPhoto: View {
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(Studio.ink)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(M3ExpressiveButtonStyle())
         }
         .padding(.horizontal, 4)
     }
@@ -352,7 +390,7 @@ struct EmptyPhoto: View {
                             .fill(Studio.ink)
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(M3ExpressiveButtonStyle())
 
                 Button {
                     Haptics.light()
@@ -369,7 +407,7 @@ struct EmptyPhoto: View {
                     .foregroundStyle(Studio.ink)
                     .liquidGlassPill()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(M3ExpressiveButtonStyle())
             }
 
             Button {
@@ -392,7 +430,7 @@ struct EmptyPhoto: View {
                         .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(M3ExpressiveButtonStyle())
         }
         .padding(16)
         .background(
@@ -426,7 +464,7 @@ struct EmptyPhoto: View {
                                     .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
                             )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(M3ExpressiveButtonStyle())
                 }
             }
         }
@@ -483,6 +521,6 @@ private struct AlbumCard: View {
                     .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 2)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(M3ExpressiveButtonStyle())
     }
 }

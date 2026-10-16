@@ -188,7 +188,7 @@ public final class IroDesktopApp {
     private TickRulerWidget maskSatRuler;
     private TickRulerWidget maskFeatherRuler;
 
-    // Định nghĩa 14 thông số Tinh chỉnh giống hệt Android Tablet
+    // Định nghĩa trọn bộ 23 thông số Tinh chỉnh & Quang học 3.0 đồng bộ 100% với Android Tablet
     private final ParamDef[] paramDefs = new ParamDef[]{
             new ParamDef("Độ phơi sáng", "EV", -3.0, 3.0, 0.0),
             new ParamDef("Vùng sáng", "Highlight", -2.0, 4.0, 0.0),
@@ -203,7 +203,16 @@ public final class IroDesktopApp {
             new ParamDef("Dịch Xanh (WB B)", "WB Blue", -9.0, 9.0, 0.0),
             new ParamDef("Giả lập Chrome", "CC Effect", 0.0, 2.0, 0.0),
             new ParamDef("Chrome Xanh", "CC Blue", 0.0, 2.0, 0.0),
-            new ParamDef("Cường độ LUT", "Strength", 0.0, 100.0, 100.0)
+            new ParamDef("Cường độ LUT", "Strength", 0.0, 100.0, 100.0),
+            new ParamDef("Kính lọc Pro-Mist", "Pro-Mist", 0.0, 100.0, 0.0),
+            new ParamDef("Quầng đỏ Halation", "Halation", 0.0, 100.0, 0.0),
+            new ParamDef("Giữ bạc Bleach", "Bleach", 0.0, 100.0, 0.0),
+            new ParamDef("Khử mù Dehaze", "Dehaze", -100.0, 100.0, 0.0),
+            new ParamDef("Chi tiết Texture", "Texture", -100.0, 100.0, 0.0),
+            new ParamDef("Bảo vệ Da mẫu", "Skin Mask", 0.0, 100.0, 0.0),
+            new ParamDef("Bokeh xoáy Helios", "Swirly", 0.0, 100.0, 0.0),
+            new ParamDef("Sương mù 3D", "Depth Fog", 0.0, 100.0, 0.0),
+            new ParamDef("Vệt lọt sáng Film", "Light Leak", 0.0, 100.0, 0.0)
     };
 
     public IroDesktopApp() {
@@ -615,6 +624,15 @@ public final class IroDesktopApp {
             case 11: return currentSettings.colorChrome;
             case 12: return currentSettings.chromeBlue;
             case 13: return currentSettings.lutAmount;
+            case 14: return currentSettings.proMist;
+            case 15: return currentSettings.halation;
+            case 16: return currentSettings.bleachBypass;
+            case 17: return currentSettings.dehaze;
+            case 18: return currentSettings.texture;
+            case 19: return currentSettings.skinProtect;
+            case 20: return currentSettings.swirlyBokeh;
+            case 21: return currentSettings.depthFog;
+            case 22: return currentSettings.lightLeak;
             default: return 0.0;
         }
     }
@@ -635,6 +653,15 @@ public final class IroDesktopApp {
             case 11: currentSettings.colorChrome = Math.round(v); break;
             case 12: currentSettings.chromeBlue = Math.round(v); break;
             case 13: currentSettings.lutAmount = Math.round(v); break;
+            case 14: currentSettings.proMist = Math.round(v); break;
+            case 15: currentSettings.halation = Math.round(v); break;
+            case 16: currentSettings.bleachBypass = Math.round(v); break;
+            case 17: currentSettings.dehaze = Math.round(v); break;
+            case 18: currentSettings.texture = Math.round(v); break;
+            case 19: currentSettings.skinProtect = Math.round(v); break;
+            case 20: currentSettings.swirlyBokeh = Math.round(v); break;
+            case 21: currentSettings.depthFog = Math.round(v); break;
+            case 22: currentSettings.lightLeak = Math.round(v); break;
         }
     }
 

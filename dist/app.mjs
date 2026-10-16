@@ -83,7 +83,10 @@ const state = {
   stageZoom: 1.0,
   stagePanX: 0,
   stagePanY: 0,
-  porcelainTheme: false
+  porcelainTheme: false,
+  previewSource: null,
+  currentUser: null,
+  authToken: localStorage.getItem('iro_token') || ''
 };
 
 // 18 thanh trượt hậu kỳ chia làm 2 nhóm: Ánh sáng & Quang học 3.0
@@ -191,6 +194,11 @@ function activateInspectorTab(targetId) {
     pane.hidden = pane.id !== targetId;
   });
   railItems.forEach(item => {
+    if (item.dataset.railTarget) {
+      item.classList.toggle('active', item.dataset.railTarget === targetId);
+    }
+  });
+  document.querySelectorAll('#m3BottomNav .bottom-nav-item').forEach(item => {
     if (item.dataset.railTarget) {
       item.classList.toggle('active', item.dataset.railTarget === targetId);
     }
@@ -527,6 +535,52 @@ zoomResetBadge?.addEventListener('click', () => {
   applyStageTransform();
 });
 
+// Cảm ứng đa điểm Native trên điện thoại & máy tính bảng (2-finger Pinch-to-Zoom & Pan)
+let initialPinchDist = 0;
+let initialPinchZoom = 1.0;
+let initialPinchCenter = { x: 0, y: 0 };
+let initialPan = { x: 0, y: 0 };
+
+stageContainer.addEventListener('touchstart', e => {
+  if (e.touches.length === 2) {
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+    initialPinchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    initialPinchZoom = state.stageZoom;
+    initialPinchCenter = {
+      x: (t1.clientX + t2.clientX) / 2,
+      y: (t1.clientY + t2.clientY) / 2
+    };
+    initialPan = { x: state.stagePanX, y: state.stagePanY };
+  }
+}, { passive: true });
+
+stageContainer.addEventListener('touchmove', e => {
+  if (e.touches.length === 2 && initialPinchDist > 0) {
+    e.preventDefault();
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+    const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    const scale = currentDist / initialPinchDist;
+    state.stageZoom = Math.max(1.0, Math.min(4.0, initialPinchZoom * scale));
+
+    const currentCenter = {
+      x: (t1.clientX + t2.clientX) / 2,
+      y: (t1.clientY + t2.clientY) / 2
+    };
+    state.stagePanX = initialPan.x + (currentCenter.x - initialPinchCenter.x);
+    state.stagePanY = initialPan.y + (currentCenter.y - initialPinchCenter.y);
+    applyStageTransform();
+  }
+}, { passive: false });
+
+stageContainer.addEventListener('touchend', e => {
+  if (e.touches.length < 2) {
+    initialPinchDist = 0;
+  }
+});
+
+
 // =========================================================================
 // KHỞI TẠO RIBBON PRESET & NẠP 392 CÔNG THỨC TỪ RECIPES.JSON
 // =========================================================================
@@ -835,11 +889,11 @@ function initLightCraftModal() {
       state.settings[`${wheelKey}Hue`] = Math.round(angle);
       state.settings[`${wheelKey}Sat`] = Math.round(dist * 100);
       drawColorWheel(wCanvas, wheelValues(wheelKey));
-      render();
+      requestInteractiveRender();
     };
     wCanvas.addEventListener('pointerdown', e => { dragging = true; wCanvas.setPointerCapture(e.pointerId); updateFromMouse(e); });
     wCanvas.addEventListener('pointermove', e => { if (dragging) updateFromMouse(e); });
-    wCanvas.addEventListener('pointerup', () => { dragging = false; commitHistory(`Bàn xoay màu ${wheelKey}`); });
+    wCanvas.addEventListener('pointerup', () => { dragging = false; commitHistory(`Bàn xoay màu ${wheelKey}`); render(false, false, false); });
     wCanvas.addEventListener('dblclick', () => {
       setWheelValues(wheelKey, { hue: 0, sat: 0, lum: 0 });
       drawAllColorWheels();
@@ -852,9 +906,12 @@ function initLightCraftModal() {
     const el = document.getElementById(inputId);
     el.addEventListener('input', () => {
       state.settings[`${key}Lum`] = Number(el.value);
-      render();
+      requestInteractiveRender();
     });
-    el.addEventListener('change', () => commitHistory(`Độ sáng ${key}`));
+    el.addEventListener('change', () => {
+      commitHistory(`Độ sáng ${key}`);
+      render(false, false, false);
+    });
   });
 
   renderHslSliders();
@@ -930,9 +987,12 @@ function renderHslSliders() {
       const v = Number(input.value);
       state.settings[prop][idx] = v;
       out.textContent = v > 0 ? '+' + v : String(v);
-      render();
+      requestInteractiveRender();
     });
-    input.addEventListener('change', () => commitHistory(`HSL ${label}`));
+    input.addEventListener('change', () => {
+      commitHistory(`HSL ${label}`);
+      render(false, false, false);
+    });
     input.addEventListener('dblclick', () => {
       state.settings[prop][idx] = 0;
       input.value = 0;
@@ -1086,10 +1146,11 @@ for (const el of document.querySelectorAll('[data-key]')) {
     if (matchedSpec) activeRulerSpec = matchedSpec;
     syncRulerHeader();
     drawTickRuler();
-    render();
+    requestInteractiveRender();
   });
   el.addEventListener('change', e => {
     commitHistory(`Chỉnh ${e.target.dataset.key}`);
+    render(false, false, false);
   });
 }
 
@@ -1221,13 +1282,14 @@ curveCanvas.addEventListener('pointermove', e => {
   }
   state.curvePoints[idx] = [nx, ny];
   drawCurveEditor();
-  render();
+  requestInteractiveRender();
 });
 
 curveCanvas.addEventListener('pointerup', () => {
   if (state.draggingCurveIdx >= 0) {
     state.draggingCurveIdx = -1;
     commitHistory('Chỉnh đường cong Tone Curve');
+    render(false, false, false);
   }
 });
 
@@ -1685,6 +1747,16 @@ window.addEventListener('keydown', e => {
     contactSheetModal.hidden = true;
     promptModal.hidden = true;
     cmdPaletteModal.hidden = true;
+    const authModal = document.getElementById('authModal');
+    if (authModal) authModal.hidden = true;
+    const adminUserModal = document.getElementById('adminUserModal');
+    if (adminUserModal) adminUserModal.hidden = true;
+    const myPhotosModal = document.getElementById('myPhotosModal');
+    if (myPhotosModal) myPhotosModal.hidden = true;
+    const moreToolsDropdown = document.getElementById('moreToolsDropdown');
+    if (moreToolsDropdown) moreToolsDropdown.hidden = true;
+    const userAccountDropdown = document.getElementById('userAccountDropdown');
+    if (userAccountDropdown) userAccountDropdown.hidden = true;
     return;
   }
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
@@ -1808,8 +1880,33 @@ document.querySelectorAll('[data-sample]').forEach(btn => {
   btn.addEventListener('click', () => generateSampleImage(btn.dataset.sample));
 });
 
+function createDownsampledImageData(srcData, maxDim = 1200) {
+  if (!srcData) return null;
+  const w0 = srcData.width;
+  const h0 = srcData.height;
+  if (Math.max(w0, h0) <= maxDim) return srcData;
+  const scale = maxDim / Math.max(w0, h0);
+  const w = Math.max(1, Math.round(w0 * scale));
+  const h = Math.max(1, Math.round(h0 * scale));
+
+  const c1 = document.createElement('canvas');
+  c1.width = w0;
+  c1.height = h0;
+  c1.getContext('2d').putImageData(srcData, 0, 0);
+
+  const c2 = document.createElement('canvas');
+  c2.width = w;
+  c2.height = h;
+  const ctx2 = c2.getContext('2d');
+  ctx2.drawImage(c1, 0, 0, w, h);
+  return ctx2.getImageData(0, 0, w, h);
+}
+
 function loadSourceImageData(imageData, label, rawFile = null) {
   state.source = imageData;
+  // Tạo bản preview nén nhẹ để tương tác slider siêu tốc 60fps
+  state.previewSource = createDownsampledImageData(imageData, 1200);
+
   state.stageZoom = 1.0;
   state.stagePanX = 0;
   state.stagePanY = 0;
@@ -2182,9 +2279,11 @@ async function initSessionOnServer(filename, fileSize, width, height, rawFile = 
     if (syncText) syncText.textContent = 'Đang nạp...';
   }
   try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (state.authToken) headers['Authorization'] = `Bearer ${state.authToken}`;
     const res = await fetch('api.php?action=init_session', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify({
         sessionId: currentSessionId,
         filename: filename || 'photo.jpg',
@@ -2203,8 +2302,11 @@ async function initSessionOnServer(filename, fileSize, width, height, rawFile = 
       const formData = new FormData();
       formData.append('sessionId', currentSessionId);
       formData.append('photo', rawFile);
+      const uploadHeaders = {};
+      if (state.authToken) uploadHeaders['Authorization'] = `Bearer ${state.authToken}`;
       fetch('api.php?action=upload_original', {
         method: 'POST',
+        headers: uploadHeaders,
         body: formData
       }).catch(() => {});
     }
@@ -2251,9 +2353,11 @@ async function syncToServerNow(actionDesc = 'Chỉnh sửa thông số') {
     offCtx.drawImage(canvas, 0, 0, pw, ph);
     const previewJpeg = offscreen.toDataURL('image/jpeg', 0.72);
 
+    const headers = { 'Content-Type': 'application/json' };
+    if (state.authToken) headers['Authorization'] = `Bearer ${state.authToken}`;
     await fetch('api.php?action=sync_settings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify({
         sessionId: currentSessionId,
         recipeName: state.settings?.film || 'Tự chỉnh',
@@ -2277,17 +2381,20 @@ async function syncToServerNow(actionDesc = 'Chỉnh sửa thông số') {
   }
 }
 
-function render(isLivingFrame = false, forExport = false) {
+function render(isLivingFrame = false, forExport = false, isInteractive = false) {
   if (!state.source) return;
   if (state.quadViewActive && !isLivingFrame && !forExport) {
     renderQuadView();
     return;
   }
 
+  // Tăng tốc siêu mượt 60fps khi kéo slider: sử dụng bản preview nén nhẹ previewSource
+  const activeSrc = (isInteractive && state.previewSource && !forExport && !isLivingFrame) ? state.previewSource : state.source;
+
   const out = processPixels(
-    state.source.data,
-    state.source.width,
-    state.source.height,
+    activeSrc.data,
+    activeSrc.width,
+    activeSrc.height,
     state.settings,
     state.lut,
     state.livingFilmActive ? state.livingFilmFrame : 0
@@ -2295,8 +2402,8 @@ function render(isLivingFrame = false, forExport = false) {
 
   if (state.frameStyle > 0 && (forExport || !state.comparingSplit)) {
     const sourceCanvas = document.createElement('canvas');
-    sourceCanvas.width = state.source.width;
-    sourceCanvas.height = state.source.height;
+    sourceCanvas.width = activeSrc.width;
+    sourceCanvas.height = activeSrc.height;
     sourceCanvas.getContext('2d').putImageData(new ImageData(out, sourceCanvas.width, sourceCanvas.height), 0, 0);
     const framedCanvas = renderPhotoFrame(sourceCanvas, out, state.settings, {
       camera: frameTitleInput.value.trim(), focal: frameExifInput.value.trim(),
@@ -2306,15 +2413,15 @@ function render(isLivingFrame = false, forExport = false) {
     canvas.height = framedCanvas.height;
     ctx.drawImage(framedCanvas, 0, 0);
   } else {
-    canvas.width = state.source.width;
-    canvas.height = state.source.height;
-    ctx.putImageData(new ImageData(out, state.source.width, state.source.height), 0, 0);
+    canvas.width = activeSrc.width;
+    canvas.height = activeSrc.height;
+    ctx.putImageData(new ImageData(out, activeSrc.width, activeSrc.height), 0, 0);
   }
 
-  beforeCanvas.width = state.source.width;
-  beforeCanvas.height = state.source.height;
-  beforeCtx.putImageData(state.source, 0, 0);
-  if (!isLivingFrame) {
+  beforeCanvas.width = activeSrc.width;
+  beforeCanvas.height = activeSrc.height;
+  beforeCtx.putImageData(activeSrc, 0, 0);
+  if (!isLivingFrame && !isInteractive) {
     drawHistogram(out);
     syncRulerHeader();
     drawTickRuler();
@@ -2322,11 +2429,665 @@ function render(isLivingFrame = false, forExport = false) {
   }
 }
 
+let rafId = null;
+let fullResDebounceTimer = null;
+
+function requestInteractiveRender() {
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(() => {
+    render(false, false, true);
+    rafId = null;
+  });
+
+  if (fullResDebounceTimer) clearTimeout(fullResDebounceTimer);
+  fullResDebounceTimer = setTimeout(() => {
+    render(false, false, false);
+  }, 110);
+}
+
 function setStatus(msg, isError = false) {
   status.textContent = msg;
   status.classList.toggle('error', isError);
 }
 
-// Khởi tạo trạng thái ban đầu và tự động nạp ảnh mẫu Chân dung Hoàng hôn để hiển thị ngay
+// =========================================================================
+// HỆ THỐNG THÔNG BÁO TOAST NỔI (TOAST NOTIFICATIONS)
+// =========================================================================
+function showToast(message, type = 'info', icon = '✨') {
+  let toastContainer = document.getElementById('iroToastContainer');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'iroToastContainer';
+    toastContainer.className = 'iro-toast-container';
+    document.body.appendChild(toastContainer);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = `iro-toast iro-toast-${type}`;
+  toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-text">${message}</span>`;
+  toastContainer.appendChild(toast);
+
+  requestAnimationFrame(() => toast.classList.add('show'));
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 320);
+  }, 3200);
+}
+
+// =========================================================================
+// ĐIỀU HƯỚNG DÀNH CHO DI ĐỘNG (MOBILE BOTTOM NAV & BOTTOM SHEET DRAWER)
+// =========================================================================
+const m3BottomNav = document.getElementById('m3BottomNav');
+const mobileDrawerHandle = document.getElementById('mobileDrawerHandle');
+const inspectorPanel = document.querySelector('.m3-inspector-panel');
+
+if (m3BottomNav) {
+  m3BottomNav.querySelectorAll('.bottom-nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const target = item.dataset.railTarget;
+      if (target) {
+        if (item.classList.contains('active') && inspectorPanel?.classList.contains('mobile-drawer-open')) {
+          inspectorPanel.classList.remove('mobile-drawer-open');
+        } else {
+          activateInspectorTab(target);
+          if (inspectorPanel) {
+            inspectorPanel.classList.add('mobile-drawer-open');
+          }
+        }
+      }
+    });
+  });
+}
+
+if (mobileDrawerHandle && inspectorPanel) {
+  mobileDrawerHandle.addEventListener('click', () => {
+    inspectorPanel.classList.toggle('mobile-drawer-open');
+  });
+}
+
+const mobileToolsBtn = document.getElementById('mobileToolsBtn');
+if (mobileToolsBtn) {
+  mobileToolsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dropdown = document.getElementById('moreToolsDropdown');
+    if (dropdown) dropdown.hidden = !dropdown.hidden;
+    const userDrop = document.getElementById('userAccountDropdown');
+    if (userDrop) userDrop.hidden = true;
+  });
+}
+
+const mobileAuthBtn = document.getElementById('mobileAuthBtn');
+if (mobileAuthBtn) {
+  mobileAuthBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (state.currentUser) {
+      const drop = document.getElementById('userAccountDropdown');
+      if (drop) drop.hidden = !drop.hidden;
+      const toolsDrop = document.getElementById('moreToolsDropdown');
+      if (toolsDrop) toolsDrop.hidden = true;
+    } else {
+      openAuthModal('login');
+    }
+  });
+}
+
+// =========================================================================
+// HỆ THỐNG TÀI KHOẢN, PHÂN QUYỀN VÀ BẢNG QUẢN TRỊ (AUTH & ADMIN UI)
+// =========================================================================
+const authTriggerBtn = document.getElementById('authTriggerBtn');
+const userAccountDropdown = document.getElementById('userAccountDropdown');
+const moreToolsBtn = document.getElementById('moreToolsBtn');
+const moreToolsDropdown = document.getElementById('moreToolsDropdown');
+
+const authModal = document.getElementById('authModal');
+const closeAuthModal = document.getElementById('closeAuthModal');
+const authTabLogin = document.getElementById('authTabLogin');
+const authTabRegister = document.getElementById('authTabRegister');
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const switchToRegisterLink = document.getElementById('switchToRegisterLink');
+const switchToLoginLink = document.getElementById('switchToLoginLink');
+const loginErrorMsg = document.getElementById('loginErrorMsg');
+const registerErrorMsg = document.getElementById('registerErrorMsg');
+
+function openAuthModal(mode = 'login') {
+  if (!authModal) return;
+  authModal.hidden = false;
+  if (mode === 'register') {
+    authTabRegister?.click();
+  } else {
+    authTabLogin?.click();
+  }
+}
+
+if (authTriggerBtn) {
+  authTriggerBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (state.currentUser) {
+      if (userAccountDropdown) userAccountDropdown.hidden = !userAccountDropdown.hidden;
+      if (moreToolsDropdown) moreToolsDropdown.hidden = true;
+    } else {
+      openAuthModal('login');
+    }
+  });
+}
+
+if (moreToolsBtn) {
+  moreToolsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (moreToolsDropdown) moreToolsDropdown.hidden = !moreToolsDropdown.hidden;
+    if (userAccountDropdown) userAccountDropdown.hidden = true;
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if (userAccountDropdown && !userAccountDropdown.contains(e.target) && e.target !== authTriggerBtn && !authTriggerBtn?.contains(e.target)) {
+    userAccountDropdown.hidden = true;
+  }
+  if (moreToolsDropdown && !moreToolsDropdown.contains(e.target) && e.target !== moreToolsBtn && !moreToolsBtn?.contains(e.target)) {
+    moreToolsDropdown.hidden = true;
+  }
+});
+
+if (closeAuthModal) {
+  closeAuthModal.addEventListener('click', () => {
+    if (authModal) authModal.hidden = true;
+  });
+}
+
+if (authTabLogin && authTabRegister) {
+  authTabLogin.addEventListener('click', () => {
+    authTabLogin.classList.add('active');
+    authTabRegister.classList.remove('active');
+    if (loginForm) loginForm.hidden = false;
+    if (registerForm) registerForm.hidden = true;
+    if (loginErrorMsg) loginErrorMsg.hidden = true;
+  });
+
+  authTabRegister.addEventListener('click', () => {
+    authTabRegister.classList.add('active');
+    authTabLogin.classList.remove('active');
+    if (registerForm) registerForm.hidden = false;
+    if (loginForm) loginForm.hidden = true;
+    if (registerErrorMsg) registerErrorMsg.hidden = true;
+  });
+}
+
+switchToRegisterLink?.addEventListener('click', (e) => {
+  e.preventDefault();
+  authTabRegister?.click();
+});
+
+switchToLoginLink?.addEventListener('click', (e) => {
+  e.preventDefault();
+  authTabLogin?.click();
+});
+
+document.querySelectorAll('.toggle-pwd-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const targetId = btn.dataset.target;
+    const input = document.getElementById(targetId);
+    if (input) {
+      const isPwd = input.type === 'password';
+      input.type = isPwd ? 'text' : 'password';
+      btn.textContent = isPwd ? '🙈' : '👁️';
+    }
+  });
+});
+
+loginForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const account = document.getElementById('loginAccountInput')?.value.trim();
+  const password = document.getElementById('loginPasswordInput')?.value;
+  const submitBtn = document.getElementById('submitLoginBtn');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Đang đăng nhập...'; }
+  if (loginErrorMsg) loginErrorMsg.hidden = true;
+
+  try {
+    const res = await fetch('api.php?action=auth_login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ account, login: account, username: account, password })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      state.authToken = data.token;
+      state.currentUser = data.user;
+      localStorage.setItem('iro_token', data.token);
+      updateUserAccountUI();
+      if (authModal) authModal.hidden = true;
+      loginForm.reset();
+      showToast(`Chào mừng ${data.user.full_name || data.user.username}!`, 'success', '👋');
+      setStatus(`👤 Đã đăng nhập: ${data.user.full_name || data.user.username} (${data.user.role.toUpperCase()})`);
+    } else {
+      if (loginErrorMsg) {
+        loginErrorMsg.textContent = data.error || 'Đăng nhập không thành công';
+        loginErrorMsg.hidden = false;
+      }
+    }
+  } catch (err) {
+    if (loginErrorMsg) {
+      loginErrorMsg.textContent = 'Lỗi kết nối máy chủ: ' + err.message;
+      loginErrorMsg.hidden = false;
+    }
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Đăng nhập'; }
+  }
+});
+
+registerForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('regUsernameInput')?.value.trim();
+  const full_name = document.getElementById('regFullNameInput')?.value.trim();
+  const email = document.getElementById('regEmailInput')?.value.trim();
+  const password = document.getElementById('regPasswordInput')?.value;
+  const submitBtn = document.getElementById('submitRegisterBtn');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Đang tạo tài khoản...'; }
+  if (registerErrorMsg) registerErrorMsg.hidden = true;
+
+  try {
+    const res = await fetch('api.php?action=auth_register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, full_name, email, password })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      state.authToken = data.token;
+      state.currentUser = data.user;
+      localStorage.setItem('iro_token', data.token);
+      updateUserAccountUI();
+      if (authModal) authModal.hidden = true;
+      registerForm.reset();
+      showToast('Đăng ký tài khoản thành công!', 'success', '🎉');
+      setStatus(`🎉 Chào mừng thành viên mới: ${data.user.full_name || data.user.username}!`);
+    } else {
+      if (registerErrorMsg) {
+        registerErrorMsg.textContent = data.error || 'Đăng ký không thành công';
+        registerErrorMsg.hidden = false;
+      }
+    }
+  } catch (err) {
+    if (registerErrorMsg) {
+      registerErrorMsg.textContent = 'Lỗi kết nối máy chủ: ' + err.message;
+      registerErrorMsg.hidden = false;
+    }
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Tạo tài khoản mới'; }
+  }
+});
+
+const logoutMenuBtn = document.getElementById('logoutMenuBtn');
+if (logoutMenuBtn) {
+  logoutMenuBtn.addEventListener('click', async () => {
+    try {
+      if (state.authToken) {
+        await fetch('api.php?action=auth_logout', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${state.authToken}` }
+        });
+      }
+    } catch (e) {}
+    state.authToken = '';
+    state.currentUser = null;
+    localStorage.removeItem('iro_token');
+    updateUserAccountUI();
+    if (userAccountDropdown) userAccountDropdown.hidden = true;
+    showToast('Đã đăng xuất tài khoản.', 'info', '👋');
+    setStatus('Đã đăng xuất tài khoản.');
+  });
+}
+
+function updateUserAccountUI() {
+  const userAccountLabel = document.getElementById('userAccountLabel');
+  const dropUserName = document.getElementById('dropUserName');
+  const dropUserRole = document.getElementById('dropUserRole');
+  const dropUserAvatar = document.getElementById('dropUserAvatar');
+  const adminUsersMenuBtn = document.getElementById('adminUsersMenuBtn');
+  const userAvatarIcon = authTriggerBtn?.querySelector('.user-avatar-icon');
+
+  if (state.currentUser) {
+    const u = state.currentUser;
+    const displayName = u.full_name || u.username;
+    if (userAccountLabel) userAccountLabel.textContent = displayName;
+    if (dropUserName) dropUserName.textContent = displayName;
+    if (dropUserRole) {
+      dropUserRole.textContent = u.role.toUpperCase();
+      dropUserRole.className = `badge-role ${u.role === 'admin' ? 'admin' : 'user'}`;
+    }
+    const avatarLetter = (displayName[0] || 'U').toUpperCase();
+    if (dropUserAvatar) dropUserAvatar.textContent = avatarLetter;
+    if (userAvatarIcon) userAvatarIcon.textContent = u.role === 'admin' ? '👑' : '👤';
+
+    if (adminUsersMenuBtn) {
+      adminUsersMenuBtn.hidden = u.role !== 'admin';
+    }
+  } else {
+    if (userAccountLabel) userAccountLabel.textContent = 'Đăng nhập';
+    if (dropUserName) dropUserName.textContent = 'Khách vãng lai';
+    if (dropUserRole) {
+      dropUserRole.textContent = 'GUEST';
+      dropUserRole.className = 'badge-role';
+    }
+    if (dropUserAvatar) dropUserAvatar.textContent = '👤';
+    if (userAvatarIcon) userAvatarIcon.textContent = '👤';
+    if (adminUsersMenuBtn) adminUsersMenuBtn.hidden = true;
+  }
+}
+
+async function checkCurrentUser() {
+  if (!state.authToken) {
+    updateUserAccountUI();
+    return;
+  }
+  try {
+    const res = await fetch('api.php?action=auth_me', {
+      headers: { 'Authorization': `Bearer ${state.authToken}` }
+    });
+    const data = await res.json();
+    if (data.ok && data.user) {
+      state.currentUser = data.user;
+      updateUserAccountUI();
+    } else {
+      state.authToken = '';
+      state.currentUser = null;
+      localStorage.removeItem('iro_token');
+      updateUserAccountUI();
+    }
+  } catch (err) {
+    console.debug('Failed to verify token:', err);
+  }
+}
+
+// Quản lý người dùng Admin
+const adminUserModal = document.getElementById('adminUserModal');
+const closeAdminUserModal = document.getElementById('closeAdminUserModal');
+const adminUsersMenuBtn = document.getElementById('adminUsersMenuBtn');
+const adminRefreshUsersBtn = document.getElementById('adminRefreshUsersBtn');
+const adminUserSearchInput = document.getElementById('adminUserSearchInput');
+const adminUsersTableBody = document.getElementById('adminUsersTableBody');
+
+let allCachedUsers = [];
+
+if (adminUsersMenuBtn) {
+  adminUsersMenuBtn.addEventListener('click', () => {
+    if (userAccountDropdown) userAccountDropdown.hidden = true;
+    if (adminUserModal) adminUserModal.hidden = false;
+    loadAdminUsers();
+  });
+}
+
+if (closeAdminUserModal) {
+  closeAdminUserModal.addEventListener('click', () => {
+    if (adminUserModal) adminUserModal.hidden = true;
+  });
+}
+
+if (adminRefreshUsersBtn) {
+  adminRefreshUsersBtn.addEventListener('click', () => loadAdminUsers());
+}
+
+if (adminUserSearchInput) {
+  adminUserSearchInput.addEventListener('input', () => {
+    renderAdminUsersTable(adminUserSearchInput.value.trim().toLowerCase());
+  });
+}
+
+async function loadAdminUsers() {
+  if (!adminUsersTableBody) return;
+  adminUsersTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;">Đang tải danh sách người dùng...</td></tr>';
+  try {
+    const res = await fetch('api.php?action=admin_get_users', {
+      headers: { 'Authorization': `Bearer ${state.authToken}` }
+    });
+    const data = await res.json();
+    if (data.ok && data.users) {
+      allCachedUsers = data.users;
+      renderAdminUsersTable();
+    } else {
+      adminUsersTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px;">${data.error || 'Không thể tải danh sách'}</td></tr>`;
+    }
+  } catch (err) {
+    adminUsersTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px;">Lỗi: ${err.message}</td></tr>`;
+  }
+}
+
+function renderAdminUsersTable(filter = '') {
+  if (!adminUsersTableBody) return;
+  const filtered = allCachedUsers.filter(u => {
+    if (!filter) return true;
+    return (u.username && u.username.toLowerCase().includes(filter)) ||
+           (u.full_name && u.full_name.toLowerCase().includes(filter)) ||
+           (u.email && u.email.toLowerCase().includes(filter));
+  });
+
+  if (filtered.length === 0) {
+    adminUsersTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text-sub);">Không tìm thấy người dùng phù hợp.</td></tr>';
+    return;
+  }
+
+  adminUsersTableBody.innerHTML = filtered.map(u => {
+    const isAdmin = u.role === 'admin';
+    const isBanned = u.status === 'banned';
+    const isMe = state.currentUser && state.currentUser.id === u.id;
+    return `
+      <tr>
+        <td style="font-family:monospace;font-size:12px;color:var(--text-sub);">${u.id}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-high);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;">${(u.username[0] || 'U').toUpperCase()}</div>
+            <div>
+              <strong>${u.full_name || u.username}</strong>
+              <div style="font-size:11px;color:var(--text-sub);">@${u.username}</div>
+            </div>
+          </div>
+        </td>
+        <td style="font-size:12px;">${u.email}</td>
+        <td>
+          <span class="badge-role ${isAdmin ? 'admin' : 'user'}">${u.role.toUpperCase()}</span>
+        </td>
+        <td>
+          <span class="badge-status ${isBanned ? 'banned' : 'active'}">${isBanned ? 'BỊ KHÓA' : 'HOẠT ĐỘNG'}</span>
+        </td>
+        <td style="font-family:monospace;font-size:12px;text-align:center;">${u.session_count || 0}</td>
+        <td style="font-size:11px;color:var(--text-sub);">${(u.created_at || '').slice(0, 10)}</td>
+        <td>
+          <div class="admin-actions-cell">
+            ${!isMe ? `
+              <button type="button" class="btn-table-action" onclick="window.iroToggleRole(${u.id}, '${isAdmin ? 'user' : 'admin'}')" title="Đổi quyền Admin/User">
+                ${isAdmin ? 'Hạ User' : 'Nâng Admin'}
+              </button>
+              <button type="button" class="btn-table-action ${isBanned ? 'btn-unban' : 'btn-ban'}" onclick="window.iroToggleStatus(${u.id}, '${isBanned ? 'active' : 'banned'}')" title="Khóa/Mở khóa">
+                ${isBanned ? 'Mở khóa' : 'Khóa'}
+              </button>
+              <button type="button" class="btn-table-action btn-del" onclick="window.iroDeleteUser(${u.id}, '${u.username}')" title="Xóa tài khoản">
+                🗑️
+              </button>
+            ` : '<span style="font-size:11px;color:var(--accent);font-weight:600;">(Chính bạn)</span>'}
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+window.iroToggleRole = async (userId, newRole) => {
+  if (!confirm(`Bạn có chắc muốn chuyển tài khoản #${userId} sang vai trò "${newRole.toUpperCase()}"?`)) return;
+  try {
+    const res = await fetch('api.php?action=admin_update_user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.authToken}`
+      },
+      body: JSON.stringify({ userId, role: newRole })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      showToast('Đã cập nhật vai trò thành công!', 'success', '👑');
+      loadAdminUsers();
+    } else {
+      alert(d.error || 'Thao tác thất bại');
+    }
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+};
+
+window.iroToggleStatus = async (userId, newStatus) => {
+  const isBan = newStatus === 'banned';
+  if (!confirm(`Bạn có chắc muốn ${isBan ? 'KHÓA' : 'MỞ KHÓA'} tài khoản #${userId}?`)) return;
+  try {
+    const res = await fetch('api.php?action=admin_update_user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.authToken}`
+      },
+      body: JSON.stringify({ userId, status: newStatus })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      showToast(`Đã ${isBan ? 'khóa' : 'mở khóa'} tài khoản thành công!`, 'info', '🔒');
+      loadAdminUsers();
+    } else {
+      alert(d.error || 'Thao tác thất bại');
+    }
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+};
+
+window.iroDeleteUser = async (userId, username) => {
+  if (!confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA vĩnh viễn tài khoản "${username}" (ID: ${userId})? Thao tác này không thể hoàn tác!`)) return;
+  try {
+    const res = await fetch('api.php?action=admin_delete_user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.authToken}`
+      },
+      body: JSON.stringify({ userId })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      showToast(`Đã xóa vĩnh viễn tài khoản @${username}!`, 'info', '🗑️');
+      loadAdminUsers();
+    } else {
+      alert(d.error || 'Thao tác thất bại');
+    }
+  } catch (e) {
+    alert('Lỗi: ' + e.message);
+  }
+};
+
+// Thư viện Ảnh của tôi (My Photos)
+const myPhotosModal = document.getElementById('myPhotosModal');
+const closeMyPhotosModal = document.getElementById('closeMyPhotosModal');
+const myPhotosMenuBtn = document.getElementById('myPhotosMenuBtn');
+const myPhotosGrid = document.getElementById('myPhotosGrid');
+
+if (myPhotosMenuBtn) {
+  myPhotosMenuBtn.addEventListener('click', () => {
+    if (userAccountDropdown) userAccountDropdown.hidden = true;
+    if (myPhotosModal) myPhotosModal.hidden = false;
+    loadMyPhotos();
+  });
+}
+
+if (closeMyPhotosModal) {
+  closeMyPhotosModal.addEventListener('click', () => {
+    if (myPhotosModal) myPhotosModal.hidden = true;
+  });
+}
+
+async function loadMyPhotos() {
+  if (!myPhotosGrid) return;
+  myPhotosGrid.innerHTML = '<p class="empty-hint">Đang tải lịch sử ảnh...</p>';
+  try {
+    const res = await fetch('api.php?action=get_my_photos', {
+      headers: { 'Authorization': `Bearer ${state.authToken}` }
+    });
+    const data = await res.json();
+    if (data.ok && data.sessions) {
+      if (data.sessions.length === 0) {
+        myPhotosGrid.innerHTML = '<p class="empty-hint">Bạn chưa có bức ảnh nào được chỉnh sửa trên máy chủ.</p>';
+        return;
+      }
+      myPhotosGrid.innerHTML = data.sessions.map(s => {
+        const thumb = s.preview_url || s.original_url || '';
+        return `
+          <div class="my-photo-card">
+            <div class="photo-thumb-wrap">
+              ${thumb ? `<img src="${thumb}" alt="${s.filename}" loading="lazy" />` : '<div class="no-thumb">🖼️</div>'}
+            </div>
+            <div class="photo-info">
+              <div class="photo-title" title="${s.filename}">${s.filename}</div>
+              <div class="photo-meta">
+                <span>${s.recipe_name || 'Tự chỉnh'}</span>
+                <span>·</span>
+                <span>${(s.updated_at || s.created_at || '').slice(0, 10)}</span>
+              </div>
+              <div class="photo-actions">
+                ${s.original_url ? `
+                  <button type="button" class="btn-load-photo" onclick="window.iroLoadCloudPhoto('${s.original_url}', '${encodeURIComponent(s.filename)}', ${JSON.stringify(s.settings_json || '{}').replace(/"/g, '&quot;')})">
+                    Mở ảnh này
+                  </button>
+                ` : ''}
+                ${thumb ? `<a href="${thumb}" target="_blank" download="${s.filename}" class="btn-download-thumb" title="Tải về">⬇️</a>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">${data.error || 'Không thể tải ảnh'}</p>`;
+    }
+  } catch (err) {
+    myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">Lỗi: ${err.message}</p>`;
+  }
+}
+
+window.iroLoadCloudPhoto = async (url, filenameEnc, settingsJsonStr) => {
+  try {
+    const filename = decodeURIComponent(filenameEnc);
+    setStatus(`Đang tải ảnh từ máy chủ: ${filename}...`);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const cx = c.getContext('2d');
+      cx.drawImage(img, 0, 0);
+      const imgData = cx.getImageData(0, 0, c.width, c.height);
+      loadSourceImageData(imgData, filename, null);
+      try {
+        const parsedSettings = typeof settingsJsonStr === 'string' ? JSON.parse(settingsJsonStr) : settingsJsonStr;
+        if (parsedSettings && typeof parsedSettings === 'object' && Object.keys(parsedSettings).length > 0) {
+          state.settings = { ...structuredClone(defaults), ...parsedSettings };
+          state.curvePoints = structuredClone(parsedSettings.curvePoints || [[0, 0], [1, 1]]);
+          syncInputsFromSettings();
+          drawCurveEditor();
+        }
+      } catch (e) {}
+      render();
+      if (myPhotosModal) myPhotosModal.hidden = true;
+      showToast(`Đã mở ảnh "${filename}" thành công!`, 'success', '🖼️');
+      setStatus(`Đã mở ảnh: ${filename}`);
+    };
+    img.onerror = () => {
+      alert('Không thể nạp ảnh từ đường dẫn máy chủ.');
+    };
+    img.src = url;
+  } catch (e) {
+    alert('Lỗi nạp ảnh: ' + e.message);
+  }
+};
+
+// Khởi tạo trạng thái ban đầu, kiểm tra xác thực người dùng và tự động nạp ảnh mẫu
 drawCurveEditor();
 generateSampleImage('portrait');
+checkCurrentUser();
+

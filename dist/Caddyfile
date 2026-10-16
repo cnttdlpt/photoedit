@@ -13,12 +13,12 @@
     }
 
     @static {
-        path *.css *.js *.mjs *.jpg *.jpeg *.png *.webp *.svg *.cube *.woff2
+        path *.jpg *.jpeg *.png *.webp *.svg *.cube *.woff2
     }
     header @static Cache-Control "public, max-age=2592000"
 
     @dynamic {
-        path *.html *.json
+        path / *.html *.json *.css *.js *.mjs
     }
     header @dynamic Cache-Control "no-cache"
 }

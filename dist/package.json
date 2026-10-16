@@ -1,0 +1,26 @@
+{
+  "name": "iro-web-studio",
+  "version": "3.0.1",
+  "description": "Phòng tối trực tuyến độc lập & Giả lập màu phim Fujifilm IRO Studio",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests.mjs engine-contract.test.mjs server.test.mjs ui-integration.test.mjs"
+  },
+  "keywords": [
+    "fujifilm",
+    "film-simulation",
+    "darkroom",
+    "color-grading",
+    "oklab",
+    "photo-frame",
+    "lut-cube"
+  ],
+  "author": "IRO Studio Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@napi-rs/canvas": "0.1.100",
+    "linkedom": "0.18.13"
+  }
+}

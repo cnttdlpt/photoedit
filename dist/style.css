@@ -1752,3 +1752,680 @@ button:disabled {
   color: var(--muted, #9ca3af);
 }
 
+/* ==========================================================================
+   8. STREAMLINED DROPDOWN MENUS & USER AUTH UI (MATERIAL 3)
+   ========================================================================== */
+.btn-user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel-elevated, #1c1e24);
+  border: 1px solid var(--line-strong, #374151);
+  color: var(--fg, #f3f4f8);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--m3-radius-pill, 999px);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.btn-user-pill:hover {
+  background: var(--line-strong, #374151);
+  border-color: var(--accent, #e28743);
+}
+.btn-user-pill.logged-in {
+  background: rgba(226, 135, 67, 0.12);
+  border-color: var(--accent, #e28743);
+  color: var(--accent, #e28743);
+}
+
+.m3-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1000;
+  min-width: 260px;
+  background: var(--panel-elevated, #1c1e24);
+  border: 1px solid var(--line-strong, #374151);
+  border-radius: 16px;
+  padding: 8px 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: m3PopIn 0.18s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+.m3-dropdown-menu[hidden] {
+  display: none !important;
+}
+
+.dropdown-section-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted, #9ca3af);
+  padding: 6px 12px 2px;
+}
+.dropdown-divider {
+  height: 1px;
+  background: var(--line, #2b2f38);
+  margin: 6px 0;
+}
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: var(--fg, #f3f4f8);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s ease;
+}
+.dropdown-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+.dropdown-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.dropdown-item.text-danger {
+  color: #ef4444;
+}
+.dropdown-item.text-danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.user-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+}
+.user-drop-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent, #e28743);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+.user-drop-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.badge-role {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  width: fit-content;
+}
+.badge-role.admin {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.badge-role.user {
+  background: rgba(16, 185, 129, 0.18);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+/* ==========================================================================
+   9. HỘP THOẠI ĐĂNG KÝ / ĐĂNG NHẬP (AUTH MODAL)
+   ========================================================================== */
+.auth-dialog-modal {
+  max-width: 440px !important;
+  margin: auto;
+}
+.auth-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.auth-logo-badge {
+  color: var(--accent, #e28743);
+  font-size: 18px;
+}
+.auth-tab-bar {
+  display: flex;
+  background: var(--bg, #121316);
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid var(--line, #2b2f38);
+}
+.auth-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--muted, #9ca3af);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.auth-tab.active {
+  background: var(--panel-elevated, #1c1e24);
+  color: var(--fg, #fff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.auth-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted, #9ca3af);
+}
+.auth-field input {
+  background: var(--bg, #121316);
+  border: 1px solid var(--line-strong, #374151);
+  color: var(--fg, #f3f4f8);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.auth-field input:focus {
+  border-color: var(--accent, #e28743);
+}
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.password-wrapper input {
+  width: 100%;
+  padding-right: 40px;
+}
+.toggle-pwd-btn {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--muted, #9ca3af);
+  cursor: pointer;
+  padding: 6px;
+  font-size: 14px;
+}
+.auth-submit-btn {
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 10px;
+  margin-top: 6px;
+}
+.auth-error-msg {
+  color: #ef4444;
+  font-size: 12.5px;
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.auth-hint {
+  font-size: 12.5px;
+  color: var(--muted, #9ca3af);
+  text-align: center;
+  margin: 4px 0 0;
+}
+.auth-hint a {
+  color: var(--accent, #e28743);
+  text-decoration: none;
+  font-weight: 600;
+}
+.auth-hint a:hover {
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   10. BẢNG QUẢN TRỊ NGƯỜI DÙNG DÀNH CHO ADMIN
+   ========================================================================== */
+.admin-mgmt-modal {
+  max-width: 960px !important;
+}
+.admin-toolbar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.admin-toolbar input {
+  flex: 1;
+  background: var(--bg, #121316);
+  border: 1px solid var(--line-strong, #374151);
+  color: var(--fg, #f3f4f8);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+}
+.admin-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--line, #2b2f38);
+  border-radius: 12px;
+  background: var(--panel, #16181d);
+}
+.admin-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+.admin-users-table th {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted, #9ca3af);
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line, #2b2f38);
+  font-weight: 600;
+}
+.admin-users-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line, #2b2f38);
+  color: var(--fg, #f3f4f8);
+  vertical-align: middle;
+}
+.admin-users-table tr:last-child td {
+  border-bottom: none;
+}
+.admin-users-table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.status-badge.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+.status-badge.banned {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+.btn-table-action {
+  padding: 5px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--line-strong, #374151);
+  background: var(--panel-elevated, #1c1e24);
+  color: var(--fg, #f3f4f8);
+  cursor: pointer;
+  margin-right: 4px;
+  transition: all 0.15s ease;
+}
+.btn-table-action:hover {
+  border-color: var(--accent, #e28743);
+  color: var(--accent, #e28743);
+}
+.btn-table-action.danger:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* ==========================================================================
+   11. MOBILE BOTTOM NAVIGATION & NATIVE PHONE ADAPTATIONS
+   ========================================================================== */
+.m3-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 840px) {
+  /* Khóa cuộn toàn trang để giả lập app native */
+  body {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Ẩn Navigation Rail dọc */
+  .m3-nav-rail {
+    display: none !important;
+  }
+
+  /* Topbar rút gọn tối đa */
+  .topbar.m3-top-app-bar {
+    padding: 8px 12px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    gap: 8px;
+  }
+  .brand-copy .subtitle,
+  .m3-recipe-hero-pill {
+    display: none !important;
+  }
+
+  /* Main Workspace chiếm trọn màn hình di động */
+  .workspace.m3-three-zone-studio {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 60px - max(56px, env(safe-area-inset-bottom)));
+    margin-bottom: max(56px, env(safe-area-inset-bottom));
+    padding: 0;
+  }
+
+  .stage-column {
+    flex: 1;
+    min-height: 0;
+  }
+  .stage {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  /* Inspector chuyển thành Bottom Sheet Drawer */
+  .m3-inspector-panel {
+    position: fixed;
+    bottom: max(56px, env(safe-area-inset-bottom));
+    left: 0;
+    right: 0;
+    max-height: 52vh;
+    background: var(--panel, #16181d);
+    border-radius: 24px 24px 0 0;
+    border: 1px solid var(--line-strong, #374151);
+    box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.6);
+    z-index: 100;
+    transform: translateY(calc(100% + 60px));
+    transition: transform 0.28s cubic-bezier(0.1, 0.9, 0.2, 1);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .m3-inspector-panel.mobile-drawer-open {
+    transform: translateY(0);
+  }
+
+  /* Thanh Điều Hướng Đáy Native */
+  .m3-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: max(58px, calc(58px + env(safe-area-inset-bottom)));
+    padding-bottom: env(safe-area-inset-bottom);
+    background: var(--panel-elevated, #1c1e24);
+    border-top: 1px solid var(--line, #2b2f38);
+    z-index: 500;
+    justify-content: space-around;
+    align-items: center;
+    backdrop-filter: blur(16px);
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--muted, #9ca3af);
+    font-size: 11px;
+    font-weight: 600;
+    gap: 3px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    border-radius: 12px;
+  }
+  .bottom-nav-item .nav-icon {
+    font-size: 20px;
+  }
+  .bottom-nav-item.active {
+    color: var(--accent, #e28743);
+  }
+  .bottom-nav-item.active .nav-icon {
+    transform: scale(1.12);
+  }
+
+  .mobile-drawer-handle {
+    display: flex;
+    width: 100%;
+    padding: 10px 0 8px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+  }
+  .drawer-pill-bar {
+    width: 44px;
+    height: 5px;
+    background: var(--line-strong, #4b5563);
+    border-radius: 999px;
+  }
+}
+
+.mobile-drawer-handle {
+  display: none;
+}
+
+/* ==========================================================================
+   12. TOAST NOTIFICATIONS (THÔNG BÁO NỔI SANG TRỌNG)
+   ========================================================================== */
+.iro-toast-container {
+  position: fixed;
+  bottom: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  max-width: 90vw;
+}
+.iro-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: rgba(22, 24, 29, 0.95);
+  border: 1px solid var(--line-strong, #374151);
+  border-radius: 999px;
+  color: var(--fg, #f3f4f8);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: translateY(20px) scale(0.95);
+  opacity: 0;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: auto;
+}
+.iro-toast.show {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+.iro-toast-success {
+  border-color: rgba(16, 185, 129, 0.5);
+}
+.iro-toast-error {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+.iro-toast-info {
+  border-color: rgba(226, 135, 67, 0.5);
+}
+.toast-icon {
+  font-size: 16px;
+}
+
+/* ==========================================================================
+   13. THƯ VIỆN ẢNH CỦA TÔI (MY PHOTOS MODAL)
+   ========================================================================== */
+.my-photos-body {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.my-photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
+}
+.my-photo-card {
+  background: var(--panel-elevated, #1c1e24);
+  border: 1px solid var(--line, #2b2f38);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+}
+.my-photo-card:hover {
+  border-color: var(--accent, #e28743);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.photo-thumb-wrap {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #0d0e12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.photo-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.photo-thumb-wrap .no-thumb {
+  font-size: 36px;
+  opacity: 0.3;
+}
+.photo-info {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+.photo-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg, #f3f4f8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.photo-meta {
+  font-size: 11px;
+  color: var(--muted, #9ca3af);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.photo-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.btn-load-photo {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--accent, #e28743);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.btn-load-photo:hover {
+  opacity: 0.9;
+}
+.btn-download-thumb {
+  padding: 6px 10px;
+  background: var(--panel, #16181d);
+  border: 1px solid var(--line, #2b2f38);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--fg, #f3f4f8);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.empty-hint {
+  text-align: center;
+  color: var(--muted, #9ca3af);
+  padding: 40px 20px;
+  font-size: 13px;
+  grid-column: 1 / -1;
+}
+
+/* Admin badge & action additions */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.badge-status.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+.badge-status.banned {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+.admin-actions-cell {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.btn-unban {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: #10b981 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+.btn-ban {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+.btn-del {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+.btn-del:hover {
+  background: rgba(239, 68, 68, 0.25) !important;
+}
+
+
+

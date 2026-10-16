@@ -95,7 +95,11 @@ server {
         add_header X-Content-Type-Options "nosniff";
     }
 
-    location ~* \.(?:css|js|mjs|jpg|jpeg|png|webp|svg|cube|woff2)$ {
+    location ~* \.(?:css|js|mjs)$ {
+        add_header Cache-Control "no-cache";
+    }
+
+    location ~* \.(?:jpg|jpeg|png|webp|svg|cube|woff2)$ {
         expires 30d;
         add_header Cache-Control "public";
     }
@@ -156,3 +160,27 @@ sudo systemctl status iro-studio
 2. Mở File Manager của cPanel/CyberPanel, vào thư mục `public_html`.
 3. Upload và giải nén (Extract).
 4. Tệp `.htaccess` đi kèm đã cấu hình sẵn Gzip, Cache và MIME type `.cube`.
+
+## Cập nhật mã và bộ nhớ đệm
+
+Các cấu hình đi kèm đặt `Cache-Control: no-cache` cho HTML, JSON, CSS và module
+JavaScript để trình duyệt kiểm tra lại bản đang chạy sau mỗi lần mở trang.
+Ảnh và font vẫn được cache. Khi dùng Apache, cần tải cả file ẩn `.htaccess`
+và cho phép `mod_headers`, `mod_expires`, `mod_mime` áp dụng trong thư mục web.
+
+Một bản cũ đã được cache một tháng vẫn có thể tồn tại trên trình duyệt hoặc CDN.
+Khi triển khai bản sửa, đổi version trong URL của HTML → app → engine/worker/CSS
+đồng bộ; nếu có CDN, xóa cache cũ. Chỉ đổi header trên máy chủ không thu hồi được
+bản đang còn hạn trong cache của trình duyệt.
+
+Kiểm tra trực tiếp header sau khi triển khai:
+
+```bash
+curl -I https://ten-mien-cua-ban/app.mjs
+curl -I https://ten-mien-cua-ban/engine.mjs
+curl -I https://ten-mien-cua-ban/style.css
+```
+
+Module phải có MIME JavaScript (ví dụ `text/javascript`) và `Cache-Control`
+chứa `no-cache`. Kiểm thử HTTP cho máy chủ Node bằng `node --test server.test.mjs`
+trong thư mục `web`; không cần dependency ngoài Node.

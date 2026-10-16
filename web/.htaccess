@@ -1,5 +1,10 @@
 # IRO Studio 3.0 — Apache / cPanel / LiteSpeed Configuration
 # Bật rewrite engine và thiết lập MIME Types
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
 <IfModule mod_mime.c>
   AddType text/html .html
   AddType text/css .css

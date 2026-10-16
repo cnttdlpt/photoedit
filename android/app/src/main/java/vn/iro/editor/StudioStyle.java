@@ -38,81 +38,9 @@ import android.view.View;
 public final class StudioStyle {
 
     // =========================================================================
-    // BẢNG MÀU TỐI GIẢN (MINIMAL STUDIO PALETTE)
+    // HỆ THỐNG MÀU MATERIAL DESIGN 3 EXPRESSIVE (DYNAMIC THEME ENGINE)
     // =========================================================================
 
-    /** Nền chính xám trắng trung tính dịu mắt (#F6F7F9). */
-    public static final int BG = 0xfff6f7f9;
-    public static final int PORCELAIN = 0xfff6f7f9;
-
-    /** Nền bề mặt phụ (#EFF1F5). */
-    public static final int SURFACE = 0xffeff1f5;
-
-    /** Nền bề mặt cấp 2 (#E6E9EF). */
-    public static final int SURFACE_CONTAINER = 0xffe6e9ef;
-
-    /** Đường viền mảnh trung tính (#E1E4EA). */
-    public static final int LINE = 0xffe1e4ea;
-
-    /** Màu chữ & nút chính mực đen than (#181A1F). */
-    public static final int INK = 0xff181a1f;
-
-    /** Màu chữ phụ xám trung tính (#6E737D). */
-    public static final int MUTED = 0xff6e737d;
-
-    // Màu kênh chức năng (chỉ dùng cho biểu đồ RGB / Đường cong R-G-B khi cần phân biệt kênh)
-    public static final int GOOGLE_RED = 0xffd9483b;
-    public static final int RED_TONAL = 0xfffbeae8;
-
-    public static final int GOOGLE_GREEN = 0xff2e9b52;
-    public static final int GREEN_TONAL = 0xffe8f5ec;
-
-    public static final int GOOGLE_BLUE = 0xff2563eb;
-    public static final int BLUE_TONAL = 0xffedf2fd;
-
-    public static final int GOOGLE_YELLOW = 0xffd9822b;
-    public static final int YELLOW_TONAL = 0xfffbf2e6;
-
-    /** Màu nhấn chính của toàn bộ giao diện: Đen than tối giản (#181A1F). */
-    public static final int WARM_AMBER = INK;
-    public static final int ACCENT = INK;
-
-    /** Nền xám nhạt cho các nút/thẻ đang chọn (#EAECEF). */
-    public static final int WARM_AMBER_LIGHT = 0xffeaecef;
-
-    /** Màu viên thuốc tối (#181A1F). */
-    public static final int DARK_PILL = 0xff181a1f;
-
-    // --- Hệ thống Token Material Design 3 (M3 Tonal Surface Hierarchy) ---
-    public static final int M3_SURFACE_CONTAINER_LOWEST = 0xffffffff;
-    public static final int M3_SURFACE_CONTAINER_LOW = 0xfff3f4f8;
-    public static final int M3_SURFACE_CONTAINER = 0xffe6e9ef;
-    public static final int M3_SURFACE_CONTAINER_HIGH = 0xffdcdfe7;
-    public static final int M3_SURFACE_CONTAINER_HIGHEST = 0xffd0d5df;
-
-    public static final int M3_PRIMARY = 0xffe07a3b;
-    public static final int M3_ON_PRIMARY = 0xffffffff;
-    public static final int M3_PRIMARY_CONTAINER = 0xffffdbca;
-    public static final int M3_ON_PRIMARY_CONTAINER = 0xff341100;
-
-    public static final int M3_SECONDARY_CONTAINER = 0xffdce4f5;
-    public static final int M3_ON_SECONDARY_CONTAINER = 0xff141c2b;
-    public static final int M3_OUTLINE = 0xff8a8e98;
-    public static final int M3_OUTLINE_VARIANT = 0xffdcdfe6;
-
-    // --- Hệ thống Token M3 Darkroom (Chế độ Phòng tối) ---
-    public static final int M3_DARK_BG = 0xff0b0d10;
-    public static final int M3_DARK_SURFACE = 0xff111318;
-    public static final int M3_DARK_SURFACE_CONTAINER_LOW = 0xff15181e;
-    public static final int M3_DARK_SURFACE_CONTAINER = 0xff1b1f27;
-    public static final int M3_DARK_SURFACE_CONTAINER_HIGH = 0xff232833;
-    public static final int M3_DARK_PRIMARY = 0xfff59e0b;
-    public static final int M3_DARK_PRIMARY_CONTAINER = 0xff422c05;
-    public static final int M3_DARK_ON_PRIMARY_CONTAINER = 0xffffdf9e;
-
-    // =========================================================================
-    // QUẢN LÝ GIAO DIỆN M3 (DARKROOM / WARM PORCELAIN DYNAMIC THEME)
-    // =========================================================================
     private static boolean darkTheme = true;
 
     public static boolean isDarkTheme() {
@@ -120,43 +48,134 @@ public final class StudioStyle {
     }
 
     public static void setDarkTheme(boolean dark) {
-        darkTheme = dark;
+        applyTheme(dark);
     }
 
     public static void toggleDarkTheme() {
-        darkTheme = !darkTheme;
+        applyTheme(!darkTheme);
+    }
+
+    /** Nền chính ứng dụng (thích ứng theo Sáng/Tối). */
+    public static int BG = 0xff0d0f14;
+    public static int PORCELAIN = 0xff0d0f14;
+
+    /** Bề mặt Surface Container chính (Thẻ Hero, Bảng điều khiển). */
+    public static int SURFACE = 0xff161922;
+
+    /** Bề mặt Surface Container cấp 2 (Thẻ Bento con, hộp tìm kiếm, chip). */
+    public static int SURFACE_CONTAINER = 0xff1e222e;
+    public static int SURFACE_CONTAINER_HIGH = 0xff272c3b;
+
+    /** Đường viền mảnh siêu tinh tế chuẩn M3 Outline. */
+    public static int LINE = 0x26ffffff;
+
+    /** Màu chữ & biểu tượng chính (Sáng rõ trên nền tối / Đậm mực trên nền sáng). */
+    public static int INK = 0xfff0f2f7;
+
+    /** Màu chữ & biểu tượng phụ (Muted Slate / Charcoal Muted). */
+    public static int MUTED = 0xff9ba2af;
+
+    /** Điểm nhấn Cam Hổ Phách ấm chuyên nghiệp cho nhiếp ảnh (#F59E0B Warm Amber). */
+    public static int WARM_AMBER = 0xfff59e0b;
+    public static int ACCENT = 0xfff59e0b;
+
+    /** Nền trạng thái đang chọn / Tonal Container nhạt. */
+    public static int WARM_AMBER_LIGHT = 0xff2e220a;
+
+    /** Màu nền viên thuốc tối. */
+    public static int DARK_PILL = 0xff252a36;
+
+    // Màu kênh chức năng (RGB curves, histogram, color balance)
+    public static final int GOOGLE_RED = 0xffd9483b;
+    public static final int RED_TONAL = 0xfffbeae8;
+    public static final int GOOGLE_GREEN = 0xff2e9b52;
+    public static final int GREEN_TONAL = 0xffe8f5ec;
+    public static final int GOOGLE_BLUE = 0xff2563eb;
+    public static final int BLUE_TONAL = 0xffedf2fd;
+    public static final int GOOGLE_YELLOW = 0xffd9822b;
+    public static final int YELLOW_TONAL = 0xfffbf2e6;
+
+    // --- Hệ thống Token M3 Tonal Surface ---
+    public static final int M3_PRIMARY = 0xfff59e0b;
+    public static final int M3_ON_PRIMARY = 0xffffffff;
+    public static final int M3_PRIMARY_CONTAINER = 0xffffdbca;
+    public static final int M3_ON_PRIMARY_CONTAINER = 0xff341100;
+    public static final int M3_OUTLINE = 0xff8a8e98;
+    public static final int M3_OUTLINE_VARIANT = 0xffdcdfe6;
+    public static final int M3_SURFACE_CONTAINER_LOW = 0xff15181e;
+
+    public static final int M3_DARK_BG = 0xff0d0f14;
+    public static final int M3_DARK_SURFACE = 0xff161922;
+    public static final int M3_DARK_SURFACE_CONTAINER_LOW = 0xff191d27;
+    public static final int M3_DARK_SURFACE_CONTAINER = 0xff1e222e;
+    public static final int M3_DARK_SURFACE_CONTAINER_HIGH = 0xff272c3b;
+    public static final int M3_DARK_PRIMARY = 0xfff59e0b;
+
+    /**
+     * Cập nhật toàn bộ bảng màu giao diện tức thì theo chế độ Tối (Darkroom Studio)
+     * hoặc Sáng (Warm Porcelain Minimal).
+     */
+    public static void applyTheme(boolean dark) {
+        darkTheme = dark;
+        if (dark) {
+            BG = 0xff0d0f14;
+            PORCELAIN = 0xff0d0f14;
+            SURFACE = 0xff161922;
+            SURFACE_CONTAINER = 0xff1e222e;
+            SURFACE_CONTAINER_HIGH = 0xff272c3b;
+            LINE = 0x26ffffff;
+            INK = 0xfff0f2f7;
+            MUTED = 0xff9ba2af;
+            WARM_AMBER = 0xfff59e0b;
+            ACCENT = 0xfff59e0b;
+            WARM_AMBER_LIGHT = 0xff2e220a;
+            DARK_PILL = 0xff252a36;
+        } else {
+            BG = 0xfff6f7f9;
+            PORCELAIN = 0xfff6f7f9;
+            SURFACE = 0xffffffff;
+            SURFACE_CONTAINER = 0xffeff1f5;
+            SURFACE_CONTAINER_HIGH = 0xffe6e9ef;
+            LINE = 0xffe1e4ea;
+            INK = 0xff181a1f;
+            MUTED = 0xff6e737d;
+            WARM_AMBER = 0xffe07a3b;
+            ACCENT = 0xffe07a3b;
+            WARM_AMBER_LIGHT = 0xffffdbca;
+            DARK_PILL = 0xff181a1f;
+        }
     }
 
     public static int getBackgroundColor() {
-        return darkTheme ? M3_DARK_BG : BG;
+        return BG;
     }
 
     public static int getSurfaceColor() {
-        return darkTheme ? M3_DARK_SURFACE : SURFACE;
+        return SURFACE;
     }
 
     public static int getSurfaceContainerColor() {
-        return darkTheme ? M3_DARK_SURFACE_CONTAINER : M3_SURFACE_CONTAINER;
+        return SURFACE_CONTAINER;
     }
 
     public static int getSurfaceContainerLowColor() {
-        return darkTheme ? M3_DARK_SURFACE_CONTAINER_LOW : M3_SURFACE_CONTAINER_LOW;
+        return SURFACE_CONTAINER;
     }
 
     public static int getSurfaceContainerHighColor() {
-        return darkTheme ? M3_DARK_SURFACE_CONTAINER_HIGH : M3_SURFACE_CONTAINER_HIGH;
+        return SURFACE_CONTAINER_HIGH;
     }
 
     public static int getPrimaryColor() {
-        return darkTheme ? M3_DARK_PRIMARY : M3_PRIMARY;
+        return WARM_AMBER;
     }
 
     public static int getTextColor() {
-        return darkTheme ? 0xffeef0f5 : INK;
+        return INK;
     }
 
     public static int getMutedTextColor() {
-        return darkTheme ? 0xff9ca3b0 : MUTED;
+        return MUTED;
     }
 
     // --- Bán kính bo góc chuẩn Material Design 3 (dp) ---
@@ -230,65 +249,65 @@ public final class StudioStyle {
     }
 
     /**
-     * Tạo bề mặt phẳng có hiệu ứng chạm nhẹ (RippleDrawable) trung tính.
+     * Tạo bề mặt phẳng có hiệu ứng chạm nhẹ (RippleDrawable) trung tính thích ứng Sáng/Tối.
      */
     static Drawable surface(int fill, int stroke, float radius) {
         return new RippleDrawable(
-                ColorStateList.valueOf(0x16181a1f),
+                ColorStateList.valueOf(darkTheme ? 0x24ffffff : 0x18181a1f),
                 shape(fill, stroke, radius),
                 shape(0xffffffff, 0, radius));
     }
 
     /**
-     * Tạo thẻ phẳng tối giản (nền trắng sạch + viền xám mảnh).
+     * Tạo thẻ Material Design 3 Expressive (nền Surface thích ứng Sáng/Tối + viền mảnh).
      */
     static Drawable liquidGlassCard(float radius) {
-        return shape(0xffffffff, LINE, radius);
+        return shape(SURFACE, LINE, radius);
     }
 
     /**
-     * Tạo nút tròn tối giản.
+     * Tạo nút tròn tối giản thích ứng Sáng/Tối.
      */
     static Drawable liquidGlassCircle() {
         GradientDrawable circle = new GradientDrawable();
-        circle.setColor(0xffffffff);
+        circle.setColor(SURFACE);
         circle.setShape(GradientDrawable.OVAL);
         circle.setStroke(2, LINE);
         return new RippleDrawable(
-                ColorStateList.valueOf(0x16181a1f),
+                ColorStateList.valueOf(darkTheme ? 0x28ffffff : 0x18181a1f),
                 circle,
                 circle);
     }
 
     /**
-     * Tạo nút viên thuốc chính màu đen than tối giản (#181A1F).
+     * Tạo nút viên thuốc chính màu Cam Hổ Phách (#F59E0B) chuẩn Material Design 3.
      */
     static Drawable warmAmberPill(float radius) {
         return new RippleDrawable(
-                ColorStateList.valueOf(0x28ffffff),
-                shape(INK, 0, radius),
+                ColorStateList.valueOf(0x38ffffff),
+                shape(WARM_AMBER, 0, radius),
                 shape(0xffffffff, 0, radius));
     }
 
     /**
-     * Nút viên thuốc trạng thái đang bật (đồng bộ màu đen than tối giản thay vì cầu vồng).
+     * Nút viên thuốc trạng thái đang bật.
      */
     static Drawable rgbSpectrumPill(float radius) {
         return warmAmberPill(radius);
     }
 
     /**
-     * Viên thuốc viền mảnh tối giản (thay thế viền cầu vồng cũ).
+     * Viên thuốc viền mảnh tối giản.
      */
     static Drawable rgbBorderPill(int innerFill, float radius) {
         return surface(innerFill, LINE, radius);
     }
 
     /**
-     * Tạo viên thuốc trắng viền mảnh.
+     * Tạo viên thuốc nền Surface viền mảnh thích ứng.
      */
     static Drawable liquidGlassPill(float radius) {
-        return surface(0xffffffff, LINE, radius);
+        return surface(SURFACE, LINE, radius);
     }
 
     static ColorStateList inkStates() {
@@ -298,9 +317,13 @@ public final class StudioStyle {
     }
 
     /**
-     * Lớp nền tối giản: chỉ dùng màu nền xám trắng phẳng dịu mắt (#F6F7F9) giúp mắt tập trung hoàn toàn vào màu ảnh.
+     * Lớp nền Material Design 3 Expressive Studio:
+     * Nền thích ứng theo Darkroom/Porcelain kèm 2 quầng sáng chuyển sắc dịu mắt
+     * (Warm Amber Dawn ở góc trên phải & Cool Mint Sky ở góc dưới trái).
      */
     static final class AntigravityBackground extends View {
+        private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
         AntigravityBackground(Context context) {
             super(context);
             setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
@@ -309,7 +332,26 @@ public final class StudioStyle {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            canvas.drawColor(PORCELAIN);
+            int w = getWidth();
+            int h = getHeight();
+            canvas.drawColor(BG);
+            if (w <= 0 || h <= 0) return;
+
+            // Quầng sáng Cam Hổ Phách bình minh ấm áp ở góc trên phải
+            int amberGlow = darkTheme ? 0x1f59e0b : 0x12f59e0b;
+            RadialGradient amberGrad = new RadialGradient(
+                    w * 0.88f, h * 0.10f, Math.max(w, h) * 0.52f,
+                    amberGlow, Color.TRANSPARENT, Shader.TileMode.CLAMP);
+            glowPaint.setShader(amberGrad);
+            canvas.drawRect(0, 0, w, h, glowPaint);
+
+            // Quầng sáng Bầu trời bạc hà mát mẻ ở góc dưới trái
+            int mintGlow = darkTheme ? 0x1638bdf8 : 0x0c38bdf8;
+            RadialGradient mintGrad = new RadialGradient(
+                    w * 0.12f, h * 0.90f, Math.max(w, h) * 0.48f,
+                    mintGlow, Color.TRANSPARENT, Shader.TileMode.CLAMP);
+            glowPaint.setShader(mintGrad);
+            canvas.drawRect(0, 0, w, h, glowPaint);
         }
     }
 
@@ -493,6 +535,34 @@ public final class StudioStyle {
                     star.lineTo(9.8f, 9.8f);
                     star.close();
                     c.drawPath(star, p);
+                    break;
+                }
+                case "moon":
+                case "theme_dark": {
+                    // Trăng khuyết Material M3
+                    Path moon = new Path();
+                    moon.moveTo(14f, 4f);
+                    moon.cubicTo(8.5f, 5.5f, 6.5f, 11f, 8.5f, 16.5f);
+                    moon.cubicTo(10.5f, 20f, 15f, 21f, 18.5f, 19f);
+                    moon.cubicTo(14f, 18.5f, 11.5f, 15f, 12f, 11.5f);
+                    moon.cubicTo(12.5f, 8f, 15f, 5.5f, 17f, 4.5f);
+                    moon.close();
+                    p.setStyle(Paint.Style.FILL);
+                    c.drawPath(moon, p);
+                    p.setStyle(Paint.Style.STROKE);
+                    break;
+                }
+                case "theme_light": {
+                    // Mặt trời Material M3
+                    c.drawCircle(12f, 12f, 4.2f, p);
+                    c.drawLine(12f, 2f, 12f, 5f, p);
+                    c.drawLine(12f, 19f, 12f, 22f, p);
+                    c.drawLine(2f, 12f, 5f, 12f, p);
+                    c.drawLine(19f, 12f, 22f, 12f, p);
+                    c.drawLine(4.9f, 4.9f, 7.1f, 7.1f, p);
+                    c.drawLine(16.9f, 16.9f, 19.1f, 19.1f, p);
+                    c.drawLine(4.9f, 19.1f, 7.1f, 16.9f, p);
+                    c.drawLine(16.9f, 7.1f, 19.1f, 4.9f, p);
                     break;
                 }
                 case "frame": {

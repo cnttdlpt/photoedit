@@ -364,6 +364,10 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         prefs = getSharedPreferences("iro", MODE_PRIVATE);
 
+        // Khởi tạo hệ thống giao diện Material Design 3 (Mặc định chế độ Tối Darkroom Studio)
+        boolean isDark = prefs.getBoolean("dark_theme", true);
+        StudioStyle.applyTheme(isDark);
+
         // Khôi phục thông số và recipe từ phiên làm việc trước
         try {
             settings = SettingsCodec.decode(new JSONObject(prefs.getString("settings", "{}")));
@@ -390,6 +394,22 @@ public class MainActivity extends Activity {
         } else {
             updateWorkspaceVisibility();
         }
+    }
+
+    /**
+     * Chuyển đổi linh hoạt giữa giao diện Tối (Material Darkroom Studio)
+     * và giao diện Sáng (Warm Porcelain Minimal) chuẩn Material Design 3 Expressive.
+     */
+    private void toggleTheme() {
+        StudioStyle.applyTheme(!StudioStyle.isDarkTheme());
+        prefs.edit().putBoolean("dark_theme", StudioStyle.isDarkTheme()).apply();
+        buildUi();
+        if (preview != null) {
+            showImage();
+        }
+        message(StudioStyle.isDarkTheme()
+                ? "Đã chuyển sang giao diện Tối (Material Darkroom)"
+                : "Đã chuyển sang giao diện Sáng (Porcelain Minimal)");
     }
 
     /**
@@ -508,7 +528,7 @@ public class MainActivity extends Activity {
         if (wideLayoutActive) {
             LinearLayout brandPill = row();
             brandPill.setPadding(dp(12), dp(8), dp(14), dp(8));
-            brandPill.setBackground(StudioStyle.surface(Color.WHITE, StudioStyle.LINE, dp(18)));
+            brandPill.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(18)));
             TextView brandTitle = text("IRO Studio", 13.5f, StudioStyle.INK);
             brandTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
             brandPill.addView(brandTitle);
@@ -521,7 +541,7 @@ public class MainActivity extends Activity {
 
         LinearLayout searchBox = row();
         searchBox.setPadding(dp(14), dp(10), dp(14), dp(10));
-        searchBox.setBackground(StudioStyle.surface(Color.WHITE, StudioStyle.LINE, dp(20)));
+        searchBox.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(20)));
         ImageView searchIcon = new ImageView(this);
         searchIcon.setImageDrawable(new StudioStyle.Icon("search", StudioStyle.MUTED, dp(16)));
         searchBox.addView(searchIcon, new LinearLayout.LayoutParams(dp(16), dp(16)));
@@ -533,7 +553,7 @@ public class MainActivity extends Activity {
         TextView shortcutBadge = text("392", 11, StudioStyle.INK);
         shortcutBadge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         shortcutBadge.setPadding(dp(8), dp(3), dp(8), dp(3));
-        shortcutBadge.setBackground(StudioStyle.shape(StudioStyle.SURFACE, 0, dp(10)));
+        shortcutBadge.setBackground(StudioStyle.shape(StudioStyle.SURFACE_CONTAINER, 0, dp(10)));
         searchBox.addView(shortcutBadge);
         searchBox.setOnClickListener(v -> showLibrary());
         MotionStudio.attachExpressiveTouch(searchBox, 0.98f);
@@ -544,6 +564,16 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams lutParams = new LinearLayout.LayoutParams(dp(40), dp(40));
         lutParams.leftMargin = dp(8);
         topBar.addView(lutCloudBtn, lutParams);
+
+        View themeBtn = createCircleIconButton(
+                StudioStyle.isDarkTheme() ? "theme_light" : "theme_dark",
+                StudioStyle.WARM_AMBER,
+                dp(40),
+                this::toggleTheme);
+        themeBtn.setContentDescription("Chuyển đổi giao diện Sáng / Tối");
+        LinearLayout.LayoutParams themeParams = new LinearLayout.LayoutParams(dp(40), dp(40));
+        themeParams.leftMargin = dp(8);
+        topBar.addView(themeBtn, themeParams);
 
         View menuBtn = createCircleTextButton("⋯", StudioStyle.INK, dp(40), this::showMore);
         LinearLayout.LayoutParams menuParams = new LinearLayout.LayoutParams(dp(40), dp(40));
@@ -707,7 +737,7 @@ public class MainActivity extends Activity {
 
         LinearLayout filmShowcase = column();
         filmShowcase.setPadding(dp(14), dp(12), dp(14), dp(12));
-        filmShowcase.setBackground(StudioStyle.surface(Color.WHITE, StudioStyle.LINE, dp(18)));
+        filmShowcase.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(18)));
         LinearLayout.LayoutParams showcaseLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -808,12 +838,12 @@ public class MainActivity extends Activity {
         LinearLayout card = column();
         card.setPadding(dp(14), dp(12), dp(14), dp(12));
         card.setMinimumHeight(dp(86));
-        card.setBackground(StudioStyle.surface(Color.WHITE, StudioStyle.LINE, dp(18)));
+        card.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(18)));
 
         FrameLayout circle = new FrameLayout(this);
-        circle.setBackground(StudioStyle.shape(StudioStyle.SURFACE, 0, dp(14)));
+        circle.setBackground(StudioStyle.shape(StudioStyle.SURFACE_CONTAINER, 0, dp(14)));
         ImageView icon = new ImageView(this);
-        icon.setImageDrawable(new StudioStyle.Icon(iconName, StudioStyle.INK, dp(16)));
+        icon.setImageDrawable(new StudioStyle.Icon(iconName, StudioStyle.WARM_AMBER, dp(16)));
         circle.addView(icon, new FrameLayout.LayoutParams(dp(16), dp(16), Gravity.CENTER));
         card.addView(circle, new LinearLayout.LayoutParams(dp(32), dp(32)));
 
@@ -1119,6 +1149,17 @@ public class MainActivity extends Activity {
         header.addView(rightSpacer, new LinearLayout.LayoutParams(0, 1, 1f));
 
         LinearLayout rightGroup = row();
+
+        View themeBtn = createCircleIconButton(
+                StudioStyle.isDarkTheme() ? "theme_light" : "theme_dark",
+                StudioStyle.WARM_AMBER,
+                dp(36),
+                this::toggleTheme);
+        themeBtn.setContentDescription("Chuyển đổi giao diện Sáng / Tối");
+        LinearLayout.LayoutParams themeParams = new LinearLayout.LayoutParams(dp(36), dp(36));
+        themeParams.rightMargin = dp(8);
+        rightGroup.addView(themeBtn, themeParams);
+
         TextView exportBtn = text("Xuất", 12.5f, Color.WHITE);
         exportBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         exportBtn.setGravity(Gravity.CENTER);
@@ -1716,7 +1757,7 @@ public class MainActivity extends Activity {
                 }
             } else {
                 label.setTextColor(active ? StudioStyle.INK : StudioStyle.MUTED);
-                label.setBackground(active ? StudioStyle.shape(Color.WHITE, StudioStyle.LINE, dp(18)) : null);
+                label.setBackground(active ? StudioStyle.shape(StudioStyle.SURFACE, StudioStyle.LINE, dp(18)) : null);
             }
         }
         if (adjustSectionView != null) {
@@ -1865,7 +1906,7 @@ public class MainActivity extends Activity {
 
         LinearLayout card = row();
         card.setPadding(dp(10), dp(9), dp(10), dp(9));
-        int bgColor = isSelected ? StudioStyle.INK : (modified ? StudioStyle.WARM_AMBER_LIGHT : Color.WHITE);
+        int bgColor = isSelected ? StudioStyle.WARM_AMBER : (modified ? StudioStyle.WARM_AMBER_LIGHT : StudioStyle.SURFACE);
         int borderColor = isSelected ? 0 : StudioStyle.LINE;
         card.setBackground(StudioStyle.surface(bgColor, borderColor, dp(14)));
 
@@ -1882,7 +1923,7 @@ public class MainActivity extends Activity {
         card.addView(label, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView val = text(param.formatValue(settings), 11f,
-                isSelected ? Color.WHITE : (modified ? StudioStyle.INK : StudioStyle.MUTED));
+                isSelected ? Color.WHITE : (modified ? StudioStyle.WARM_AMBER : StudioStyle.MUTED));
         val.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         card.addView(val);
 
@@ -1902,7 +1943,7 @@ public class MainActivity extends Activity {
                                        boolean isSelected,
                                        boolean isModified,
                                        Runnable onClick) {
-        return buildCircularToolItem(label, iconName, overrideCenterText, isSelected, isModified, StudioStyle.INK, onClick);
+        return buildCircularToolItem(label, iconName, overrideCenterText, isSelected, isModified, StudioStyle.WARM_AMBER, onClick);
     }
 
     private View buildCircularToolItem(String label,
@@ -1917,7 +1958,7 @@ public class MainActivity extends Activity {
 
         FrameLayout circle = new FrameLayout(this);
         circle.setBackground(StudioStyle.shape(
-                isSelected ? accentColor : 0xd9ffffff,
+                isSelected ? accentColor : StudioStyle.SURFACE,
                 isSelected ? 0 : StudioStyle.LINE,
                 dp(24)));
 
@@ -2097,8 +2138,8 @@ public class MainActivity extends Activity {
         card.setGravity(Gravity.CENTER_HORIZONTAL);
         card.setPadding(dp(6), dp(6), dp(6), dp(6));
         card.setBackground(StudioStyle.surface(
-                selected ? StudioStyle.WARM_AMBER_LIGHT : Color.WHITE,
-                selected ? StudioStyle.INK : StudioStyle.LINE,
+                selected ? StudioStyle.WARM_AMBER_LIGHT : StudioStyle.SURFACE,
+                selected ? StudioStyle.WARM_AMBER : StudioStyle.LINE,
                 dp(16)));
 
         ImageView thumb = new ImageView(this);
@@ -2213,7 +2254,7 @@ public class MainActivity extends Activity {
         item.setGravity(Gravity.CENTER_HORIZONTAL);
         item.setPadding(dp(6), dp(8), dp(6), dp(8));
         item.setBackground(StudioStyle.surface(
-                selected ? StudioStyle.WARM_AMBER : Color.WHITE,
+                selected ? StudioStyle.WARM_AMBER : StudioStyle.SURFACE,
                 selected ? 0 : StudioStyle.LINE,
                 dp(16)));
 
@@ -3222,7 +3263,11 @@ public class MainActivity extends Activity {
     // =========================================================================
 
     private void showMore() {
+        String themeLabel = StudioStyle.isDarkTheme()
+                ? "☀ Chuyển sang giao diện Sáng (Porcelain Minimal)"
+                : "🌙 Chuyển sang giao diện Tối (Material Darkroom)";
         String[] actions = {
+                themeLabel,
                 "✦ Tự động cân bằng ảnh (AI / Guard)",
                 "↷ Xoay 90° sang phải (Clockwise)",
                 "↶ Xoay 90° sang trái (Counter-Clockwise)",
@@ -3244,25 +3289,26 @@ public class MainActivity extends Activity {
                 .setTitle("Tùy chọn IRO Studio")
                 .setItems(actions, (d, which) -> {
                     switch (which) {
-                        case 0: performAutoBalance(); break;
-                        case 1: rotatePhoto(true); break;
-                        case 2: rotatePhoto(false); break;
-                        case 3: showGeminiConfigDialog(); break;
-                        case 4: choose(OPEN_PHOTO, "image/*"); break;
-                        case 5: chooseDocumentOnly(OPEN_PHOTO, "image/*"); break;
-                        case 6: applyOriginalLook(true); break;
-                        case 7: confirmClosePhoto(); break;
-                        case 8: showLutOptions(); break;
-                        case 9: showOnlineLuts(); break;
-                        case 10:
+                        case 0: toggleTheme(); break;
+                        case 1: performAutoBalance(); break;
+                        case 2: rotatePhoto(true); break;
+                        case 3: rotatePhoto(false); break;
+                        case 4: showGeminiConfigDialog(); break;
+                        case 5: choose(OPEN_PHOTO, "image/*"); break;
+                        case 6: chooseDocumentOnly(OPEN_PHOTO, "image/*"); break;
+                        case 7: applyOriginalLook(true); break;
+                        case 8: confirmClosePhoto(); break;
+                        case 9: showLutOptions(); break;
+                        case 10: showOnlineLuts(); break;
+                        case 11:
                             if (currentRecipe == null) message("Chưa chọn recipe");
                             else showRecipe(currentRecipe);
                             break;
-                        case 11: editRecipe(); break;
-                        case 12: saveRecipe(); break;
-                        case 13: choose(OPEN_RECIPE, "*/*"); break;
-                        case 14: editPhotoFrame(); break;
-                        case 15: showHelpDialog(); break;
+                        case 12: editRecipe(); break;
+                        case 13: saveRecipe(); break;
+                        case 14: choose(OPEN_RECIPE, "*/*"); break;
+                        case 15: editPhotoFrame(); break;
+                        case 16: showHelpDialog(); break;
                     }
                 })
                 .show();

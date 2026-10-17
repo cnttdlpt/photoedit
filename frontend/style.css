@@ -2518,3 +2518,586 @@ body.auth-locked .m3-bottom-nav {
 
 
 
+
+
+/* ==========================================================================
+   CARD DECK ARCHITECTURE & BACK NAVIGATION (MOBILE APP PARITY)
+   ========================================================================== */
+
+/* 1. Deck Screens */
+.deck-screen {
+  display: none;
+  animation: fadeIn 0.22s var(--m3-emphasized);
+}
+.deck-screen.active {
+  display: block;
+}
+#screenEditor.deck-screen.active {
+  display: flex;
+}
+
+/* 2. TopBar Back Button */
+.m3-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--panel-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-pill);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s var(--m3-spring);
+}
+.m3-back-btn:hover {
+  background: var(--panel-high);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateX(-2px);
+}
+.m3-back-btn .back-arrow {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* 3. Resume Editor Floating Banner */
+.resume-editor-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(240, 154, 62, 0.15), rgba(99, 102, 241, 0.12));
+  border: 1px solid var(--accent);
+  border-radius: var(--m3-radius-lg);
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--m3-elevation-1);
+}
+.resume-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.resume-badge {
+  background: var(--accent);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: var(--m3-radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.resume-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--m3-radius-pill);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.resume-action-btn:hover {
+  transform: translateX(3px);
+}
+
+/* 4. Hero Card Banner */
+#screenLanding {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.hero-card-banner {
+  background: linear-gradient(135deg, var(--panel-elevated) 0%, var(--panel) 100%);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--m3-radius-xl);
+  padding: 36px 32px;
+  margin-bottom: 24px;
+  box-shadow: var(--m3-elevation-2);
+  position: relative;
+  overflow: hidden;
+}
+.hero-card-banner::after {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(240, 154, 62, 0.18), transparent 70%);
+  pointer-events: none;
+}
+.hero-chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--accent);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.hero-content h2 {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.5px;
+}
+.hero-content p {
+  font-size: 14.5px;
+  color: var(--muted);
+  max-width: 680px;
+  margin: 0 0 24px 0;
+  line-height: 1.55;
+}
+.hero-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.hero-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--m3-radius-pill);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s var(--m3-spring);
+  border: none;
+}
+.hero-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(240, 154, 62, 0.35);
+}
+.hero-btn.primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+}
+.hero-btn.tonal {
+  background: var(--panel-high);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.hero-btn.tonal:hover {
+  background: var(--panel-elevated);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+.hero-btn.outlined {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line-strong);
+}
+.hero-btn.outlined:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-2px);
+}
+
+/* 5. Bento Grid Cards */
+.bento-grid-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+.bento-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-xl);
+  padding: 24px;
+  box-shadow: var(--m3-elevation-1);
+}
+.bento-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+.bento-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.bento-header p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.bento-link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--m3-radius-sm);
+  transition: opacity 0.15s;
+}
+.bento-link-btn:hover {
+  opacity: 0.8;
+}
+
+/* Sensor Bento Chips */
+.sensor-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.sensor-bento-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--panel-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-pill);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.sensor-bento-pill:hover,
+.sensor-bento-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.sensor-bento-pill .sensor-count {
+  font-size: 11px;
+  opacity: 0.8;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1px 6px;
+  border-radius: var(--m3-radius-pill);
+}
+
+/* Landing search bar & grid */
+.landing-search-bar {
+  margin-bottom: 16px;
+}
+.landing-search-bar input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--panel-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-lg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.landing-search-bar input:focus {
+  border-color: var(--accent);
+}
+.landing-recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.landing-recipe-card {
+  background: var(--panel-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-lg);
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s var(--m3-spring);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.landing-recipe-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--m3-elevation-2);
+}
+.landing-recipe-card .rc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.landing-recipe-card .rc-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.landing-recipe-card .rc-sensor {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--m3-radius-pill);
+  background: var(--panel-high);
+  color: var(--muted);
+}
+.landing-recipe-card .rc-film {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 500;
+}
+.landing-recipe-card .rc-desc {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Frames Preview Ribbon */
+.frames-preview-ribbon {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.frame-preview-pill {
+  padding: 8px 14px;
+  background: var(--panel-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-md);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.frame-preview-pill:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* 6. M3 App Editor Suite (Photo Stage + Card Deck) */
+.m3-app-editor-suite {
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+}
+.m3-app-editor-suite .stage-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+.stage-info-pill {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background: rgba(15, 17, 22, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-pill);
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 500;
+  pointer-events: none;
+  z-index: 5;
+}
+body.theme-porcelain .stage-info-pill {
+  background: rgba(255, 255, 255, 0.88);
+}
+.dot-separator {
+  color: var(--line-strong);
+}
+
+/* 7. Bottom / Side Card Deck Panel */
+.m3-card-deck-panel {
+  width: 440px;
+  max-width: 440px;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  box-shadow: var(--m3-elevation-1);
+}
+.deck-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-elevated);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.deck-tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 4px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.deck-tab-btn .tab-icon {
+  font-size: 16px;
+}
+.deck-tab-btn:hover {
+  color: var(--text);
+}
+.deck-tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: rgba(240, 154, 62, 0.06);
+}
+.deck-pane {
+  display: none;
+  padding: 16px;
+  flex-direction: column;
+  gap: 14px;
+}
+.deck-pane.active {
+  display: flex;
+}
+.deck-card-box {
+  background: var(--panel-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-lg);
+  padding: 14px;
+}
+
+/* 8. Horizontal Circular Tools Strip (Parity with Mobile App) */
+.circular-tools-container {
+  padding: 10px 12px;
+}
+.circular-tools-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 4px 0 8px 0;
+  scrollbar-width: thin;
+}
+.circular-tool-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  min-width: 62px;
+  padding: 4px;
+  transition: transform 0.15s var(--m3-spring);
+}
+.circular-tool-item:hover {
+  transform: translateY(-2px);
+}
+.tool-circle-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--panel-high);
+  border: 1.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  color: var(--text);
+  transition: all 0.2s var(--m3-spring);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.circular-tool-item.active .tool-circle-icon {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(240, 154, 62, 0.45);
+  transform: scale(1.08);
+}
+.tool-circle-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.circular-tool-item.active .tool-circle-label {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* 9. Collapsible Details Sliders */
+.deck-details-box {
+  background: var(--panel-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-lg);
+  padding: 12px;
+}
+.deck-details-box summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--muted);
+  user-select: none;
+}
+.deck-details-box summary:hover {
+  color: var(--text);
+}
+.sliders-double-column {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sliders-double-column h5 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.film-dr-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* Responsive Breakpoints for Mobile */
+@media (max-width: 900px) {
+  .m3-app-editor-suite {
+    flex-direction: column;
+    height: auto;
+  }
+  .m3-card-deck-panel {
+    width: 100%;
+    max-width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--line);
+    height: auto;
+  }
+  #screenLanding {
+    padding: 16px;
+  }
+  .hero-card-banner {
+    padding: 24px 20px;
+  }
+  .hero-content h2 {
+    font-size: 22px;
+  }
+}

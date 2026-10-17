@@ -86,7 +86,15 @@ const state = {
   porcelainTheme: false,
   previewSource: null,
   currentUser: null,
-  authToken: localStorage.getItem('iro_token') || ''
+  authToken: (() => {
+    try {
+      return (typeof localStorage !== 'undefined' && typeof localStorage.getItem === 'function')
+        ? localStorage.getItem('iro_token') || ''
+        : '';
+    } catch (_) {
+      return '';
+    }
+  })()
 };
 
 // 18 thanh trượt hậu kỳ chia làm 2 nhóm: Ánh sáng & Quang học 3.0
@@ -259,6 +267,117 @@ if (themeToggleBtn) {
 }
 
 // =========================================================================
+// MÀN HÌNH CHÍNH & BUỒNG TỐI BIÊN TẬP DẠNG THẺ (CARD-DECK & BACK NAVIGATION)
+// =========================================================================
+function showScreen(screenId, pushHistory = true) {
+  const isEditor = screenId === 'editor';
+  const screenLanding = document.querySelector('#screenLanding');
+  const screenEditor = document.querySelector('#screenEditor');
+  const editorBackBtn = document.querySelector('#editorBackBtn');
+  const resumeEditorBanner = document.querySelector('#resumeEditorBanner');
+  const resumePhotoTitle = document.querySelector('#resumePhotoTitle');
+  const brandIdentity = document.querySelector('#brandIdentity');
+
+  if (screenLanding) {
+    screenLanding.classList.toggle('active', !isEditor);
+  }
+  if (screenEditor) {
+    screenEditor.classList.toggle('active', isEditor);
+  }
+  if (editorBackBtn) {
+    editorBackBtn.hidden = !isEditor;
+  }
+  if (brandIdentity) {
+    brandIdentity.classList.toggle('in-editor', isEditor);
+  }
+  if (resumeEditorBanner) {
+    if (!isEditor && state.source) {
+      resumeEditorBanner.hidden = false;
+      if (resumePhotoTitle) {
+        resumePhotoTitle.textContent = state.activeRecipeName || 'Bức ảnh đang mở';
+      }
+    } else {
+      resumeEditorBanner.hidden = true;
+    }
+  }
+
+  if (isEditor) {
+    requestAnimationFrame(() => {
+      drawTickRuler();
+      if (typeof drawCurveEditor === 'function') drawCurveEditor();
+      if (typeof drawAllColorWheels === 'function') drawAllColorWheels();
+    });
+  }
+
+  if (pushHistory && typeof window !== 'undefined' && window.history && typeof window.history.pushState === 'function') {
+    try {
+      window.history.pushState({ screen: screenId }, '', screenId === 'landing' ? '#/' : '#/editor');
+    } catch (_) {}
+  }
+}
+
+document.querySelector('#editorBackBtn')?.addEventListener('click', () => {
+  showScreen('landing');
+});
+document.querySelector('#resumeEditorBtn')?.addEventListener('click', () => {
+  showScreen('editor');
+});
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('popstate', (e) => {
+    const targetScreen = (e.state && e.state.screen) || (location.hash === '#/editor' ? 'editor' : 'landing');
+    showScreen(targetScreen, false);
+  });
+}
+
+function selectDeckTab(tabId) {
+  document.querySelectorAll('.deck-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.deckTab === tabId);
+  });
+  document.querySelectorAll('.deck-pane').forEach(pane => {
+    const isTarget = pane.id === tabId;
+    pane.classList.toggle('active', isTarget);
+    pane.hidden = !isTarget;
+  });
+  if (tabId === 'tabAdjust') {
+    requestAnimationFrame(() => {
+      drawTickRuler();
+    });
+  } else if (tabId === 'tabLightCraft') {
+    requestAnimationFrame(() => {
+      drawCurveEditor();
+      drawAllColorWheels();
+      if (typeof renderHslSliders === 'function') renderHslSliders();
+    });
+  }
+}
+
+document.querySelectorAll('.deck-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectDeckTab(btn.dataset.deckTab);
+  });
+});
+
+function updateStageInfoPill() {
+  const dimEl = document.querySelector('#stageDimensionText');
+  const filmEl = document.querySelector('#stageFilmText');
+  const frameEl = document.querySelector('#stageFrameText');
+  if (canvas && dimEl) {
+    dimEl.textContent = `${canvas.width} × ${canvas.height}`;
+  }
+  if (filmEl) {
+    filmEl.textContent = state.activeRecipeName || 'Gốc';
+  }
+  if (frameEl) {
+    const frameName = PHOTO_FRAMES[state.frameStyle]?.name || 'Không khung';
+    frameEl.textContent = frameName;
+  }
+  const topActiveFilmLabel = document.querySelector('#topActiveFilmLabel');
+  if (topActiveFilmLabel) {
+    topActiveFilmLabel.textContent = `${state.settings.film || 'Classic Chrome'} · ${state.activeRecipeName || 'Gốc'}`;
+  }
+}
+
+// =========================================================================
 // THƯỚC CHIA VẠCH GAUSSIAN M3 (PRECISION TICK RULER DOCK)
 // =========================================================================
 const tickRulerCanvas = document.querySelector('#m3TickRulerCanvas');
@@ -286,23 +405,44 @@ function formatParamReadout(key, val) {
 }
 
 function initM3RulerDock() {
-  if (!m3ParamPillStrip || !tickRulerCanvas) return;
-  m3ParamPillStrip.innerHTML = '';
-  for (const spec of allSliderSpecs) {
-    const [key, label] = spec;
-    const shortName = label.split(' (')[0];
-    const pill = document.createElement('button');
-    pill.type = 'button';
-    pill.className = 'm3-param-pill' + (key === activeRulerSpec[0] ? ' active' : '');
-    pill.dataset.paramKey = key;
-    pill.textContent = shortName;
-    pill.addEventListener('click', () => {
-      activeRulerSpec = spec;
-      syncRulerHeader();
-      drawTickRuler();
-    });
-    m3ParamPillStrip.append(pill);
+  if (!tickRulerCanvas) return;
+  if (m3ParamPillStrip) {
+    m3ParamPillStrip.innerHTML = '';
+    for (const spec of allSliderSpecs) {
+      const [key, label] = spec;
+      const shortName = label.split(' (')[0];
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'm3-param-pill' + (key === activeRulerSpec[0] ? ' active' : '');
+      pill.dataset.paramKey = key;
+      pill.textContent = shortName;
+      pill.addEventListener('click', () => {
+        activeRulerSpec = spec;
+        syncRulerHeader();
+        drawTickRuler();
+      });
+      m3ParamPillStrip.append(pill);
+    }
   }
+
+  // Gắn sự kiện cho Dải công cụ tròn nằm ngang (Circular Tools Strip)
+  document.querySelectorAll('.circular-tool-item').forEach(item => {
+    const k = item.dataset.paramKey;
+    if (!k) return;
+    item.addEventListener('click', () => {
+      const spec = allSliderSpecs.find(s => s[0] === k);
+      if (spec) {
+        activeRulerSpec = spec;
+        syncRulerHeader();
+        drawTickRuler();
+      }
+    });
+  });
+
+  document.querySelector('#toolBtnAuto')?.addEventListener('click', () => {
+    document.querySelector('#aiAuto')?.click();
+  });
+
   syncRulerHeader();
   drawTickRuler();
 }
@@ -322,6 +462,16 @@ function syncRulerHeader() {
       btn.classList.toggle('modified', Math.abs(cur - def) > 0.01);
     });
   }
+  // Đồng bộ trạng thái active của dải nút tròn (Circular Tools)
+  document.querySelectorAll('.circular-tool-item').forEach(btn => {
+    const k = btn.dataset.paramKey;
+    if (k) {
+      btn.classList.toggle('active', k === key);
+      const cur = Number(state.settings[k] ?? defaults[k] ?? 0);
+      const def = Number(defaults[k] ?? 0);
+      btn.classList.toggle('modified', Math.abs(cur - def) > 0.01);
+    }
+  });
 }
 
 function drawTickRuler() {
@@ -652,6 +802,7 @@ async function load392Catalog() {
     buildFilmFilterChips();
     if (!recipeLibraryModal.hidden) renderRecipeLibraryGrid();
     if (!cmdPaletteModal.hidden) renderCmdPaletteResults();
+    renderLandingRecipeGrid();
   } catch (error) {
     setStatus(`Không tải được kho công thức: ${error.message}. Bạn vẫn có thể dùng preset và chỉnh tay.`, true);
   }
@@ -764,6 +915,104 @@ function renderRecipeLibraryGrid() {
     recipeLibraryGrid.append(card);
   }
 }
+
+// =========================================================================
+// LƯỚI 392 CÔNG THỨC TRÊN MÀN HÌNH LANDING (BENTO SENSOR CARD)
+// =========================================================================
+let landingSensorFilter = 'Tất cả';
+
+function renderLandingRecipeGrid() {
+  const grid = document.querySelector('#landingRecipeGrid');
+  if (!grid) return;
+  const q = (document.querySelector('#landingSearchInput')?.value || '').trim().toLowerCase();
+
+  const filtered = state.fullCatalogRecipes.filter(r => {
+    const matchSensor = landingSensorFilter === 'Tất cả' ||
+      (r.sensor && r.sensor.toLowerCase().includes(landingSensorFilter.toLowerCase())) ||
+      (landingSensorFilter === 'Bayer' && (r.sensor?.toLowerCase().includes('bayer') || r.sensor?.toLowerCase().includes('gfx')));
+    const matchQuery = !q ||
+      r.name.toLowerCase().includes(q) ||
+      r.film.toLowerCase().includes(q) ||
+      r.wb.toLowerCase().includes(q);
+    return matchSensor && matchQuery;
+  }).slice(0, 36);
+
+  grid.innerHTML = '';
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div class="landing-empty-recipes" style="grid-column: 1 / -1; text-align: center; padding: 24px; color: var(--text-sub);">Không tìm thấy công thức phù hợp. Thử tìm từ khóa khác nhé!</div>';
+    return;
+  }
+
+  for (const rec of filtered) {
+    const isCurrent = state.activeRecipeName === rec.name;
+    const card = document.createElement('div');
+    card.className = 'landing-recipe-card' + (isCurrent ? ' active' : '');
+    card.innerHTML = `
+      <div class="l-card-head">
+        <span class="l-card-title">${escapeHTML(rec.name)}</span>
+        <span class="l-card-sensor">${escapeHTML(rec.sensor || 'X-Trans')}</span>
+      </div>
+      <div class="l-card-film">🎞️ ${escapeHTML(rec.film)}</div>
+      <div class="l-card-meta">
+        <span>DR${rec.dr}</span>
+        <span>WB ${escapeHTML(rec.wb)}</span>
+      </div>
+    `;
+    card.addEventListener('click', () => {
+      if (!state.source) {
+        generateSampleImage('portrait');
+      }
+      applyCatalogRecipe(rec);
+      showScreen('editor');
+    });
+    grid.append(card);
+  }
+}
+
+document.querySelectorAll('.sensor-bento-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('.sensor-bento-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    landingSensorFilter = pill.dataset.sensor;
+    renderLandingRecipeGrid();
+  });
+});
+document.querySelector('#landingSearchInput')?.addEventListener('input', () => {
+  renderLandingRecipeGrid();
+});
+document.querySelector('#bentoOpenFullLibBtn')?.addEventListener('click', openRecipeLibraryModal);
+
+document.querySelectorAll('.frame-preview-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    const frameId = Number(pill.dataset.frameId || 0);
+    state.frameStyle = frameId;
+    if (frameStyleSelect) {
+      frameStyleSelect.value = String(frameId);
+      frameStyleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    if (!state.source) {
+      generateSampleImage('portrait');
+    }
+    render();
+    selectDeckTab('tabFrames');
+    showScreen('editor');
+  });
+});
+
+document.querySelector('#heroOpenBtn')?.addEventListener('click', () => {
+  document.querySelector('#photo')?.click();
+});
+document.querySelector('#heroPromptBtn')?.addEventListener('click', () => {
+  promptModal.hidden = false;
+  promptTextInput?.focus();
+});
+document.querySelector('#heroRandomBtn')?.addEventListener('click', () => {
+  if (!state.source) {
+    generateSampleImage('portrait');
+  }
+  applySurpriseRandomRecipe();
+  showScreen('editor');
+});
 
 function openRecipeLibraryModal() {
   recipeLibraryModal.hidden = false;
@@ -1928,6 +2177,8 @@ function loadSourceImageData(imageData, label, rawFile = null) {
   empty.style.display = 'none';
   canvasWrapper.hidden = false;
   canvasWrapper.style.display = 'inline-block';
+  showScreen('editor', false);
+  updateStageInfoPill();
 
   const enableIds = [
     '#export', '#compareBtn', '#rotate90', '#aiAuto',
@@ -2443,6 +2694,7 @@ function render(isLivingFrame = false, forExport = false, isInteractive = false)
     drawHistogram(out);
     syncRulerHeader();
     drawTickRuler();
+    updateStageInfoPill();
     scheduleServerSync('Cập nhật màu sắc');
   }
 }
@@ -2570,13 +2822,9 @@ const loginErrorMsg = document.getElementById('loginErrorMsg');
 const registerErrorMsg = document.getElementById('registerErrorMsg');
 
 function lockAppToAuth() {
-  document.body.classList.add('auth-locked');
-  if (authModal) {
-    authModal.hidden = false;
-    authModal.classList.add('mandatory-gate');
-  }
+  document.body.classList.remove('auth-locked');
   if (closeAuthModal) {
-    closeAuthModal.style.display = 'none';
+    closeAuthModal.style.display = '';
   }
 }
 
@@ -2836,7 +3084,6 @@ function updateUserAccountUI() {
 async function checkCurrentUser() {
   if (!state.authToken) {
     updateUserAccountUI();
-    lockAppToAuth();
     return;
   }
   try {
@@ -2848,20 +3095,19 @@ async function checkCurrentUser() {
       state.currentUser = data.user;
       updateUserAccountUI();
       unlockAppFromAuth();
-      if (!state.source) {
-        generateSampleImage('portrait');
-      }
     } else {
       state.authToken = '';
       state.currentUser = null;
-      localStorage.removeItem('iro_token');
+      try {
+        if (typeof localStorage !== 'undefined' && typeof localStorage.removeItem === 'function') {
+          localStorage.removeItem('iro_token');
+        }
+      } catch (_) {}
       updateUserAccountUI();
-      lockAppToAuth();
     }
   } catch (err) {
     console.debug('Failed to verify token:', err);
     updateUserAccountUI();
-    lockAppToAuth();
   }
 }
 
@@ -3151,7 +3397,9 @@ window.iroLoadCloudPhoto = async (url, filenameEnc, settingsJsonStr) => {
   }
 };
 
-// Khởi tạo trạng thái ban đầu và kiểm tra xác thực người dùng bắt buộc
+// Khởi tạo trạng thái ban đầu, tự động nạp ảnh mẫu studio và nạp thước đo M3
 drawCurveEditor();
+generateSampleImage('portrait');
+initM3RulerDock();
 checkCurrentUser();
 

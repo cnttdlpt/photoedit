@@ -327,6 +327,9 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
     const targetScreen = (e.state && e.state.screen) || (location.hash === '#/editor' ? 'editor' : 'landing');
     showScreen(targetScreen, false);
   });
+  if (location.hash === '#/editor') {
+    showScreen('editor', false);
+  }
 }
 
 function selectDeckTab(tabId) {

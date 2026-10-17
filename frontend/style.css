@@ -4142,3 +4142,94 @@ body.theme-porcelain .contact-sheet-modal {
 }
 
 
+
+/* =========================================================================
+   CREATIVE STUDIO 3.0: QUICK PEEK, SHORTCUTS MODAL & HAPTIC UI
+   ========================================================================= */
+.quick-peek-badge {
+  position: absolute;
+  bottom: 24px;
+  left: 24px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: var(--m3-radius-pill, 9999px);
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-brand);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  user-select: none;
+}
+
+.quick-peek-badge:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 6px 20px rgba(26, 115, 232, 0.16);
+}
+
+.quick-peek-badge.active {
+  background: #f59e0b;
+  color: #000000;
+  border-color: #d97706;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.5);
+  transform: scale(1.04);
+}
+
+.shortcuts-dialog-modal {
+  max-width: 680px;
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--panel-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition: all 0.15s ease;
+}
+
+.shortcut-item:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel-elevated));
+}
+
+.shortcut-desc {
+  font-size: 13.5px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 3px 7px;
+  font-family: var(--font-code, monospace);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}

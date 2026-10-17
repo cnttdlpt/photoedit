@@ -2213,9 +2213,11 @@ function loadSourceImageData(imageData, label, rawFile = null) {
     showScreen('editor', false);
   }
   updateStageInfoPill();
+  const quickPeekBadge = document.querySelector('#quickPeekBadge');
+  if (quickPeekBadge) quickPeekBadge.hidden = false;
 
   const enableIds = [
-    '#export', '#compareBtn', '#rotate90', '#aiAuto',
+    '#export', '#exportRecipeCard', '#compareBtn', '#rotate90', '#aiAuto',
     '#contactSheetBtn', '#quadViewBtn', '#dateStampBtn',
     '#shareCode', '#exportCube', '#matchRefBtn', '#livingFilmBtn', '#lightCraftBtn'
   ];
@@ -3459,3 +3461,401 @@ drawCurveEditor();
 initM3RulerDock();
 checkCurrentUser();
 
+
+// =========================================================================
+// 🌟 CREATIVE ENGINE 3.0: WEB AUDIO SYNTHESIZER, RECIPE CARD & SHORTCUTS
+// =========================================================================
+
+// --- 1. Web Audio Camera Mechanical Shutter & Haptic Dial Engine ---
+let audioCtx = null;
+let soundEnabled = true;
+
+function getAudioContext() {
+  if (!audioCtx && typeof window !== 'undefined') {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function playShutterSound() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const bufferSize = Math.floor(ctx.sampleRate * 0.07);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+    const whiteNoise = ctx.createBufferSource();
+    whiteNoise.buffer = noiseBuffer;
+
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.setValueAtTime(1400, now);
+    noiseFilter.Q.setValueAtTime(1.8, now);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.25, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+    whiteNoise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    whiteNoise.start(now);
+
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(460, now + 0.022);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.065);
+
+    oscGain.gain.setValueAtTime(0.35, now + 0.022);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now + 0.022);
+    osc.stop(now + 0.08);
+  } catch (e) {}
+}
+
+function playDialClick() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1800, now);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.015);
+
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.02);
+  } catch (e) {}
+}
+
+const soundToggleBtn = document.querySelector('#soundToggleBtn');
+const soundStatusText = document.querySelector('#soundStatusText');
+soundToggleBtn?.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  if (soundStatusText) soundStatusText.textContent = soundEnabled ? 'Bật' : 'Tắt';
+  showToast(soundEnabled ? '🔊 Đã bật âm thanh buồng tối Leica / Fuji' : '🔇 Đã tắt âm thanh', 'info', soundEnabled ? '🔊' : '🔇');
+  if (soundEnabled) playShutterSound();
+});
+
+// Trigger dial click on sliders
+document.querySelectorAll('input[type="range"]').forEach(range => {
+  range.addEventListener('input', () => playDialClick());
+});
+
+// --- 2. Quick Peek Before / After (Hold Space or Button) ---
+let isPeekingBefore = false;
+
+function setPeekingBefore(peek) {
+  if (!state.source || isPeekingBefore === peek) return;
+  isPeekingBefore = peek;
+  const beforeCanvas = document.querySelector('#beforeCanvas');
+  const mainCanvas = document.querySelector('#canvas');
+  const peekBadge = document.querySelector('#quickPeekBadge');
+
+  if (peek) {
+    if (beforeCanvas && mainCanvas) {
+      beforeCanvas.width = state.source.width;
+      beforeCanvas.height = state.source.height;
+      const bCtx = beforeCanvas.getContext('2d');
+      bCtx.putImageData(state.source, 0, 0);
+      beforeCanvas.hidden = false;
+      mainCanvas.style.opacity = '0';
+      if (peekBadge) {
+        peekBadge.textContent = '👁️ ĐANG XEM ẢNH GỐC (THẢ ĐỂ VỀ MÀU FUJI)';
+        peekBadge.classList.add('active');
+      }
+    }
+  } else {
+    if (beforeCanvas && mainCanvas) {
+      beforeCanvas.hidden = true;
+      mainCanvas.style.opacity = '1';
+      if (peekBadge) {
+        peekBadge.textContent = '👁️ Giữ xem ảnh gốc (Space)';
+        peekBadge.classList.remove('active');
+      }
+    }
+  }
+}
+
+const quickPeekBadge = document.querySelector('#quickPeekBadge');
+quickPeekBadge?.addEventListener('mousedown', () => setPeekingBefore(true));
+quickPeekBadge?.addEventListener('mouseup', () => setPeekingBefore(false));
+quickPeekBadge?.addEventListener('mouseleave', () => setPeekingBefore(false));
+quickPeekBadge?.addEventListener('touchstart', (e) => { e.preventDefault(); setPeekingBefore(true); });
+quickPeekBadge?.addEventListener('touchend', (e) => { e.preventDefault(); setPeekingBefore(false); });
+
+// --- 3. Instant Fujifilm Recipe Share Card Generator ---
+function generateRecipeCardCanvas() {
+  if (!state.source) return null;
+  render(false, true);
+
+  const cardW = 1200;
+  const cardH = 1680;
+  const cardCanvas = document.createElement('canvas');
+  cardCanvas.width = cardW;
+  cardCanvas.height = cardH;
+  const ctx = cardCanvas.getContext('2d');
+
+  const isDark = !document.body.classList.contains('theme-porcelain');
+  const bg = isDark ? '#141416' : '#faf9f6';
+  const cardPanelBg = isDark ? '#1e1f24' : '#ffffff';
+  const textColor = isDark ? '#f3f4f6' : '#1f2937';
+  const textMuted = isDark ? '#9ca3af' : '#6b7280';
+  const accentColor = '#1a73e8';
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, cardW, cardH);
+
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(32, 32, cardW - 64, cardH - 64);
+
+  ctx.fillStyle = accentColor;
+  ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('✦ IRO FUJIFILM COLOR LAB · RECIPE DNA', 64, 76);
+
+  ctx.fillStyle = textColor;
+  ctx.font = '800 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  const recipeTitle = (state.activeRecipeName || state.settings.film || 'CLASSIC CHROME').toUpperCase();
+  ctx.fillText(recipeTitle, 64, 120);
+
+  ctx.fillStyle = textMuted;
+  ctx.font = '500 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('FUJIFILM X-TRANS V · OPTICAL DARKROOM 3.0 RECIPE', 64, 146);
+
+  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  ctx.beginPath();
+  ctx.roundRect(cardW - 240, 68, 176, 42, 21);
+  ctx.fill();
+  ctx.fillStyle = textColor;
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(state.settings.film || 'Classic Chrome', cardW - 152, 94);
+  ctx.textAlign = 'left';
+
+  const photoBoxX = 64;
+  const photoBoxY = 176;
+  const photoBoxW = 1072;
+  const photoBoxH = 920;
+
+  ctx.fillStyle = isDark ? '#0d0d0f' : '#f0f0f2';
+  ctx.beginPath();
+  ctx.roundRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 16);
+  ctx.fill();
+
+  const aspectCanvas = canvas.width / canvas.height;
+  let targetW, targetH, targetX, targetY;
+  if (aspectCanvas > photoBoxW / photoBoxH) {
+    targetW = photoBoxW;
+    targetH = photoBoxW / aspectCanvas;
+    targetX = photoBoxX;
+    targetY = photoBoxY + (photoBoxH - targetH) / 2;
+  } else {
+    targetH = photoBoxH;
+    targetW = photoBoxH * aspectCanvas;
+    targetX = photoBoxX + (photoBoxW - targetW) / 2;
+    targetY = photoBoxY;
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 16);
+  ctx.clip();
+  ctx.drawImage(canvas, targetX, targetY, targetW, targetH);
+  ctx.restore();
+
+  const paramsY = 1130;
+  const s = state.settings;
+  const wbText = s.wb === 'Kelvin' || s.temperature ? `${s.temperature || 5500}K` : (s.wb || 'Auto');
+  const wbShift = `R:${s.red > 0 ? '+' : ''}${s.red || 0} B:${s.blue > 0 ? '+' : ''}${s.blue || 0}`;
+
+  const specCards = [
+    { label: 'FILM SIMULATION', val: s.film || 'Classic Chrome' },
+    { label: 'DYNAMIC RANGE', val: `DR${s.dr || 100}` },
+    { label: 'GRAIN EFFECT', val: s.grain > 0 ? `${s.grain > 50 ? 'Strong' : 'Weak'}, ${s.grainSize > 1 ? 'Large' : 'Small'}` : 'Off' },
+    { label: 'WHITE BALANCE', val: `${wbText} (${wbShift})` },
+    { label: 'HIGHLIGHT / SHADOW', val: `${s.highlight > 0 ? '+' : ''}${s.highlight} / ${s.shadow > 0 ? '+' : ''}${s.shadow}` },
+    { label: 'COLOR / SHARPNESS', val: `${s.color > 0 ? '+' : ''}${s.color} / ${s.sharpness > 0 ? '+' : ''}${s.sharpness}` },
+    { label: 'NOISE REDUCTION', val: `${s.nr > 0 ? '+' : ''}${s.nr}` },
+    { label: 'CLARITY & OPTICAL', val: s.clarity !== 0 ? `Clarity ${s.clarity > 0 ? '+' : ''}${s.clarity}` : (s.proMist > 0 ? `Pro-Mist ${s.proMist}%` : 'Standard') }
+  ];
+
+  const colW = (1072 - 36) / 4;
+  const rowH = 78;
+
+  specCards.forEach((c, idx) => {
+    const col = idx % 4;
+    const row = Math.floor(idx / 4);
+    const x = 64 + col * (colW + 12);
+    const y = paramsY + row * (rowH + 12);
+
+    ctx.fillStyle = cardPanelBg;
+    ctx.beginPath();
+    ctx.roundRect(x, y, colW, rowH, 12);
+    ctx.fill();
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = textMuted;
+    ctx.font = '600 11px monospace';
+    ctx.fillText(c.label, x + 16, y + 26);
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(c.val, x + 16, y + 54);
+  });
+
+  const footerY = 1350;
+  ctx.strokeStyle = borderColor;
+  ctx.beginPath();
+  ctx.moveTo(64, footerY);
+  ctx.lineTo(cardW - 64, footerY);
+  ctx.stroke();
+
+  const barcodeX = 64;
+  const barcodeY = footerY + 22;
+  const barPattern = [2, 1, 3, 1, 1, 4, 2, 1, 2, 3, 1, 1, 3, 2, 1, 4, 1, 2, 3, 1, 2, 1, 4, 2, 1, 3, 1, 2];
+  let currX = barcodeX;
+  ctx.fillStyle = isDark ? '#ffffff' : '#000000';
+  barPattern.forEach((w, i) => {
+    if (i % 2 === 0) {
+      ctx.fillRect(currX, barcodeY, w * 2, 32);
+    }
+    currX += w * 2 + 2;
+  });
+
+  ctx.fillStyle = textMuted;
+  ctx.font = '12px monospace';
+  ctx.fillText(`SN: IRO-XTRANS-V-${Date.now().toString(36).toUpperCase()}`, currX + 16, barcodeY + 20);
+
+  ctx.textAlign = 'right';
+  ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillStyle = textColor;
+  ctx.fillText('npccc.io.vn · IRO Studio 3.0', cardW - 64, barcodeY + 14);
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillStyle = textMuted;
+  ctx.fillText('Agentic Fujifilm X-Trans V Color Laboratory', cardW - 64, barcodeY + 30);
+  ctx.textAlign = 'left';
+
+  return cardCanvas;
+}
+
+document.querySelector('#exportRecipeCard')?.addEventListener('click', () => {
+  if (!state.source) return;
+  const cardCanvas = generateRecipeCardCanvas();
+  if (!cardCanvas) return;
+
+  playShutterSound();
+  cardCanvas.toBlob(blob => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    const title = (state.activeRecipeName || state.settings.film || 'fuji-recipe').toLowerCase().replace(/\s+/g, '-');
+    a.download = `recipe-card-${title}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('📇 Đã xuất Thẻ Công Thức Fujifilm Recipe Card thành công!', 'success', '📇');
+  }, 'image/png');
+});
+
+// --- 4. Keyboard Shortcuts Modal & Global Key Listener ---
+const shortcutsModal = document.querySelector('#shortcutsModal');
+const closeShortcutsModal = document.querySelector('#closeShortcutsModal');
+const shortcutsBtn = document.querySelector('#shortcutsBtn');
+
+shortcutsBtn?.addEventListener('click', () => {
+  if (shortcutsModal) shortcutsModal.hidden = false;
+});
+closeShortcutsModal?.addEventListener('click', () => {
+  if (shortcutsModal) shortcutsModal.hidden = true;
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.target && (e.target.matches('input, textarea, select') || e.target.isContentEditable)) return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    setPeekingBefore(true);
+    return;
+  }
+
+  if (e.key === '?' || (e.key === '/' && (e.ctrlKey || e.metaKey))) {
+    e.preventDefault();
+    if (shortcutsModal) shortcutsModal.hidden = !shortcutsModal.hidden;
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    document.querySelector('#export')?.click();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.querySelector('#compareBtn')?.click();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.querySelector('#rotate90')?.click();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 'o' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.querySelector('#photo')?.click();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    openRecipeLibraryModal();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.querySelector('#themeToggleBtn')?.click();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 'q' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.querySelector('#quadViewBtn')?.click();
+    return;
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space') {
+    setPeekingBefore(false);
+  }
+});

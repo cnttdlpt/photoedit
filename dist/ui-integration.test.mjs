@@ -121,8 +121,11 @@ test('real page starts, renders sample and wires exposure, undo, frames and navi
     assert.equal(app.pixels(), before, 'Undo must restore the previous image');
     app.input('#frameStyle', 1, 'change');
     assert.ok(app.element('#canvas').height > 640, 'Frame must add canvas area');
+    assert.ok(app.document.body.classList.contains('theme-porcelain'), 'App starts in porcelain light theme');
     app.click('#themeToggleBtn');
-    assert.ok(app.document.body.classList.contains('theme-porcelain'));
+    assert.ok(!app.document.body.classList.contains('theme-porcelain'), 'Clicking theme button toggles to darkroom');
+    app.click('#themeToggleBtn');
+    assert.ok(app.document.body.classList.contains('theme-porcelain'), 'Clicking again restores porcelain light theme');
     app.click('#quickCmdBtn');
     assert.equal(app.element('#cmdPaletteModal').hidden, false);
   } finally { app.cleanup(); }

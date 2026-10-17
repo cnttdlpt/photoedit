@@ -83,7 +83,7 @@ const state = {
   stageZoom: 1.0,
   stagePanX: 0,
   stagePanY: 0,
-  porcelainTheme: false,
+  porcelainTheme: true,
   previewSource: null,
   currentUser: null,
   authToken: (() => {

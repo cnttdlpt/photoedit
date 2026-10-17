@@ -3574,3 +3574,447 @@ body.theme-porcelain .agy-ambient-aurora {
   box-shadow: 0 0 18px rgba(240, 154, 62, 0.45) !important;
   border: 2px solid #ffffff !important;
 }
+
+/* ==========================================================================
+   10. GOOGLE ANTIGRAVITY — LIGHT THEME (WARM PORCELAIN & FROSTED GLASS)
+   Source & Inspiration: https://antigravity.google/ (Light Mode)
+   ========================================================================== */
+
+body.theme-porcelain {
+  --bg: #f8f9fa;
+  --panel: #ffffff;
+  --panel-elevated: #ffffff;
+  --panel-high: #f1f3f4;
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.15);
+  --text: #1f2937;
+  --muted: #5f6368;
+  --agy-bg: #f8f9fa;
+  --agy-surface: #ffffff;
+  --agy-surface-elevated: rgba(255, 255, 255, 0.88);
+  --agy-border: rgba(0, 0, 0, 0.08);
+  --agy-border-subtle: rgba(0, 0, 0, 0.05);
+  --agy-border-hover: rgba(0, 0, 0, 0.16);
+  background:
+    radial-gradient(circle at 14% 8%, rgba(240, 154, 62, 0.06), transparent 36%),
+    radial-gradient(circle at 86% 92%, rgba(49, 134, 255, 0.06), transparent 38%),
+    #f8f9fa;
+  color: #1f2937;
+}
+
+/* Ambient Aurora Pastel Watercolor Wash in Light Mode */
+body.theme-porcelain .agy-ambient-aurora {
+  opacity: 0.42;
+}
+
+body.theme-porcelain .agy-glow-blue {
+  background: radial-gradient(circle, rgba(49, 134, 255, 0.18) 0%, rgba(49, 134, 255, 0) 70%);
+}
+
+body.theme-porcelain .agy-glow-amber {
+  background: radial-gradient(circle, rgba(251, 188, 4, 0.16) 0%, rgba(251, 188, 4, 0) 70%);
+}
+
+body.theme-porcelain .agy-glow-coral {
+  background: radial-gradient(circle, rgba(252, 65, 61, 0.12) 0%, rgba(252, 65, 61, 0) 70%);
+}
+
+body.theme-porcelain .agy-glow-green {
+  background: radial-gradient(circle, rgba(0, 185, 92, 0.12) 0%, rgba(0, 185, 92, 0) 70%);
+}
+
+/* Topbar & Header */
+body.theme-porcelain .topbar.m3-top-app-bar {
+  background: rgba(255, 255, 255, 0.84) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.theme-porcelain .m3-back-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.09) !important;
+  color: #1e293b !important;
+}
+
+body.theme-porcelain .m3-back-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-porcelain .brand h1 {
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .brand p.subtitle {
+  color: #64748b !important;
+}
+
+body.theme-porcelain .cloud-sync-badge {
+  background: rgba(22, 163, 74, 0.1) !important;
+  color: #16a34a !important;
+  border: 1px solid rgba(22, 163, 74, 0.25) !important;
+}
+
+body.theme-porcelain .topbar-btn,
+body.theme-porcelain .capsule-icon-btn,
+body.theme-porcelain .m3-outlined-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #334155 !important;
+}
+
+body.theme-porcelain .topbar-btn:hover,
+body.theme-porcelain .capsule-icon-btn:hover,
+body.theme-porcelain .m3-outlined-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .m3-center-capsule {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-porcelain .capsule-pill-btn {
+  background: transparent !important;
+  color: #334155 !important;
+}
+
+body.theme-porcelain .capsule-pill-btn:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .capsule-divider {
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Announcement Pill */
+body.theme-porcelain .agy-announcement-pill {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-top: 1px solid #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-left: 1px solid rgba(0, 0, 0, 0.07) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.07) !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+}
+
+body.theme-porcelain .agy-announcement-pill:hover {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.14) !important;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.09) !important;
+}
+
+body.theme-porcelain .agy-announcement-pill .pill-text {
+  color: #1e293b !important;
+}
+
+body.theme-porcelain .agy-announcement-pill .pill-arrow {
+  color: #64748b !important;
+}
+
+/* Hero Banner */
+body.theme-porcelain .hero-card-banner {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(241, 245, 249, 0.9) 100%) !important;
+  border-top: 1px solid #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-left: 1px solid rgba(0, 0, 0, 0.07) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.07) !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.05) !important;
+}
+
+body.theme-porcelain .hero-content h2 {
+  background: linear-gradient(135deg, #0f172a 35%, #475569 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+body.theme-porcelain .hero-content p {
+  color: #475569 !important;
+}
+
+body.theme-porcelain .hero-btn.tonal {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #1e293b !important;
+}
+
+body.theme-porcelain .hero-btn.tonal:hover {
+  background: rgba(0, 0, 0, 0.09) !important;
+  border-color: rgba(0, 0, 0, 0.16) !important;
+}
+
+body.theme-porcelain .hero-btn.outlined {
+  background: transparent !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  color: #334155 !important;
+}
+
+body.theme-porcelain .hero-btn.outlined:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.24) !important;
+}
+
+/* Bento Cards */
+body.theme-porcelain .bento-card {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-top: 1px solid #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07) !important;
+  border-left: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04) !important;
+}
+
+body.theme-porcelain .bento-card:hover {
+  border-top-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08) !important;
+}
+
+body.theme-porcelain .bento-header h3 {
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .bento-header p {
+  color: #64748b !important;
+}
+
+body.theme-porcelain .bento-link {
+  color: #1a73e8 !important;
+}
+
+/* Sensor Pills & Search Bar */
+body.theme-porcelain .sensor-bento-pill {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #334155 !important;
+}
+
+body.theme-porcelain .sensor-bento-pill:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.16) !important;
+}
+
+body.theme-porcelain .sensor-bento-pill.active {
+  background: #1a73e8 !important;
+  border-color: #1a73e8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(26, 115, 232, 0.28) !important;
+}
+
+body.theme-porcelain .sensor-bento-pill .sensor-count {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #475569 !important;
+}
+
+body.theme-porcelain .sensor-bento-pill.active .sensor-count {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+}
+
+body.theme-porcelain .landing-search-bar input {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.theme-porcelain .landing-search-bar input::placeholder {
+  color: #94a3b8 !important;
+}
+
+body.theme-porcelain .landing-search-bar input:focus {
+  background: #ffffff !important;
+  border-color: #1a73e8 !important;
+  box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.18), 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Landing Recipe Cards */
+body.theme-porcelain .landing-recipe-card {
+  background: rgba(255, 255, 255, 0.82) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.theme-porcelain .landing-recipe-card:hover {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.16) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-porcelain .l-card-title {
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .l-card-sensor {
+  background: rgba(26, 115, 232, 0.09) !important;
+  color: #1a73e8 !important;
+  border: 1px solid rgba(26, 115, 232, 0.2) !important;
+}
+
+body.theme-porcelain .l-card-film {
+  color: #64748b !important;
+}
+
+body.theme-porcelain .l-card-meta {
+  color: #94a3b8 !important;
+}
+
+/* Frame Bento Pills */
+body.theme-porcelain .frame-bento-pill {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #334155 !important;
+}
+
+body.theme-porcelain .frame-bento-pill:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  color: #0f172a !important;
+}
+
+/* Resume Edit Card */
+body.theme-porcelain .resume-edit-card {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(240, 154, 62, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(240, 154, 62, 0.08) !important;
+}
+
+body.theme-porcelain .resume-title {
+  color: #0f172a !important;
+}
+
+/* Editor Deck in Light Mode */
+body.theme-porcelain .editor-panel {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-left: 1px solid rgba(0, 0, 0, 0.08) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.theme-porcelain .editor-tabs {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-porcelain .editor-tabs .nav-tab {
+  color: #64748b !important;
+}
+
+body.theme-porcelain .editor-tabs .nav-tab.active {
+  color: #0f172a !important;
+  border-bottom-color: #d97706 !important;
+}
+
+body.theme-porcelain .stage-viewport {
+  background: #eaedf2 !important;
+}
+
+body.theme-porcelain .telemetry-card {
+  background: rgba(248, 250, 252, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03) !important;
+}
+
+body.theme-porcelain .card-title {
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .telemetry-meta-strip {
+  color: #64748b !important;
+}
+
+body.theme-porcelain .ruler-indicator-card {
+  background: rgba(248, 250, 252, 0.95) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-porcelain .ruler-title {
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .ruler-desc {
+  color: #64748b !important;
+}
+
+body.theme-porcelain .ruler-val-badge {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .circular-tool-item .tool-circle-icon {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #334155 !important;
+}
+
+body.theme-porcelain .circular-tool-item:hover .tool-circle-icon {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-porcelain .circular-tool-item .tool-label {
+  color: #64748b !important;
+}
+
+body.theme-porcelain .circular-tool-item.active .tool-circle-icon {
+  background: linear-gradient(135deg, #f09a3e 0%, #ea580c 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(240, 154, 62, 0.45) !important;
+  border: 2px solid #ffffff !important;
+}
+
+body.theme-porcelain .circular-tool-item.active .tool-label {
+  color: #0f172a !important;
+  font-weight: 600 !important;
+}
+
+body.theme-porcelain .stage-info-pill {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(0, 0, 0, 0.09) !important;
+  color: #334155 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+}
+
+body.theme-porcelain .m3-floating-action-bar {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(0, 0, 0, 0.09) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-porcelain .action-bar-btn {
+  color: #475569 !important;
+}
+
+body.theme-porcelain .action-bar-btn:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .full-sliders-toggle-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #334155 !important;
+}
+
+body.theme-porcelain .full-sliders-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.07) !important;
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .nav-pill-btn {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #334155 !important;
+}
+
+body.theme-porcelain .nav-pill-btn:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  color: #0f172a !important;
+}
+
+body.theme-porcelain .nav-pill-btn.active {
+  background: #1a73e8 !important;
+  border-color: #1a73e8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.28) !important;
+}
+

@@ -500,15 +500,22 @@
               <select id="dr"><option value="100">DR100 (Chuẩn)</option><option value="200">DR200</option><option value="400">DR400</option></select>
             </label>
           </div>
+          <!-- Băng chuyền chọn nhanh toàn bộ các loại Giả lập Film gốc -->
+          <div class="film-sim-pills-row" id="filmSimPillsRow"></div>
         </div>
 
         <div class="deck-card-box">
           <div class="section-header">
-            <span>Kho 392 Công thức Fujifilm</span>
+            <span>Toàn bộ Bộ Lọc & Công thức Fujifilm (<strong id="tabFilmCountBadge">392</strong>)</span>
             <div class="section-header-links">
               <button id="inlineSurpriseBtn" type="button" class="reset-link" title="Chọn ngẫu nhiên">🎲 Ngẫu nhiên</button>
-              <button id="openFullCatalogInline" type="button" class="reset-link">Mở kho ➔</button>
+              <button id="openFullCatalogInline" type="button" class="reset-link">Mở kho lớn ➔</button>
             </div>
+          </div>
+          <!-- Thanh tìm kiếm & phân loại nhanh toàn bộ bộ lọc -->
+          <div class="tab-film-toolbar" style="margin-bottom: 10px;">
+            <input id="tabFilmSearchInput" type="search" placeholder="🔍 Tìm trong 392 bộ lọc (Portra, Kodachrome, Cine, Acros...)" style="width: 100%; padding: 8px 14px; font-size: 12.5px; border-radius: 9999px; border: 1px solid var(--border); background: var(--panel-elevated); color: var(--text); outline: none; box-sizing: border-box;" />
+            <div id="tabFilmChipsRow" class="tab-film-chips"></div>
           </div>
           <div class="preset-ribbon" id="presetRibbon"></div>
         </div>

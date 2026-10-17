@@ -757,32 +757,157 @@ stageContainer.addEventListener('touchend', e => {
 // =========================================================================
 // KHỞI TẠO RIBBON PRESET & NẠP 392 CÔNG THỨC TỪ RECIPES.JSON
 // =========================================================================
-const presetRibbon = document.querySelector('#presetRibbon');
-for (const preset of CURATED_PRESETS) {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'preset-pill';
-  btn.innerHTML = `<span class="p-name">${preset.name}</span><span class="p-sub">${preset.subtitle}</span>`;
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.preset-pill').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const currentDiag = state.settings.diagnosticMode;
-    const currentDate = state.settings.dateStamp;
-    state.settings = {
-      ...structuredClone(defaults),
-      ...structuredClone(preset.settings),
-      diagnosticMode: currentDiag,
-      dateStamp: currentDate
-    };
-    state.activeRecipeName = preset.name;
-    state.curvePoints = structuredClone(preset.settings.curvePoints || [[0, 0], [1, 1]]);
-    syncInputsFromSettings();
-    drawCurveEditor();
-    commitHistory(`Preset: ${preset.name}`);
-    render();
-  });
-  presetRibbon.append(btn);
+// --- Quản lý toàn bộ 392 Bộ lọc & Giả lập Film trong Buồng tối ---
+let currentTabFilmFilter = 'Tất cả';
+
+function buildFilmSimPills() {
+  const container = document.querySelector('#filmSimPillsRow');
+  if (!container) return;
+  const filmSims = [
+    'Original', 'Provia', 'Velvia', 'Astia', 'Classic Chrome',
+    'PRO Neg. Hi', 'PRO Neg. Std', 'Classic Neg.', 'Nostalgic Neg.',
+    'ETERNA', 'ETERNA Bleach Bypass', 'Acros', 'Monochrome', 'Sepia'
+  ];
+  container.innerHTML = '';
+  for (const sim of filmSims) {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = `film-sim-pill ${state.settings.film === sim ? 'active' : ''}`;
+    pill.textContent = sim;
+    pill.addEventListener('click', () => {
+      updateFilmSimPillsActive();
+  const filmSelect = document.querySelector('#film');
+      if (filmSelect) {
+        filmSelect.value = sim;
+        filmSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    container.append(pill);
+  }
 }
+
+function updateFilmSimPillsActive() {
+  const container = document.querySelector('#filmSimPillsRow');
+  if (!container) return;
+  container.querySelectorAll('.film-sim-pill').forEach(p => {
+    p.classList.toggle('active', p.textContent === state.settings.film);
+  });
+}
+
+function buildTabFilmChips() {
+  const chipsContainer = document.querySelector('#tabFilmChipsRow');
+  if (!chipsContainer) return;
+  const categories = [
+    'Tất cả', '⭐ Yêu thích', 'Classic Chrome', 'Classic Neg', 'Portra / Kodachrome',
+    'Velvia', 'Astia', 'Eterna', 'Acros', 'Nostalgic Neg', 'Bleach Bypass'
+  ];
+  chipsContainer.innerHTML = '';
+  for (const cat of categories) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `tab-film-chip ${cat === currentTabFilmFilter ? 'active' : ''}`;
+    chip.textContent = cat;
+    chip.addEventListener('click', () => {
+      currentTabFilmFilter = cat;
+      chipsContainer.querySelectorAll('.tab-film-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      renderTabFilmRecipes();
+    });
+    chipsContainer.append(chip);
+  }
+}
+
+function renderTabFilmRecipes() {
+  const ribbon = document.querySelector('#presetRibbon');
+  if (!ribbon) return;
+  const q = (document.querySelector('#tabFilmSearchInput')?.value || '').trim().toLowerCase();
+  const countBadge = document.querySelector('#tabFilmCountBadge');
+
+  let list = [];
+  if (state.fullCatalogRecipes && state.fullCatalogRecipes.length > 0) {
+    list = state.fullCatalogRecipes.filter(r => {
+      const matchFav = currentTabFilmFilter === '⭐ Yêu thích' ? state.favoriteRecipeIds.has(r.id) : true;
+      let matchCat = true;
+      if (currentTabFilmFilter !== 'Tất cả' && currentTabFilmFilter !== '⭐ Yêu thích') {
+        if (currentTabFilmFilter === 'Portra / Kodachrome') {
+          matchCat = r.name.toLowerCase().includes('portra') || r.name.toLowerCase().includes('kodachrome');
+        } else {
+          matchCat = r.film.toLowerCase().includes(currentTabFilmFilter.toLowerCase()) ||
+                     r.name.toLowerCase().includes(currentTabFilmFilter.toLowerCase()) ||
+                     (r.settings && r.settings.film && r.settings.film.toLowerCase().includes(currentTabFilmFilter.toLowerCase()));
+        }
+      }
+      const matchQuery = !q ||
+        r.name.toLowerCase().includes(q) ||
+        r.film.toLowerCase().includes(q) ||
+        r.wb.toLowerCase().includes(q);
+
+      return matchFav && matchCat && matchQuery;
+    });
+  } else {
+    list = CURATED_PRESETS.map((p, idx) => ({
+      id: `curated-${idx}`,
+      name: p.name,
+      film: p.subtitle,
+      dr: p.settings.dr || 100,
+      wb: 'Auto',
+      settings: p.settings,
+      isCurated: true
+    }));
+  }
+
+  if (countBadge) {
+    countBadge.textContent = list.length;
+  }
+
+  ribbon.innerHTML = '';
+
+  if (list.length === 0) {
+    ribbon.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 24px 12px; color: var(--muted); font-size: 13px;">Không tìm thấy bộ lọc phù hợp với "${q}".</div>`;
+    return;
+  }
+
+  for (const rec of list) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'preset-pill';
+    if (state.activeRecipeName === rec.name) {
+      btn.classList.add('active');
+    }
+    const subText = rec.isCurated ? rec.film : `${rec.film} · DR${rec.dr}`;
+    btn.innerHTML = `<span class="p-name">${rec.name}</span><span class="p-sub">${subText}</span>`;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#presetRibbon .preset-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (rec.isCurated) {
+        const currentDiag = state.settings.diagnosticMode;
+        const currentDate = state.settings.dateStamp;
+        state.settings = {
+          ...structuredClone(defaults),
+          ...structuredClone(rec.settings),
+          diagnosticMode: currentDiag,
+          dateStamp: currentDate
+        };
+        state.activeRecipeName = rec.name;
+        state.curvePoints = structuredClone(rec.settings.curvePoints || [[0, 0], [1, 1]]);
+        syncInputsFromSettings();
+        drawCurveEditor();
+        commitHistory(`Preset: ${rec.name}`);
+        render();
+        setStatus(`🎞️ Đã áp dụng preset "${rec.name}".`);
+      } else {
+        applyCatalogRecipe(rec);
+      }
+    });
+    ribbon.append(btn);
+  }
+}
+
+// Khởi tạo hiển thị ban đầu
+buildFilmSimPills();
+buildTabFilmChips();
+renderTabFilmRecipes();
+document.querySelector('#tabFilmSearchInput')?.addEventListener('input', () => renderTabFilmRecipes());
 
 // Khởi tạo 30 mẫu Khung ảnh Triển lãm (PhotoFrame.java Parity)
 for (const frame of PHOTO_FRAMES) {
@@ -824,6 +949,8 @@ async function load392Catalog() {
     if (!recipeLibraryModal.hidden) renderRecipeLibraryGrid();
     if (!cmdPaletteModal.hidden) renderCmdPaletteResults();
     renderLandingRecipeGrid();
+    buildTabFilmChips();
+    renderTabFilmRecipes();
   } catch (error) {
     setStatus(`Không tải được kho công thức: ${error.message}. Bạn vẫn có thể dùng preset và chỉnh tay.`, true);
   }

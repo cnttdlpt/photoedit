@@ -2526,14 +2526,14 @@ body.auth-locked .m3-bottom-nav {
 
 /* 1. Deck Screens */
 .deck-screen {
-  display: none;
+  display: none !important;
   animation: fadeIn 0.22s var(--m3-emphasized);
 }
 .deck-screen.active {
-  display: block;
+  display: block !important;
 }
 #screenEditor.deck-screen.active {
-  display: flex;
+  display: flex !important;
 }
 
 /* 2. TopBar Back Button */

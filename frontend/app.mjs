@@ -2177,7 +2177,11 @@ function loadSourceImageData(imageData, label, rawFile = null) {
   empty.style.display = 'none';
   canvasWrapper.hidden = false;
   canvasWrapper.style.display = 'inline-block';
-  showScreen('editor', false);
+  if (typeof window !== 'undefined' && window.location && window.location.hash === '#/') {
+    showScreen('landing', false);
+  } else {
+    showScreen('editor', false);
+  }
   updateStageInfoPill();
 
   const enableIds = [
@@ -2823,6 +2827,10 @@ const registerErrorMsg = document.getElementById('registerErrorMsg');
 
 function lockAppToAuth() {
   document.body.classList.remove('auth-locked');
+  if (authModal) {
+    authModal.hidden = true;
+    authModal.classList.remove('mandatory-gate');
+  }
   if (closeAuthModal) {
     closeAuthModal.style.display = '';
   }

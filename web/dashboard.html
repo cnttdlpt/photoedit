@@ -3,432 +3,1512 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Bảng Điều Khiển Giám Sát Realtime — IRO Studio 3.0</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>IRO Studio 3.0 — Trung Tâm Quản Trị & Giám Sát Realtime</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,slnt,wdth,wght,ROND@8..144,-10..0,25..150,400..600,0..100&family=Google+Sans+Code:ital,wght@0,400..700;1,400..700&display=swap" />
   <style>
+    /* ==========================================================================
+       GOOGLE ANTIGRAVITY — ADMIN HUB DESIGN SYSTEM & CSS TOKENS
+       ========================================================================== */
     :root {
-      --bg-dark: #121316;
-      --card-bg: #1c1e24;
-      --border-color: #2b2f38;
-      --accent-color: #e28743;
-      --text-main: #f3f4f6;
-      --text-dim: #9ca3af;
-      --green: #10b981;
+      --font-sans: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'Google Sans Code', 'Roboto Mono', monospace;
+
+      /* Chế độ Sáng mặc định (Warm Porcelain & Frosted Glass) */
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --surface-elevated: rgba(255, 255, 255, 0.92);
+      --surface-dim: #f1f3f4;
+      --surface-hover: #f3f5f8;
+      --border: rgba(0, 0, 0, 0.08);
+      --border-subtle: rgba(0, 0, 0, 0.05);
+      --border-hover: rgba(0, 0, 0, 0.16);
+      --text: #1f2937;
+      --text-muted: #5f6368;
+      --text-dim: #80868b;
+      --card-shadow: 0 12px 32px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02);
+      --card-shadow-hover: 0 20px 48px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.04);
+      --aurora-opacity: 0.42;
+
+      /* Google & Antigravity Accents */
+      --agy-blue: #1a73e8;
+      --agy-amber: #d97706;
+      --agy-coral: #ea4335;
+      --agy-green: #16a34a;
+      --agy-purple: #9333ea;
+      --accent: #f09a3e;
+      --accent-hover: #ea580c;
+    }
+
+    body.theme-dark {
+      --bg: #0c0d12;
+      --surface: #14161d;
+      --surface-elevated: rgba(20, 23, 30, 0.82);
+      --surface-dim: #181b24;
+      --surface-hover: #1e222d;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-subtle: rgba(255, 255, 255, 0.05);
+      --border-hover: rgba(255, 255, 255, 0.18);
+      --text: #f3f4f8;
+      --text-muted: #9aa0a6;
+      --text-dim: #646b78;
+      --card-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+      --card-shadow-hover: 0 24px 60px rgba(0, 0, 0, 0.65);
+      --aurora-opacity: 0.75;
+      --agy-blue: #3186ff;
+      --agy-green: #00b95c;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
     }
 
     body {
-      background: var(--bg-dark);
-      color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
-      padding: 24px;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+      overflow-x: hidden;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
-    .dashboard-header {
+    /* Ambient Aurora Particles */
+    .agy-ambient-aurora {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+      opacity: var(--aurora-opacity);
+      transition: opacity 0.5s ease;
+    }
+
+    .agy-glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(140px);
+      will-change: transform;
+    }
+
+    .agy-glow-blue {
+      top: -10%;
+      left: 15%;
+      width: 600px;
+      height: 480px;
+      background: radial-gradient(circle, rgba(49, 134, 255, 0.22) 0%, rgba(49, 134, 255, 0) 70%);
+      animation: agyDrift1 22s ease-in-out infinite alternate;
+    }
+
+    .agy-glow-amber {
+      top: 10%;
+      right: 10%;
+      width: 550px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(251, 188, 4, 0.18) 0%, rgba(251, 188, 4, 0) 70%);
+      animation: agyDrift2 26s ease-in-out infinite alternate;
+    }
+
+    .agy-glow-coral {
+      bottom: 5%;
+      left: 30%;
+      width: 520px;
+      height: 420px;
+      background: radial-gradient(circle, rgba(252, 65, 61, 0.14) 0%, rgba(252, 65, 61, 0) 70%);
+      animation: agyDrift3 30s ease-in-out infinite alternate;
+    }
+
+    .agy-glow-green {
+      top: 40%;
+      left: 3%;
+      width: 480px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(0, 185, 92, 0.14) 0%, rgba(0, 185, 92, 0) 70%);
+      animation: agyDrift1 24s ease-in-out infinite alternate;
+    }
+
+    @keyframes agyDrift1 {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(40px, 30px) scale(1.08); }
+    }
+    @keyframes agyDrift2 {
+      0% { transform: translate(0, 0) scale(1.05); }
+      100% { transform: translate(-35px, 25px) scale(0.95); }
+    }
+    @keyframes agyDrift3 {
+      0% { transform: translate(0, 0) scale(0.98); }
+      100% { transform: translate(30px, -40px) scale(1.06); }
+    }
+
+    /* Container */
+    .admin-container {
+      position: relative;
+      z-index: 1;
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 0 24px 60px;
+    }
+
+    /* Topbar */
+    .admin-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(20px) saturate(180%);
+      background: rgba(255, 255, 255, 0.85);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      margin: 0 -24px 28px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      flex-wrap: wrap;
       gap: 16px;
-      margin-bottom: 24px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
     }
 
-    .header-title h1 {
-      margin: 0;
-      font-size: 24px;
-      font-weight: 700;
+    body.theme-dark .admin-topbar {
+      background: rgba(12, 13, 18, 0.85);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .topbar-cluster {
       display: flex;
       align-items: center;
       gap: 12px;
+      flex-wrap: wrap;
     }
 
-    .live-badge {
+    .btn-back-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px 8px 14px;
+      border-radius: 9999px;
+      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 13.5px;
+      transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    body.theme-dark .btn-back-pill {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-back-pill:hover {
+      background: rgba(0, 0, 0, 0.08);
+      border-color: var(--border-hover);
+      transform: translateX(-2px);
+    }
+
+    body.theme-dark .btn-back-pill:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .btn-back-pill .arrow {
+      font-size: 18px;
+      line-height: 1;
+      transition: transform 0.2s ease;
+    }
+
+    .btn-back-pill:hover .arrow {
+      transform: translateX(-3px);
+    }
+
+    .brand-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, #f09a3e 0%, #ea580c 100%);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 4px 12px rgba(240, 154, 62, 0.35);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+      user-select: none;
+    }
+
+    .brand-text h1 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-admin-hub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      background: rgba(26, 115, 232, 0.1);
+      color: var(--agy-blue);
+      border: 1px solid rgba(26, 115, 232, 0.25);
+      letter-spacing: 0.02em;
+    }
+
+    .tunnel-status-pill {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--green);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: rgba(22, 163, 74, 0.1);
+      border: 1px solid rgba(22, 163, 74, 0.25);
+      color: var(--agy-green);
       font-size: 12px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 550;
+      text-decoration: none;
+      transition: all 0.2s ease;
     }
 
-    .live-dot {
+    .tunnel-status-pill:hover {
+      background: rgba(22, 163, 74, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .live-pulse-dot {
       width: 8px;
       height: 8px;
-      background: var(--green);
       border-radius: 50%;
-      box-shadow: 0 0 8px var(--green);
-      animation: pulse 1.5s infinite;
+      background: #16a34a;
+      box-shadow: 0 0 8px #16a34a;
+      animation: pulseLive 1.6s infinite;
     }
 
-    @keyframes pulse {
+    @keyframes pulseLive {
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.4; transform: scale(0.85); }
     }
 
-    .header-controls {
+    /* Topbar Controls */
+    .topbar-controls {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
-    .btn-action {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      color: var(--text-main);
-      padding: 8px 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
-      transition: all 0.2s ease;
+    .capsule-btn {
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      padding: 7px 14px;
+      border-radius: 9999px;
+      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: var(--font-sans);
     }
 
-    .btn-action:hover {
-      background: #272a33;
-      border-color: #4b5563;
+    body.theme-dark .capsule-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.12);
     }
 
-    .btn-action.active {
-      background: var(--accent-color);
+    .capsule-btn:hover {
+      background: rgba(0, 0, 0, 0.08);
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
+    }
+
+    body.theme-dark .capsule-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .capsule-btn.active {
+      background: var(--agy-blue);
+      border-color: var(--agy-blue);
       color: #fff;
-      border-color: var(--accent-color);
+      box-shadow: 0 4px 14px rgba(26, 115, 232, 0.28);
     }
 
-    /* Stats Grid */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
+    /* Hero Banner */
+    .admin-hero-banner {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-top: 1px solid #ffffff;
+      border-radius: 28px;
+      padding: 32px 36px;
       margin-bottom: 28px;
+      backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: var(--card-shadow);
+      position: relative;
+      overflow: hidden;
     }
 
-    .stat-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 16px 20px;
+    body.theme-dark .admin-hero-banner {
+      border-top: 1px solid rgba(255, 255, 255, 0.18);
     }
 
-    .stat-label {
-      font-size: 12px;
-      color: var(--text-dim);
+    .agy-announcement-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 16px 5px 6px;
+      border-radius: 9999px;
+      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+      margin-bottom: 14px;
+      user-select: none;
+    }
+
+    body.theme-dark .agy-announcement-pill {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .agy-announcement-pill .pill-badge {
+      padding: 4px 11px;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #1a73e8 0%, #9333ea 100%);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+    }
+
+    .agy-announcement-pill .pill-text {
+      font-size: 13px;
+      font-weight: 450;
+      color: var(--text);
+    }
+
+    .admin-hero-title {
+      margin: 0 0 8px;
+      font-size: 32px;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, #0f172a 35%, #475569 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    body.theme-dark .admin-hero-title {
+      background: linear-gradient(135deg, #ffffff 40%, #9aa0a6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .admin-hero-sub {
+      margin: 0;
+      font-size: 15px;
+      color: var(--text-muted);
+      max-width: 720px;
+      line-height: 1.5;
+    }
+
+    /* KPI Bento Grid */
+    .kpi-bento-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .kpi-card {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-top: 1px solid #ffffff;
+      border-radius: 22px;
+      padding: 20px 24px;
+      backdrop-filter: blur(18px) saturate(160%);
+      box-shadow: var(--card-shadow);
+      transition: all 0.22s cubic-bezier(0.2, 0, 0, 1);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    body.theme-dark .kpi-card {
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--card-shadow-hover);
+      border-color: var(--border-hover);
+    }
+
+    .kpi-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .kpi-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .kpi-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 17px;
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    body.theme-dark .kpi-icon {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .kpi-value {
+      font-family: var(--font-mono);
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
       margin-bottom: 6px;
     }
 
-    .stat-value {
-      font-size: 28px;
-      font-weight: 800;
-      color: #fff;
-    }
-
-    /* Sessions Grid */
-    .sessions-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-      gap: 20px;
-    }
-
-    .session-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-
-    .session-card:hover {
-      border-color: #4b5563;
-      transform: translateY(-2px);
-    }
-
-    .session-card-header {
-      padding: 14px 16px;
-      background: rgba(255, 255, 255, 0.02);
-      border-bottom: 1px solid var(--border-color);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .user-info {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .user-ip {
-      font-family: monospace;
-      font-weight: 700;
-      font-size: 13px;
-      color: #60a5fa;
-    }
-
-    .user-time {
-      font-size: 11px;
+    .kpi-sub {
+      font-size: 12px;
       color: var(--text-dim);
-    }
-
-    .recipe-badge {
-      background: rgba(226, 135, 67, 0.15);
-      color: var(--accent-color);
-      border: 1px solid rgba(226, 135, 67, 0.3);
-      padding: 3px 8px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .card-images {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      padding: 14px 16px;
-      background: #14151a;
-    }
-
-    .img-box {
       display: flex;
-      flex-direction: column;
+      align-items: center;
       gap: 6px;
     }
 
-    .img-box span {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-dim);
-    }
-
-    .img-box img {
-      width: 100%;
-      height: 140px;
-      object-fit: cover;
-      border-radius: 8px;
-      background: #000;
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .img-box .placeholder {
-      width: 100%;
-      height: 140px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.03);
+    /* Admin Tabs */
+    .admin-nav-tabs {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      color: var(--text-dim);
-      border: 1px dashed var(--border-color);
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+      padding-bottom: 4px;
+      overflow-x: auto;
     }
 
-    .card-details {
-      padding: 14px 16px;
-      font-size: 12px;
+    .admin-tab-btn {
+      padding: 10px 20px;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-sans);
+      white-space: nowrap;
+    }
+
+    .admin-tab-btn:hover {
+      color: var(--text);
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    body.theme-dark .admin-tab-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .admin-tab-btn.active {
+      background: var(--surface-elevated);
+      color: var(--agy-blue);
+      border-color: var(--border);
+      font-weight: 600;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+    }
+
+    .tab-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      background: rgba(0, 0, 0, 0.06);
+      color: inherit;
+    }
+
+    body.theme-dark .tab-badge {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Tab Content Areas */
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+      animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Filter & Search Bar */
+    .filter-search-strip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+
+    .search-pill-box {
+      position: relative;
+      flex: 1;
+      max-width: 440px;
+    }
+
+    .search-pill-box input {
+      width: 100%;
+      padding: 11px 20px 11px 44px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface-elevated);
+      color: var(--text);
+      font-family: var(--font-sans);
+      font-size: 13.5px;
+      outline: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+      transition: all 0.2s ease;
+    }
+
+    .search-pill-box input:focus {
+      border-color: var(--agy-blue);
+      box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.18), 0 4px 16px rgba(0, 0, 0, 0.06);
+    }
+
+    .search-pill-box .icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 15px;
+      pointer-events: none;
+    }
+
+    .filter-chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 12.5px;
+      font-weight: 500;
+      border: 1px solid var(--border);
+      background: var(--surface-elevated);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .filter-chip:hover {
+      border-color: var(--border-hover);
+      color: var(--text);
+    }
+
+    .filter-chip.active {
+      background: var(--agy-blue);
+      border-color: var(--agy-blue);
+      color: #fff;
+    }
+
+    /* Sessions Bento Grid */
+    .sessions-bento-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 22px;
+    }
+
+    .session-bento-card {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-top: 1px solid #ffffff;
+      border-radius: 22px;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      flex: 1;
+      box-shadow: var(--card-shadow);
+      backdrop-filter: blur(18px) saturate(160%);
+      transition: transform 0.24s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.24s ease, border-color 0.24s ease;
     }
 
-    .meta-row {
+    body.theme-dark .session-bento-card {
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .session-bento-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--card-shadow-hover);
+      border-color: var(--border-hover);
+    }
+
+    .session-card-head {
+      padding: 16px 18px 12px;
       display: flex;
       justify-content: space-between;
-      color: var(--text-dim);
+      align-items: flex-start;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
     }
 
-    .meta-row strong {
-      color: var(--text-main);
-    }
-
-    .sliders-preview {
+    .client-badge-block {
       display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      margin-top: 4px;
+      flex-direction: column;
+      gap: 3px;
     }
 
-    .pill-param {
-      background: rgba(255, 255, 255, 0.05);
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 10.5px;
-      font-family: monospace;
-    }
-
-    .card-footer {
-      padding: 12px 16px;
-      border-top: 1px solid var(--border-color);
+    .client-ip {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 13.5px;
+      color: var(--agy-blue);
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      background: rgba(255, 255, 255, 0.01);
+      gap: 6px;
     }
 
-    .edit-counter {
+    .client-time {
       font-size: 11.5px;
       color: var(--text-dim);
     }
 
-    .edit-counter strong {
-      color: var(--green);
+    .recipe-pill {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      background: rgba(240, 154, 62, 0.12);
+      color: var(--agy-amber);
+      border: 1px solid rgba(240, 154, 62, 0.25);
+      white-space: nowrap;
     }
 
-    /* Modal for Log details */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.75);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      backdrop-filter: blur(4px);
+    /* Dual Images */
+    .card-dual-images {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 14px 18px;
+      background: var(--surface-dim);
     }
 
-    .modal-overlay.open {
-      display: flex;
-    }
-
-    .modal-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      width: 90%;
-      max-width: 600px;
-      max-height: 80vh;
+    .img-box-wrap {
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      gap: 6px;
     }
 
-    .modal-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border-color);
+    .img-box-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
-    .modal-header h3 {
-      margin: 0;
-      font-size: 16px;
+    .img-box-preview {
+      position: relative;
+      width: 100%;
+      height: 155px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #111;
+      border: 1px solid var(--border);
+      cursor: zoom-in;
     }
 
-    .modal-body {
+    .img-box-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .img-box-preview:hover img {
+      transform: scale(1.05);
+    }
+
+    .img-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.03);
+      color: var(--text-dim);
+      font-size: 12px;
+      border: 1px dashed var(--border);
+    }
+
+    /* Card Metadata */
+    .card-meta-details {
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .meta-line {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .meta-line strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .specs-pill-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 2px;
+    }
+
+    .specs-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 2.5px 7px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.04);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+    }
+
+    body.theme-dark .specs-pill {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* Card Footer */
+    .card-action-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface);
+    }
+
+    .edits-count {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .edits-count strong {
+      color: var(--agy-green);
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    /* User Management Table */
+    .user-table-card {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-top: 1px solid #ffffff;
+      border-radius: 24px;
+      overflow: hidden;
+      backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: var(--card-shadow);
+      margin-bottom: 24px;
+    }
+
+    body.theme-dark .user-table-card {
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table.admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13.5px;
+    }
+
+    table.admin-table th {
       padding: 16px 20px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-dim);
+      white-space: nowrap;
+    }
+
+    table.admin-table td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    table.admin-table tr:hover td {
+      background: var(--surface-hover);
+    }
+
+    .role-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+    }
+
+    .role-badge.admin {
+      background: rgba(220, 38, 38, 0.1);
+      color: #dc2626;
+      border: 1px solid rgba(220, 38, 38, 0.25);
+    }
+
+    .role-badge.user {
+      background: rgba(26, 115, 232, 0.1);
+      color: var(--agy-blue);
+      border: 1px solid rgba(26, 115, 232, 0.25);
+    }
+
+    .status-badge {
+      font-size: 11.5px;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .status-badge.active {
+      background: rgba(22, 163, 74, 0.1);
+      color: #16a34a;
+    }
+
+    .status-badge.banned {
+      background: rgba(100, 116, 139, 0.12);
+      color: #64748b;
+    }
+
+    /* Infrastructure Bento Cards */
+    .infra-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .infra-card {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-top: 1px solid #ffffff;
+      border-radius: 22px;
+      padding: 24px;
+      backdrop-filter: blur(18px) saturate(160%);
+      box-shadow: var(--card-shadow);
+    }
+
+    body.theme-dark .infra-card {
+      border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .infra-card h3 {
+      margin: 0 0 16px;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .infra-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .infra-item {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-muted);
+    }
+
+    .infra-item code {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text);
+      background: rgba(0, 0, 0, 0.04);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+
+    body.theme-dark .infra-item code {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* Modal Glassmorphism */
+    .admin-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(12px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .admin-modal-overlay.open {
+      display: flex;
+      animation: modalFade 0.22s ease;
+    }
+
+    @keyframes modalFade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .admin-modal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 85vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
+    }
+
+    .admin-modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .admin-modal-header h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .admin-modal-body {
+      padding: 20px 24px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 10px;
     }
 
-    .log-item {
-      padding: 10px 12px;
-      background: rgba(255, 255, 255, 0.03);
-      border-radius: 8px;
-      font-size: 12.5px;
+    .timeline-log-row {
       display: flex;
       justify-content: space-between;
-      gap: 12px;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: var(--surface-dim);
+      font-size: 13px;
+      border: 1px solid var(--border-subtle);
     }
 
-    .log-time {
-      font-size: 11px;
+    .timeline-log-time {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
       color: var(--text-dim);
       white-space: nowrap;
+    }
+
+    /* Lightbox Modal */
+    .lightbox-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(16px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1100;
+      padding: 30px;
+    }
+
+    .lightbox-modal.open {
+      display: flex;
+    }
+
+    .lightbox-container {
+      max-width: 1200px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .lightbox-img-wrap {
+      max-width: 100%;
+      max-height: 75vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .lightbox-img-wrap img {
+      max-width: 100%;
+      max-height: 75vh;
+      object-fit: contain;
+      border-radius: 16px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+    }
+
+    .lightbox-caption {
+      color: #fff;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
     }
   </style>
 </head>
 <body>
 
-  <header class="dashboard-header">
-    <div class="header-title">
-      <h1>
-        <span>IRO Studio 3.0 Realtime Dashboard</span>
-        <span class="live-badge">
-          <span class="live-dot"></span> Trực tiếp (Live)
-        </span>
-      </h1>
-      <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-dim);">
-        Theo dõi người dùng tải ảnh lên và chỉnh sửa thông số trực tiếp trên máy chủ
-      </p>
-    </div>
+  <!-- =========================================================================
+       ANTIGRAVITY AMBIENT AURORA BACKGROUND
+       ========================================================================= -->
+  <div class="agy-ambient-aurora" aria-hidden="true">
+    <div class="agy-glow agy-glow-blue"></div>
+    <div class="agy-glow agy-glow-amber"></div>
+    <div class="agy-glow agy-glow-coral"></div>
+    <div class="agy-glow agy-glow-green"></div>
+  </div>
 
-    <div class="header-controls">
-      <button id="autoRefreshBtn" class="btn-action active">
-        <span>🔄 Tự làm mới (2s)</span>
-      </button>
-      <button id="manualRefreshBtn" class="btn-action">
-        <span>Cập nhật ngay</span>
-      </button>
-      <a href="index.html" class="btn-action" target="_blank" style="text-decoration: none;">
-        <span>🌐 Mở Phòng Tối Web</span>
-      </a>
-    </div>
-  </header>
+  <div class="admin-container">
 
-  <!-- Thống kê tổng quan -->
-  <section class="stats-row">
-    <div class="stat-card">
-      <div class="stat-label">Tổng số ảnh đã nạp</div>
-      <div id="statTotalPhotos" class="stat-value">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Tổng lượt tinh chỉnh Live</div>
-      <div id="statTotalEdits" class="stat-value">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Đang xem trực tiếp</div>
-      <div id="statActiveNow" class="stat-value">0</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Lần sửa gần nhất</div>
-      <div id="statLastUpdate" class="stat-value" style="font-size: 18px; line-height: 34px;">--:--:--</div>
-    </div>
-  </section>
+    <!-- =======================================================================
+         1. TOPBAR & QUICK ACTIONS
+         ======================================================================= -->
+    <header class="admin-topbar">
+      <div class="topbar-cluster">
+        <!-- Nút Back về Studio (Parity) -->
+        <a href="index.html" class="btn-back-pill" title="Quay lại Phòng tối Web IRO Studio">
+          <span class="arrow">‹</span>
+          <span>Quay lại Studio</span>
+        </a>
 
-  <!-- Lưới hiển thị các phiên chỉnh ảnh -->
-  <section id="sessionsGrid" class="sessions-grid">
-    <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-dim);">
-      Đang nạp dữ liệu từ máy chủ...
-    </div>
-  </section>
+        <div class="brand-title-wrap">
+          <div class="brand-logo-badge">✦</div>
+          <div class="brand-text">
+            <h1>IRO <span style="color:var(--accent);">3.0</span> <span class="badge-admin-hub">ADMIN HUB</span></h1>
+          </div>
+        </div>
 
-  <!-- Modal xem lịch sử chỉnh sửa chi tiết -->
-  <div id="logModal" class="modal-overlay">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 id="modalTitle">Lịch sử từng bước chỉnh sửa</h3>
-        <button id="closeModalBtn" class="btn-action" style="padding: 4px 10px;">✕</button>
+        <a href="https://npccc.io.vn" target="_blank" class="tunnel-status-pill" title="Tên miền chính thức qua Cloudflare Tunnel">
+          <span class="live-pulse-dot"></span>
+          <span>npccc.io.vn</span>
+          <span style="font-size:10px; opacity:0.8;">↗</span>
+        </a>
       </div>
-      <div id="modalBody" class="modal-body"></div>
+
+      <div class="topbar-controls">
+        <!-- Interval refresh toggle -->
+        <button id="autoRefreshBtn" class="capsule-btn active" title="Bật/tắt tự động làm mới">
+          <span>🔄 Tự làm mới (2s)</span>
+        </button>
+        <button id="manualRefreshBtn" class="capsule-btn" title="Nạp dữ liệu mới nhất từ máy chủ">
+          <span>Cập nhật ngay</span>
+        </button>
+
+        <!-- Nút đổi theme sáng/tối -->
+        <button id="themeToggleBtn" class="capsule-btn" title="Chuyển chế độ Sáng (Porcelain) / Tối (Darkroom)">
+          <span>☀️ Giao diện Sáng</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- =======================================================================
+         2. ANTIGRAVITY HERO BANNER
+         ======================================================================= -->
+    <section class="admin-hero-banner">
+      <div class="agy-announcement-pill">
+        <span class="pill-badge">✦ ANTIGRAVITY × IRO ADMIN</span>
+        <span class="pill-text">Agentic Telemetry & Realtime Laboratory</span>
+      </div>
+      <h2 class="admin-hero-title">Trung Tâm Quản Trị & Giám Sát Realtime</h2>
+      <p class="admin-hero-sub">
+        Theo dõi đồng bộ luồng người dùng tải ảnh lên, tinh chỉnh thông số màu sắc quang học Fujifilm X-Trans V, quản trị danh sách tài khoản và giám sát đường truyền Cloudflare Tunnel trực tiếp.
+      </p>
+    </section>
+
+    <!-- =======================================================================
+         3. KPI METRIC BENTO CARDS
+         ======================================================================= -->
+    <section class="kpi-bento-grid">
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Tổng số ảnh đã tải lên</span>
+          <div class="kpi-icon" style="color: #1a73e8;">📷</div>
+        </div>
+        <div id="statTotalPhotos" class="kpi-value">0</div>
+        <div class="kpi-sub">Kho ảnh gốc & ảnh preview</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Tổng lượt tinh chỉnh Live</span>
+          <div class="kpi-icon" style="color: #d97706;">⚡</div>
+        </div>
+        <div id="statTotalEdits" class="kpi-value">0</div>
+        <div class="kpi-sub">Thao tác thanh trượt & công thức</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Phiên đang hoạt động</span>
+          <div class="kpi-icon" style="color: #16a34a;">🟢</div>
+        </div>
+        <div id="statActiveNow" class="kpi-value">0</div>
+        <div class="kpi-sub">Kết nối đồng bộ thời gian thực</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Lần đồng bộ gần nhất</span>
+          <div class="kpi-icon" style="color: #9333ea;">⏱</div>
+        </div>
+        <div id="statLastUpdate" class="kpi-value" style="font-size: 24px; line-height: 1.35;">--:--:--</div>
+        <div class="kpi-sub" id="statSyncStatus">Đang lắng nghe tín hiệu...</div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         4. MULTI-TAB NAVIGATION
+         ======================================================================= -->
+    <nav class="admin-nav-tabs">
+      <button class="admin-tab-btn active" data-tab="tabSessions">
+        <span>📷 Giám Sát Phiên Realtime</span>
+        <span id="tabCountSessions" class="tab-badge">0</span>
+      </button>
+      <button class="admin-tab-btn" data-tab="tabUsers">
+        <span>👥 Quản Lý Người Dùng</span>
+        <span id="tabCountUsers" class="tab-badge">0</span>
+      </button>
+      <button class="admin-tab-btn" data-tab="tabLogs">
+        <span>📜 Nhật Ký Hoạt Động</span>
+      </button>
+      <button class="admin-tab-btn" data-tab="tabInfra">
+        <span>🛰️ Hạ Tầng & Tên Miền</span>
+      </button>
+    </nav>
+
+    <!-- =======================================================================
+         TAB 1: LIVE SESSIONS
+         ======================================================================= -->
+    <div id="tabSessions" class="tab-panel active">
+      <div class="filter-search-strip">
+        <div class="search-pill-box">
+          <span class="icon">🔍</span>
+          <input type="text" id="sessionSearchInput" placeholder="Tìm kiếm theo IP, tên file, công thức màu..." />
+        </div>
+
+        <div class="filter-chips">
+          <button class="filter-chip active" data-filter="all">Tất cả phiên</button>
+          <button class="filter-chip" data-filter="has_original">Có ảnh gốc</button>
+          <button class="filter-chip" data-filter="edited">Đã chỉnh sửa (>0)</button>
+        </div>
+      </div>
+
+      <div id="sessionsGrid" class="sessions-bento-grid">
+        <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-dim); background: var(--surface-elevated); border-radius: 24px; border: 1px dashed var(--border);">
+          Đang nạp dữ liệu phiên từ máy chủ...
+        </div>
+      </div>
+    </div>
+
+    <!-- =======================================================================
+         TAB 2: USER MANAGEMENT
+         ======================================================================= -->
+    <div id="tabUsers" class="tab-panel">
+      <div class="user-table-card">
+        <div style="padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 style="margin: 0; font-size: 17px; font-weight: 600;">Danh Sách Tài Khoản Đã Đăng Ký</h3>
+            <p style="margin: 4px 0 0; font-size: 13px; color: var(--text-muted);">Phân quyền Admin/Thành viên và quản lý trạng thái tài khoản</p>
+          </div>
+          <button id="refreshUsersBtn" class="capsule-btn">🔄 Tải lại người dùng</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Người dùng</th>
+                <th>Email</th>
+                <th>Vai trò</th>
+                <th>Trạng thái</th>
+                <th>Số ảnh tải</th>
+                <th>Tổng lượt sửa</th>
+                <th>Lần đăng nhập cuối</th>
+                <th>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr>
+                <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-dim);">
+                  Đang tải danh sách người dùng...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- =======================================================================
+         TAB 3: SYSTEM AUDIT LOGS
+         ======================================================================= -->
+    <div id="tabLogs" class="tab-panel">
+      <div class="user-table-card" style="padding: 24px;">
+        <h3 style="margin: 0 0 16px; font-size: 17px; font-weight: 600;">Nhật Ký Tác Vụ Hệ Thống Gần Đây</h3>
+        <div id="globalLogsContainer" style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="text-align: center; color: var(--text-dim); padding: 40px;">Đang tải nhật ký...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =======================================================================
+         TAB 4: INFRASTRUCTURE & DOMAIN
+         ======================================================================= -->
+    <div id="tabInfra" class="tab-panel">
+      <div class="infra-grid">
+        <div class="infra-card">
+          <h3><span>🌐</span> Tên Miền Chính Thức</h3>
+          <div class="infra-list">
+            <div class="infra-item">
+              <span>Domain:</span>
+              <code>https://npccc.io.vn</code>
+            </div>
+            <div class="infra-item">
+              <span>DNS Proxy:</span>
+              <span style="color: #ea580c; font-weight: 600;">Cloudflare Edge (Proxied)</span>
+            </div>
+            <div class="infra-item">
+              <span>SSL/TLS:</span>
+              <span style="color: #16a34a; font-weight: 600;">TLS 1.3 / HTTP/2 (Let's Encrypt)</span>
+            </div>
+            <div class="infra-item">
+              <span>Mạng:</span>
+              <span>172.67.168.238 / 104.21.79.31</span>
+            </div>
+          </div>
+          <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <a href="https://npccc.io.vn" target="_blank" class="capsule-btn active" style="text-decoration: none;">
+              <span>Mở Web Ngay ↗</span>
+            </a>
+            <button class="capsule-btn" onclick="testPing()">
+              <span>Kiểm tra Ping</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="infra-card">
+          <h3><span>🛡️</span> Cloudflare Zero Trust Tunnel</h3>
+          <div class="infra-list">
+            <div class="infra-item">
+              <span>Tunnel Name:</span>
+              <code>iro-studio</code>
+            </div>
+            <div class="infra-item">
+              <span>Tunnel ID:</span>
+              <code style="font-size:11px;">f4f2f708-37f0-41b0-9b5d-7f4f39899734</code>
+            </div>
+            <div class="infra-item">
+              <span>Client Version:</span>
+              <code>cloudflared 2026.10.1</code>
+            </div>
+            <div class="infra-item">
+              <span>Giao thức:</span>
+              <span style="color: #16a34a; font-weight: 600;">QUIC (UDP) & HTTP/2</span>
+            </div>
+            <div class="infra-item">
+              <span>Đích đến cục bộ:</span>
+              <code>http://localhost:3000</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="infra-card">
+          <h3><span>🖥️</span> Máy Chủ & Dịch Vụ Node.js</h3>
+          <div class="infra-list">
+            <div class="infra-item">
+              <span>Frontend Service:</span>
+              <span style="color: #16a34a; font-weight: 600;">iro-frontend.service (Port 3000)</span>
+            </div>
+            <div class="infra-item">
+              <span>Backend Service:</span>
+              <span style="color: #16a34a; font-weight: 600;">iro-backend.service (Port 5000)</span>
+            </div>
+            <div class="infra-item">
+              <span>Database:</span>
+              <code>SQLite (iro.db)</code>
+            </div>
+            <div class="infra-item">
+              <span>Tailscale Mesh IP:</span>
+              <code>100.113.89.21</code>
+            </div>
+            <div class="infra-item">
+              <span>LAN IP:</span>
+              <code>192.168.88.230</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- =========================================================================
+       MODAL XEM LỊCH SỬ CHỈNH SỬA CHI TIẾT
+       ========================================================================= -->
+  <div id="logModal" class="admin-modal-overlay">
+    <div class="admin-modal-card">
+      <div class="admin-modal-header">
+        <h3 id="modalTitle">Lịch Sử Từng Bước Tinh Chỉnh</h3>
+        <button id="closeModalBtn" class="capsule-btn" style="padding: 4px 10px;">✕</button>
+      </div>
+      <div id="modalBody" class="admin-modal-body"></div>
     </div>
   </div>
 
+  <!-- =========================================================================
+       MODAL LIGHTBOX XEM ẢNH FULLSCREEN
+       ========================================================================= -->
+  <div id="lightboxModal" class="lightbox-modal" onclick="closeLightbox(event)">
+    <div class="lightbox-container" onclick="event.stopPropagation()">
+      <div class="lightbox-img-wrap">
+        <img id="lightboxImg" src="" alt="Ảnh xem trước lớn" />
+      </div>
+      <div class="lightbox-caption">
+        <span id="lightboxTitle">Ảnh</span>
+        <button class="capsule-btn" onclick="closeLightbox(event)" style="background: rgba(255,255,255,0.2); color: #fff; border-color: rgba(255,255,255,0.3);">Đóng ✕</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       JAVASCRIPT LOGIC REALTIME & TƯƠNG TÁC
+       ========================================================================= -->
   <script>
     let autoRefresh = true;
     let refreshTimer = null;
+    let cachedSessions = [];
+    let currentFilter = 'all';
+    let searchQuery = '';
+    let currentTheme = localStorage.getItem('iro_admin_theme') || 'light';
 
+    // Elements
     const sessionsGrid = document.getElementById('sessionsGrid');
     const autoRefreshBtn = document.getElementById('autoRefreshBtn');
     const manualRefreshBtn = document.getElementById('manualRefreshBtn');
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const sessionSearchInput = document.getElementById('sessionSearchInput');
     const logModal = document.getElementById('logModal');
     const closeModalBtn = document.getElementById('closeModalBtn');
     const modalTitle = document.getElementById('modalTitle');
     const modalBody = document.getElementById('modalBody');
+    const lightboxModal = document.getElementById('lightboxModal');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxTitle = document.getElementById('lightboxTitle');
 
+    // 1. Theme Management (Default Light)
+    function applyTheme(theme) {
+      currentTheme = theme;
+      localStorage.setItem('iro_admin_theme', theme);
+      if (theme === 'dark') {
+        document.body.classList.add('theme-dark');
+        themeToggleBtn.innerHTML = '<span>🌙 Giao diện Tối</span>';
+      } else {
+        document.body.classList.remove('theme-dark');
+        themeToggleBtn.innerHTML = '<span>☀️ Giao diện Sáng</span>';
+      }
+    }
+    applyTheme(currentTheme);
+
+    themeToggleBtn.addEventListener('click', () => {
+      applyTheme(currentTheme === 'light' ? 'dark' : 'light');
+    });
+
+    // 2. Tabs Switcher
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+        btn.classList.add('active');
+        const tabId = btn.getAttribute('data-tab');
+        const targetPanel = document.getElementById(tabId);
+        if (targetPanel) targetPanel.classList.add('active');
+
+        if (tabId === 'tabUsers') fetchUsers();
+        if (tabId === 'tabLogs') fetchGlobalLogs();
+      });
+    });
+
+    // 3. Filter Chips & Search
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentFilter = chip.getAttribute('data-filter');
+        renderSessions();
+      });
+    });
+
+    sessionSearchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value.toLowerCase().trim();
+      renderSessions();
+    });
+
+    // 4. Auto-Refresh Controls
     autoRefreshBtn.addEventListener('click', () => {
       autoRefresh = !autoRefresh;
       autoRefreshBtn.classList.toggle('active', autoRefresh);
@@ -437,100 +1517,146 @@
       else clearInterval(refreshTimer);
     });
 
-    manualRefreshBtn.addEventListener('click', fetchSessions);
+    manualRefreshBtn.addEventListener('click', () => {
+      fetchSessions();
+      if (document.getElementById('tabUsers').classList.contains('active')) fetchUsers();
+      if (document.getElementById('tabLogs').classList.contains('active')) fetchGlobalLogs();
+    });
+
     closeModalBtn.addEventListener('click', () => logModal.classList.remove('open'));
 
+    // 5. Fetch Sessions API
     async function fetchSessions() {
       try {
         const res = await fetch('api.php?action=get_sessions');
         const data = await res.json();
         if (!data.ok) return;
 
-        document.getElementById('statTotalPhotos').textContent = data.totalCount || 0;
-        document.getElementById('statTotalEdits').textContent = data.totalEdits || 0;
-        document.getElementById('statActiveNow').textContent = data.sessions.length || 0;
+        cachedSessions = data.sessions || [];
+        document.getElementById('statTotalPhotos').textContent = data.totalCount || cachedSessions.length;
+        document.getElementById('statTotalEdits').textContent = data.totalEdits || cachedSessions.reduce((acc, s) => acc + (s.edit_count || 0), 0);
+        document.getElementById('statActiveNow').textContent = cachedSessions.length;
+        document.getElementById('tabCountSessions').textContent = cachedSessions.length;
 
-        if (data.sessions.length > 0) {
-          const lastTime = new Date(data.sessions[0].updated_at).toLocaleTimeString('vi-VN');
+        if (cachedSessions.length > 0) {
+          const lastTime = new Date(cachedSessions[0].updated_at).toLocaleTimeString('vi-VN');
           document.getElementById('statLastUpdate').textContent = lastTime;
+          document.getElementById('statSyncStatus').textContent = 'Đồng bộ realtime mượt mà';
         }
 
-        renderGrid(data.sessions);
+        renderSessions();
       } catch (err) {
-        console.error('Lỗi nạp sessions:', err);
+        console.error('Lỗi khi nạp sessions:', err);
+        document.getElementById('statSyncStatus').textContent = 'Mất kết nối API';
       }
     }
 
-    function renderGrid(sessions) {
-      if (!sessions || sessions.length === 0) {
+    // 6. Render Sessions Grid
+    function renderSessions() {
+      let filtered = cachedSessions;
+
+      if (currentFilter === 'has_original') {
+        filtered = filtered.filter(s => !!s.original_url);
+      } else if (currentFilter === 'edited') {
+        filtered = filtered.filter(s => (s.edit_count || 0) > 0);
+      }
+
+      if (searchQuery) {
+        filtered = filtered.filter(s => {
+          const ip = (s.client_ip || '').toLowerCase();
+          const fn = (s.filename || '').toLowerCase();
+          const rec = (s.recipe_name || '').toLowerCase();
+          const usr = (s.user_name || '').toLowerCase();
+          return ip.includes(searchQuery) || fn.includes(searchQuery) || rec.includes(searchQuery) || usr.includes(searchQuery);
+        });
+      }
+
+      if (!filtered || filtered.length === 0) {
         sessionsGrid.innerHTML = `
-          <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-dim); background: var(--card-bg); border-radius: 16px; border: 1px dashed var(--border-color);">
-            <div style="font-size: 32px; margin-bottom: 8px;">📷</div>
-            <div style="font-size: 15px; font-weight: 600; color: #fff;">Chưa có ảnh nào được tải lên máy chủ</div>
-            <p style="font-size: 13px; margin: 4px 0 0;">Mở phòng tối web, kéo thả ảnh vào và thử kéo thanh trượt để xem đồng bộ trực tiếp tại đây!</p>
+          <div style="grid-column: 1/-1; text-align: center; padding: 70px 20px; color: var(--text-dim); background: var(--surface-elevated); border-radius: 24px; border: 1px dashed var(--border);">
+            <div style="font-size: 36px; margin-bottom: 10px;">📷</div>
+            <div style="font-size: 16px; font-weight: 600; color: var(--text);">Không tìm thấy phiên chỉnh ảnh phù hợp</div>
+            <p style="font-size: 13.5px; margin: 6px 0 0; color: var(--text-muted);">
+              Mở phòng tối web IRO Studio, kéo thả ảnh vào để xem dữ liệu xuất hiện trực tiếp tại đây!
+            </p>
           </div>
         `;
         return;
       }
 
-      sessionsGrid.innerHTML = sessions.map(s => {
-        const settings = s.settings || {};
+      sessionsGrid.innerHTML = filtered.map(s => {
+        const settings = s.settings_json || s.settings || {};
         const params = [];
-        if (settings.exposure) params.push(`EV: ${settings.exposure > 0 ? '+' : ''}${settings.exposure}`);
-        if (settings.temperature) params.push(`K: ${settings.temperature}`);
-        if (settings.highlight) params.push(`H: ${settings.highlight}`);
-        if (settings.shadow) params.push(`S: ${settings.shadow}`);
-        if (settings.color) params.push(`Màu: ${settings.color}`);
+        if (settings.exposure !== undefined && settings.exposure !== 0) params.push(`EV: ${settings.exposure > 0 ? '+' : ''}${settings.exposure}`);
+        if (settings.temperature) params.push(`WB: ${settings.temperature}`);
+        if (settings.highlight) params.push(`High: ${settings.highlight > 0 ? '+' : ''}${settings.highlight}`);
+        if (settings.shadow) params.push(`Shadow: ${settings.shadow > 0 ? '+' : ''}${settings.shadow}`);
+        if (settings.color) params.push(`Màu: ${settings.color > 0 ? '+' : ''}${settings.color}`);
         if (settings.grain) params.push(`Hạt: ${settings.grain}`);
+        if (settings.proMist) params.push(`ProMist: ${settings.proMist}`);
+        if (settings.clarity) params.push(`Clarity: ${settings.clarity}`);
 
-        const timeStr = new Date(s.updated_at).toLocaleTimeString('vi-VN') + ' ' + new Date(s.updated_at).toLocaleDateString('vi-VN');
+        const timeStr = new Date(s.updated_at).toLocaleTimeString('vi-VN') + ' · ' + new Date(s.updated_at).toLocaleDateString('vi-VN');
 
         return `
-          <div class="session-card" data-sid="${s.session_id}">
-            <div class="session-card-header">
-              <div class="user-info">
-                <span class="user-ip">IP: ${s.client_ip || '127.0.0.1'}</span>
-                <span class="user-time">${timeStr}</span>
+          <div class="session-bento-card" data-sid="${s.session_id}">
+            <div class="session-card-head">
+              <div class="client-badge-block">
+                <span class="client-ip">
+                  <span>●</span> IP: ${s.client_ip || '127.0.0.1'}
+                </span>
+                <span class="client-time">${timeStr}</span>
               </div>
-              <span class="recipe-badge">${s.recipe_name || 'Tự chỉnh'}</span>
+              <span class="recipe-pill">${s.recipe_name || 'Original'}</span>
             </div>
 
-            <div class="card-images">
-              <div class="img-box">
-                <span>Ảnh Gốc</span>
-                ${s.original_url 
-                  ? `<a href="${s.original_url}" target="_blank"><img src="${s.original_url}" alt="Ảnh gốc" loading="lazy"></a>`
-                  : `<div class="placeholder">Chưa lưu ảnh gốc</div>`}
+            <div class="card-dual-images">
+              <div class="img-box-wrap">
+                <div class="img-box-label">
+                  <span>Ảnh Gốc</span>
+                  ${s.original_url ? `<span style="font-size:10px;color:var(--text-dim);cursor:pointer;" onclick="openLightbox('${s.original_url}', 'Ảnh gốc: ${s.filename || ''}')">Phóng to 🔍</span>` : ''}
+                </div>
+                <div class="img-box-preview" onclick="${s.original_url ? `openLightbox('${s.original_url}', 'Ảnh gốc: ${s.filename || ''}')` : ''}">
+                  ${s.original_url
+                    ? `<img src="${s.original_url}" alt="Ảnh gốc" loading="lazy" />`
+                    : `<div class="img-placeholder">Chưa nạp ảnh gốc</div>`}
+                </div>
               </div>
-              <div class="img-box">
-                <span style="color: var(--accent-color);">Đang sửa Trực tiếp ✨</span>
-                ${s.preview_url 
-                  ? `<a href="${s.preview_url}" target="_blank"><img src="${s.preview_url}" alt="Đang sửa" loading="lazy"></a>`
-                  : `<div class="placeholder">Đang xử lý...</div>`}
+
+              <div class="img-box-wrap">
+                <div class="img-box-label">
+                  <span style="color:var(--accent);">Đang sửa Live ✨</span>
+                  ${s.preview_url ? `<span style="font-size:10px;color:var(--accent);cursor:pointer;" onclick="openLightbox('${s.preview_url}', 'Ảnh đang chỉnh sửa: ${s.filename || ''}')">Phóng to 🔍</span>` : ''}
+                </div>
+                <div class="img-box-preview" onclick="${s.preview_url ? `openLightbox('${s.preview_url}', 'Ảnh đang chỉnh sửa: ${s.filename || ''}')` : ''}">
+                  ${s.preview_url
+                    ? `<img src="${s.preview_url}" alt="Ảnh đang sửa" loading="lazy" />`
+                    : `<div class="img-placeholder">Đang kết xuất...</div>`}
+                </div>
               </div>
             </div>
 
-            <div class="card-details">
-              <div class="meta-row">
-                <span>Tên file:</span>
-                <strong>${s.filename || 'photo.jpg'}</strong>
+            <div class="card-meta-details">
+              <div class="meta-line">
+                <span>Tên tập tin:</span>
+                <strong style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${s.filename || 'photo.jpg'}</strong>
               </div>
-              <div class="meta-row">
+              <div class="meta-line">
                 <span>Độ phân giải:</span>
-                <strong>${s.width ? `${s.width}×${s.height}px` : 'N/A'}</strong>
+                <strong>${s.width ? `${s.width} × ${s.height} px` : 'Chuẩn Studio'}</strong>
               </div>
-              <div class="meta-row">
+              <div class="meta-line">
                 <span>Thông số tức thời:</span>
               </div>
-              <div class="sliders-preview">
-                ${params.length ? params.map(p => `<span class="pill-param">${p}</span>`).join('') : '<span class="pill-param">Mặc định</span>'}
+              <div class="specs-pill-cloud">
+                ${params.length ? params.map(p => `<span class="specs-pill">${p}</span>`).join('') : '<span class="specs-pill">Mặc định ban đầu</span>'}
               </div>
             </div>
 
-            <div class="card-footer">
-              <span class="edit-counter">Lượt sửa: <strong>${s.edit_count || 0}</strong></span>
-              <button class="btn-action" onclick="viewLogs('${s.session_id}', '${s.filename}')" style="padding: 4px 10px; font-size: 11.5px;">
-                📜 Xem lịch sử
+            <div class="card-action-footer">
+              <span class="edits-count">Lượt tinh chỉnh: <strong>${s.edit_count || 0}</strong></span>
+              <button class="capsule-btn" onclick="viewLogs('${s.session_id}', '${s.filename}')" style="padding: 4px 12px; font-size: 12px;">
+                📜 Lịch sử
               </button>
             </div>
           </div>
@@ -538,41 +1664,171 @@
       }).join('');
     }
 
+    // 7. View Logs Modal
     async function viewLogs(sessionId, filename) {
       modalTitle.textContent = `Lịch sử chỉnh sửa: ${filename || sessionId}`;
-      modalBody.innerHTML = '<div style="text-align: center; padding: 20px;">Đang tải...</div>';
+      modalBody.innerHTML = '<div style="text-align: center; padding: 24px; color: var(--text-dim);">Đang tải lịch sử...</div>';
       logModal.classList.add('open');
 
       try {
         const res = await fetch(`api.php?action=get_logs&sessionId=${encodeURIComponent(sessionId)}`);
         const data = await res.json();
         if (!data.ok || !data.logs || !data.logs.length) {
-          modalBody.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 20px;">Chưa có bước chỉnh sửa nào.</div>';
+          modalBody.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 24px;">Chưa ghi nhận bước chỉnh sửa nào.</div>';
           return;
         }
 
         modalBody.innerHTML = data.logs.map(log => {
           const t = new Date(log.created_at).toLocaleTimeString('vi-VN');
           return `
-            <div class="log-item">
+            <div class="timeline-log-row">
               <div>${log.detail || log.action}</div>
-              <div class="log-time">${t}</div>
+              <div class="timeline-log-time">${t}</div>
             </div>
           `;
         }).join('');
       } catch (err) {
-        modalBody.innerHTML = '<div style="color: #ef4444; padding: 20px;">Lỗi khi nạp lịch sử.</div>';
+        modalBody.innerHTML = '<div style="color: #ef4444; padding: 20px; text-align: center;">Không thể nạp lịch sử từ máy chủ.</div>';
       }
     }
 
+    // 8. Lightbox Fullscreen Preview
+    function openLightbox(url, title) {
+      lightboxImg.src = url;
+      lightboxTitle.textContent = title || 'Xem ảnh lớn';
+      lightboxModal.classList.add('open');
+    }
+
+    function closeLightbox(e) {
+      lightboxModal.classList.remove('open');
+    }
+
+    // 9. Fetch Users (User Management Tab)
+    async function fetchUsers() {
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: var(--text-dim);">Đang tải dữ liệu người dùng...</td></tr>';
+
+      try {
+        const token = localStorage.getItem('iro_token') || '';
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const res = await fetch('api.php?action=admin_get_users', { headers });
+        const data = await res.json();
+
+        if (!data.ok || !data.users) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 40px; color: var(--text-dim);">
+                ${data.error || 'Cần đăng nhập tài khoản Quản Trị Viên (Admin) trên Studio để quản lý phân quyền.'}
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        document.getElementById('tabCountUsers').textContent = data.users.length;
+
+        tbody.innerHTML = data.users.map(u => {
+          const created = new Date(u.created_at).toLocaleDateString('vi-VN');
+          const lastLog = u.last_login_at ? new Date(u.last_login_at).toLocaleTimeString('vi-VN') + ' ' + new Date(u.last_login_at).toLocaleDateString('vi-VN') : 'Chưa có';
+
+          return `
+            <tr>
+              <td><code>#${u.id}</code></td>
+              <td><strong>${u.username}</strong></td>
+              <td>${u.email}</td>
+              <td><span class="role-badge ${u.role}">${u.role}</span></td>
+              <td><span class="status-badge ${u.status}">● ${u.status}</span></td>
+              <td><strong>${u.photo_count || 0}</strong></td>
+              <td><strong>${u.total_edits || 0}</strong></td>
+              <td style="font-size:12px;color:var(--text-dim);">${lastLog}</td>
+              <td>
+                <button class="capsule-btn" onclick="toggleUserStatus(${u.id}, '${u.status}')" style="padding: 3px 9px; font-size: 11px;">
+                  ${u.status === 'active' ? 'Khóa' : 'Kích hoạt'}
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #ef4444;">Lỗi kết nối khi nạp danh sách tài khoản.</td></tr>';
+      }
+    }
+
+    async function toggleUserStatus(userId, currentStatus) {
+      const nextStatus = currentStatus === 'active' ? 'banned' : 'active';
+      if (!confirm(`Bạn có chắc muốn chuyển trạng thái tài khoản #${userId} sang ${nextStatus}?`)) return;
+
+      try {
+        const token = localStorage.getItem('iro_token') || '';
+        const res = await fetch('api.php?action=admin_update_user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ userId, status: nextStatus })
+        });
+        const data = await res.json();
+        if (data.ok) fetchUsers();
+        else alert(data.error || 'Thao tác không thành công');
+      } catch (err) {
+        alert('Lỗi gửi yêu cầu cập nhật');
+      }
+    }
+
+    // 10. Fetch Global Audit Logs
+    async function fetchGlobalLogs() {
+      const c = document.getElementById('globalLogsContainer');
+      c.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-dim);">Đang tải nhật ký...</div>';
+
+      try {
+        const res = await fetch('api.php?action=get_logs');
+        const data = await res.json();
+        if (!data.ok || !data.logs || !data.logs.length) {
+          c.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-dim);">Chưa có nhật ký hoạt động nào.</div>';
+          return;
+        }
+
+        c.innerHTML = data.logs.slice(0, 50).map(log => {
+          const t = new Date(log.created_at).toLocaleTimeString('vi-VN') + ' · ' + new Date(log.created_at).toLocaleDateString('vi-VN');
+          return `
+            <div class="timeline-log-row">
+              <div>
+                <span style="font-family:var(--font-mono);font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.06);margin-right:8px;">${log.action}</span>
+                <span>${log.detail}</span>
+              </div>
+              <div class="timeline-log-time">${t}</div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        c.innerHTML = '<div style="color: #ef4444; padding: 20px; text-align: center;">Lỗi khi tải nhật ký toàn cục.</div>';
+      }
+    }
+
+    // 11. Test Ping
+    async function testPing() {
+      const t0 = performance.now();
+      try {
+        await fetch('api.php?action=get_sessions');
+        const ms = (performance.now() - t0).toFixed(1);
+        alert(`Kết nối Cloudflare Tunnel và Máy chủ phản hồi xuất sắc: ${ms} ms!`);
+      } catch (err) {
+        alert('Không nhận được phản hồi từ máy chủ');
+      }
+    }
+
+    // 12. Polling Loop
     function startPolling() {
       clearInterval(refreshTimer);
       refreshTimer = setInterval(() => {
-        if (autoRefresh) fetchSessions();
+        if (autoRefresh && document.getElementById('tabSessions').classList.contains('active')) {
+          fetchSessions();
+        }
       }, 2000);
     }
 
-    // Khởi chạy ngay
+    // Boot
     fetchSessions();
     startPolling();
   </script>

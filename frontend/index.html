@@ -163,15 +163,6 @@
           <button type="button" class="hero-btn primary" id="heroOpenBtn">
             <span>📷 Mở ảnh từ máy</span>
           </button>
-          <button type="button" class="hero-btn tonal sample-btn" data-sample="portrait">
-            <span>👩 Chân dung Hoàng hôn</span>
-          </button>
-          <button type="button" class="hero-btn tonal sample-btn" data-sample="street">
-            <span>🏮 Phố đêm Neon</span>
-          </button>
-          <button type="button" class="hero-btn tonal sample-btn" data-sample="landscape">
-            <span>🏔️ Phong cảnh Núi</span>
-          </button>
           <button type="button" class="hero-btn outlined" id="heroPromptBtn">
             <span>🪄 Tả cảnh AI</span>
           </button>
@@ -254,15 +245,24 @@
     <!-- SÂN KHẤU TRUNG TÂM (CENTER PHOTO STAGE) -->
     <section class="stage-column">
       <div class="stage" id="stageContainer">
-        <!-- Vùng rỗng dự phòng -->
-        <div id="empty" class="empty-state" hidden>
-          <div class="empty-icon">📷</div>
-          <h2>IRO Studio 3.0 · Material Design 3 Expressive</h2>
-          <p>Kéo & thả ảnh vào đây, hoặc bấm <b>Mở ảnh</b>.</p>
+        <!-- Vùng rỗng buồng tối (Empty State Dropzone) -->
+        <div id="empty" class="empty-state">
+          <div class="empty-icon-wrapper">
+            <span class="empty-sparkle">✦</span>
+            <div class="empty-icon">📷</div>
+          </div>
+          <h2>Chưa có ảnh trong buồng tối</h2>
+          <p>Kéo & thả ảnh vào đây, hoặc nhấn để duyệt tệp từ thiết bị của bạn.</p>
+          <div class="empty-actions">
+            <button type="button" class="btn primary empty-open-btn" id="emptyOpenBtn">
+              <span>🖼️ Chọn ảnh từ thiết bị</span>
+            </button>
+          </div>
+          <div class="empty-hint">Hỗ trợ JPG, PNG, WebP, AVIF, RAW (RAF / DNG)</div>
         </div>
 
         <div class="canvas-viewport" id="canvasViewport">
-          <div class="canvas-wrapper" id="canvasWrapper">
+          <div class="canvas-wrapper" id="canvasWrapper" hidden>
             <canvas id="canvas"></canvas>
             <canvas id="beforeCanvas" class="before-canvas" hidden></canvas>
             <div id="splitSlider" class="split-slider" hidden>
@@ -274,7 +274,7 @@
         </div>
 
         <!-- Chỉ báo thông tin ảnh dưới sân khấu (App Caption Pill) -->
-        <div class="stage-info-pill" id="stageInfoPill">
+        <div class="stage-info-pill" id="stageInfoPill" hidden>
           <span id="stageDimensionText">1200 × 800</span>
           <span class="dot-separator">·</span>
           <span id="stageFilmText">Classic Chrome</span>

@@ -358,6 +358,12 @@ document.querySelectorAll('.deck-tab-btn').forEach(btn => {
 });
 
 function updateStageInfoPill() {
+  const pill = document.querySelector('#stageInfoPill');
+  if (!state.source) {
+    if (pill) pill.hidden = true;
+    return;
+  }
+  if (pill) pill.hidden = false;
   const dimEl = document.querySelector('#stageDimensionText');
   const filmEl = document.querySelector('#stageFilmText');
   const frameEl = document.querySelector('#stageFrameText');
@@ -959,11 +965,13 @@ function renderLandingRecipeGrid() {
       </div>
     `;
     card.addEventListener('click', () => {
-      if (!state.source) {
-        generateSampleImage('portrait');
-      }
       applyCatalogRecipe(rec);
-      showScreen('editor');
+      if (!state.source) {
+        showToast(`Đã chọn công thức "${rec.name}". Vui lòng chọn ảnh để áp dụng!`, 'info', '📷');
+        document.querySelector('#photo')?.click();
+      } else {
+        showScreen('editor');
+      }
     });
     grid.append(card);
   }
@@ -991,11 +999,13 @@ document.querySelectorAll('.frame-preview-pill').forEach(pill => {
       frameStyleSelect.dispatchEvent(new Event('change', { bubbles: true }));
     }
     if (!state.source) {
-      generateSampleImage('portrait');
+      showToast('Đã chọn khung. Vui lòng mở ảnh từ máy để áp dụng!', 'info', '🖼️');
+      document.querySelector('#photo')?.click();
+    } else {
+      render();
+      selectDeckTab('tabFrames');
+      showScreen('editor');
     }
-    render();
-    selectDeckTab('tabFrames');
-    showScreen('editor');
   });
 });
 
@@ -1007,11 +1017,13 @@ document.querySelector('#heroPromptBtn')?.addEventListener('click', () => {
   promptTextInput?.focus();
 });
 document.querySelector('#heroRandomBtn')?.addEventListener('click', () => {
-  if (!state.source) {
-    generateSampleImage('portrait');
-  }
   applySurpriseRandomRecipe();
-  showScreen('editor');
+  if (!state.source) {
+    showToast(`Đã chọn ngẫu nhiên "${state.activeRecipeName}". Vui lòng mở ảnh để trải nghiệm!`, 'info', '🎲');
+    document.querySelector('#photo')?.click();
+  } else {
+    showScreen('editor');
+  }
 });
 
 function openRecipeLibraryModal() {
@@ -1870,8 +1882,10 @@ function runPromptRecipe(text) {
   syncInputsFromSettings();
   drawCurveEditor();
   promptModal.hidden = true;
-  if (!state.source) generateSampleImage('street');
-  else {
+  if (!state.source) {
+    showToast('Đã tạo công thức AI! Vui lòng chọn ảnh để áp dụng.', 'info', '🪄');
+    document.querySelector('#photo')?.click();
+  } else {
     commitHistory(`AI Tả cảnh: ${text.slice(0, 24)}`);
     render();
   }
@@ -2137,8 +2151,21 @@ function generateSampleImage(type = 'portrait') {
   loadSourceImageData(c.getImageData(0, 0, w, h), `Ảnh mẫu Studio (${type})`);
 }
 
+if (typeof window !== 'undefined') {
+  window.generateSampleImage = generateSampleImage;
+}
+
 document.querySelectorAll('[data-sample]').forEach(btn => {
   btn.addEventListener('click', () => generateSampleImage(btn.dataset.sample));
+});
+
+document.querySelector('#emptyOpenBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.querySelector('#photo')?.click();
+});
+document.querySelector('#empty')?.addEventListener('click', (e) => {
+  if (e.target && e.target.closest('#emptyOpenBtn')) return;
+  document.querySelector('#photo')?.click();
 });
 
 function createDownsampledImageData(srcData, maxDim = 1200) {
@@ -2963,9 +2990,6 @@ loginForm?.addEventListener('submit', async (e) => {
       localStorage.setItem('iro_token', data.token);
       updateUserAccountUI();
       unlockAppFromAuth();
-      if (!state.source) {
-        generateSampleImage('portrait');
-      }
       loginForm.reset();
       showToast(`Chào mừng ${data.user.full_name || data.user.username}!`, 'success', '👋');
       setStatus(`👤 Đã đăng nhập: ${data.user.full_name || data.user.username} (${data.user.role.toUpperCase()})`);
@@ -3008,9 +3032,6 @@ registerForm?.addEventListener('submit', async (e) => {
       localStorage.setItem('iro_token', data.token);
       updateUserAccountUI();
       unlockAppFromAuth();
-      if (!state.source) {
-        generateSampleImage('portrait');
-      }
       registerForm.reset();
       showToast('Đăng ký tài khoản thành công!', 'success', '🎉');
       setStatus(`🎉 Chào mừng thành viên mới: ${data.user.full_name || data.user.username}!`);
@@ -3405,9 +3426,8 @@ window.iroLoadCloudPhoto = async (url, filenameEnc, settingsJsonStr) => {
   }
 };
 
-// Khởi tạo trạng thái ban đầu, tự động nạp ảnh mẫu studio và nạp thước đo M3
+// Khởi tạo trạng thái ban đầu, nạp thước đo M3 (không nạp ảnh mẫu mặc định)
 drawCurveEditor();
-generateSampleImage('portrait');
 initM3RulerDock();
 checkCurrentUser();
 

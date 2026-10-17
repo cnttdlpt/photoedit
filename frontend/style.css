@@ -568,50 +568,105 @@ button:disabled {
 
 .empty-state {
   text-align: center;
-  max-width: 480px;
-  padding: 32px 26px;
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--m3-radius-xl);
-  background: color-mix(in srgb, var(--panel) 78%, transparent);
-  backdrop-filter: blur(12px);
+  max-width: 520px;
+  width: 90%;
+  padding: 44px 32px;
+  border: 2px dashed rgba(26, 115, 232, 0.35);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
   animation: m3PopIn 0.35s var(--m3-emphasized-decelerate);
+  margin: auto;
+  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.empty-state:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 54px rgba(26, 115, 232, 0.12), 0 0 0 1px rgba(26, 115, 232, 0.25) inset;
+}
+
+.empty-icon-wrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(26, 115, 232, 0.12), rgba(161, 66, 244, 0.12));
+  border: 1px solid rgba(26, 115, 232, 0.2);
+}
+
+.empty-sparkle {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  font-size: 14px;
+  color: #a142f4;
+  animation: pulse 2s infinite ease-in-out;
 }
 
 .empty-icon {
-  font-size: 42px;
-  margin-bottom: 10px;
+  font-size: 34px;
+  line-height: 1;
 }
 
 .empty-state h2 {
   margin: 0 0 8px;
-  font-size: 18px;
-  font-weight: 800;
+  font-family: var(--font-brand);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
 }
 
 .empty-state p {
-  margin: 0 0 18px;
+  margin: 0 0 22px;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
-.sample-presets {
+.empty-actions {
   display: flex;
-  gap: 8px;
   justify-content: center;
-  flex-wrap: wrap;
+  margin-bottom: 16px;
 }
 
-.sample-btn {
-  background: var(--panel-elevated);
-  border-color: var(--line-strong);
-  padding: 8px 14px;
-  border-radius: var(--m3-radius-pill);
+.empty-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #1a73e8, #1557b0);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 6px 18px rgba(26, 115, 232, 0.32);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  cursor: pointer;
 }
 
-.sample-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+.empty-open-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(26, 115, 232, 0.42);
+  filter: brightness(1.05);
+}
+
+.empty-hint {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.85;
+  font-family: var(--font-code);
 }
 
 /* Canvas & Split-Wipe Comparison */

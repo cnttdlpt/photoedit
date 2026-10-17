@@ -1158,14 +1158,14 @@ button:disabled {
    5. HỘP THOẠI MODAL M3 (KHO 392 CÔNG THỨC, LIGHTCRAFT, COMMAND PALETTE)
    ========================================================================== */
 .contact-sheet-modal {
-  position: absolute;
+  position: fixed;
   inset: 14px;
   background: color-mix(in srgb, var(--panel) 96%, transparent);
   backdrop-filter: blur(22px) saturate(160%);
   border: 1px solid var(--line-strong);
   border-radius: var(--m3-radius-xl);
   padding: 18px;
-  z-index: 25;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -4017,4 +4017,73 @@ body.theme-porcelain .nav-pill-btn.active {
   color: #ffffff !important;
   box-shadow: 0 4px 12px rgba(26, 115, 232, 0.28) !important;
 }
+
+/* ==========================================================================
+   11. FIX MODAL VISIBILITY & PROMINENT CLOSE BUTTONS
+   ========================================================================== */
+.contact-sheet-modal {
+  position: fixed !important;
+  inset: 24px !important;
+  z-index: 1000 !important;
+  padding: 24px !important;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.45) !important;
+}
+
+body.theme-porcelain .contact-sheet-modal {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  border-top: 1px solid #ffffff !important;
+  box-shadow: 0 24px 72px rgba(15, 23, 42, 0.2) !important;
+  color: #1f2937 !important;
+}
+
+.contact-sheet-header {
+  position: sticky !important;
+  top: -24px !important;
+  margin-top: -8px !important;
+  padding-top: 8px !important;
+  padding-bottom: 14px !important;
+  background: inherit !important;
+  backdrop-filter: blur(24px) !important;
+  z-index: 30 !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+
+#closeRecipeLibrary,
+#closeLightCraft,
+#closeContactSheet,
+#closeQuadView,
+#closePromptModal,
+#closeCmdPalette,
+.modal-header-actions button:last-child {
+  padding: 8px 20px !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  font-size: 13.5px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15) !important;
+}
+
+#closeRecipeLibrary:hover,
+#closeLightCraft:hover,
+#closeContactSheet:hover,
+#closeQuadView:hover,
+#closePromptModal:hover,
+#closeCmdPalette:hover,
+.modal-header-actions button:last-child:hover {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border-color: #ef4444 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35) !important;
+}
+
 

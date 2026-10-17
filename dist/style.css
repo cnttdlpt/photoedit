@@ -116,6 +116,18 @@ body {
   display: flex;
   align-items: center;
   gap: 9px;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s cubic-bezier(0.2, 0, 0, 1), transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.brand:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.brand:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .brand-badge {

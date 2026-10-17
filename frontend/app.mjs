@@ -319,6 +319,18 @@ function showScreen(screenId, pushHistory = true) {
 document.querySelector('#editorBackBtn')?.addEventListener('click', () => {
   showScreen('landing');
 });
+document.querySelector('#brandIdentity')?.addEventListener('click', () => {
+  showScreen('landing');
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+});
+document.querySelector('#brandIdentity')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    showScreen('landing');
+  }
+});
 document.querySelector('#resumeEditorBtn')?.addEventListener('click', () => {
   showScreen('editor');
 });

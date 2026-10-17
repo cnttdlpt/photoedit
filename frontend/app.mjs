@@ -336,11 +336,17 @@ document.querySelector('#resumeEditorBtn')?.addEventListener('click', () => {
 });
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('popstate', (e) => {
-    const targetScreen = (e.state && e.state.screen) || (location.hash === '#/editor' ? 'editor' : 'landing');
+    const targetScreen = (e.state && e.state.screen) || (location.hash.startsWith('#/editor') ? 'editor' : 'landing');
     showScreen(targetScreen, false);
+    if (location.hash.includes('tab=film')) {
+      selectDeckTab('tabFilm');
+    }
   });
-  if (location.hash === '#/editor') {
+  if (location.hash.startsWith('#/editor')) {
     showScreen('editor', false);
+    if (location.hash.includes('tab=film')) {
+      selectDeckTab('tabFilm');
+    }
   }
 }
 

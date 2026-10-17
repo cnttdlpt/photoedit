@@ -3101,3 +3101,476 @@ body.theme-porcelain .stage-info-pill {
     font-size: 22px;
   }
 }
+
+
+/* ==========================================================================
+   GOOGLE ANTIGRAVITY (AGY) UX & DESIGN LANGUAGE EXTENSION
+   Source & Inspiration: https://antigravity.google/
+   ========================================================================== */
+
+:root {
+  --font-sans: 'Google Sans Flex', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'Google Sans Code', 'Roboto Mono', monospace;
+  --agy-bg: #0c0d12;
+  --agy-surface: #14161d;
+  --agy-surface-elevated: rgba(22, 25, 34, 0.72);
+  --agy-border: rgba(255, 255, 255, 0.08);
+  --agy-border-subtle: rgba(255, 255, 255, 0.05);
+  --agy-border-hover: rgba(255, 255, 255, 0.18);
+  --agy-blue: #3186ff;
+  --agy-amber: #fbbc04;
+  --agy-coral: #fc413d;
+  --agy-green: #00b95c;
+  --agy-purple: #a142f4;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 1. Antigravity Ambient Background Aurora */
+.agy-ambient-aurora {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+  opacity: 0.75;
+  transition: opacity 0.5s ease;
+}
+
+body.theme-porcelain .agy-ambient-aurora {
+  opacity: 0.35;
+}
+
+.agy-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(130px);
+  will-change: transform;
+}
+
+.agy-glow-blue {
+  top: -12%;
+  left: 20%;
+  width: 650px;
+  height: 520px;
+  background: radial-gradient(circle, rgba(49, 134, 255, 0.22) 0%, rgba(49, 134, 255, 0) 70%);
+  animation: agyFloat 20s ease-in-out infinite alternate;
+}
+
+.agy-glow-amber {
+  top: 15%;
+  right: 8%;
+  width: 580px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(251, 188, 4, 0.16) 0%, rgba(251, 188, 4, 0) 70%);
+  animation: agyFloat2 24s ease-in-out infinite alternate;
+}
+
+.agy-glow-coral {
+  bottom: 8%;
+  left: 35%;
+  width: 520px;
+  height: 460px;
+  background: radial-gradient(circle, rgba(252, 65, 61, 0.14) 0%, rgba(252, 65, 61, 0) 70%);
+  animation: agyFloat3 28s ease-in-out infinite alternate;
+}
+
+.agy-glow-green {
+  top: 45%;
+  left: 4%;
+  width: 500px;
+  height: 420px;
+  background: radial-gradient(circle, rgba(0, 185, 92, 0.12) 0%, rgba(0, 185, 92, 0) 70%);
+  animation: agyFloat 22s ease-in-out infinite alternate;
+}
+
+@keyframes agyFloat {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(45px, 35px) scale(1.08); }
+}
+
+@keyframes agyFloat2 {
+  0% { transform: translate(0, 0) scale(1.05); }
+  100% { transform: translate(-40px, 30px) scale(0.95); }
+}
+
+@keyframes agyFloat3 {
+  0% { transform: translate(0, 0) scale(0.97); }
+  100% { transform: translate(35px, -45px) scale(1.06); }
+}
+
+/* 2. Antigravity Announcement Pill */
+.agy-announcement-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 16px 5px 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  margin-bottom: 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.22s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.agy-announcement-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-top-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+}
+
+.agy-announcement-pill .pill-badge {
+  padding: 4px 11px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #3186ff 0%, #a142f4 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.agy-announcement-pill .pill-text {
+  font-size: 13px;
+  font-weight: 450;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.agy-announcement-pill .pill-arrow {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.agy-announcement-pill:hover .pill-arrow {
+  transform: translateX(4px);
+  color: #ffffff;
+}
+
+/* 3. Antigravity Hero Banner & Typography */
+.hero-card-banner {
+  position: relative;
+  border-radius: 28px !important;
+  background: radial-gradient(120% 100% at 80% 10%, rgba(49, 134, 255, 0.08) 0%, rgba(20, 23, 30, 0.75) 60%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.09) !important;
+  backdrop-filter: blur(20px) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+.hero-content h2 {
+  font-family: var(--font-sans);
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin: 0 0 14px;
+  background: linear-gradient(135deg, #ffffff 45%, #9aa0a6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-content p {
+  font-size: 16px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.75);
+  max-width: 640px;
+  margin: 0 0 28px;
+}
+
+.hero-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hero-btn {
+  border-radius: 9999px !important;
+  font-family: var(--font-sans);
+  font-weight: 450;
+  font-size: 13.5px;
+  padding: 10px 20px !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-btn.primary {
+  background: linear-gradient(135deg, #f09a3e 0%, #e67e22 100%) !important;
+  color: #121316 !important;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(240, 154, 62, 0.35) !important;
+  border: none !important;
+}
+
+.hero-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(240, 154, 62, 0.5) !important;
+}
+
+.hero-btn.tonal {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #f3f4f8 !important;
+  backdrop-filter: blur(8px);
+}
+
+.hero-btn.tonal:hover {
+  background: rgba(255, 255, 255, 0.13) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  transform: translateY(-1.5px);
+}
+
+.hero-btn.outlined {
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.hero-btn.outlined:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  transform: translateY(-1.5px);
+}
+
+/* 4. Antigravity Bento Cards */
+.bento-card {
+  border-radius: 24px !important;
+  background: var(--agy-surface-elevated) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35) !important;
+  transition: transform 0.24s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.24s ease, border-color 0.24s ease !important;
+}
+
+.bento-card:hover {
+  transform: translateY(-2px);
+  border-top-color: rgba(255, 255, 255, 0.26) !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45) !important;
+}
+
+.bento-header h3 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  font-size: 19px;
+  margin: 0 0 4px;
+}
+
+.bento-header p {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 13.5px;
+  margin: 0;
+}
+
+/* 5. Antigravity Sensor Pills & Search Input */
+.sensor-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.sensor-bento-pill {
+  border-radius: 9999px !important;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 450;
+  padding: 7px 16px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sensor-bento-pill:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-1px);
+}
+
+.sensor-bento-pill.active {
+  background: rgba(49, 134, 255, 0.16) !important;
+  border-color: #3186ff !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(49, 134, 255, 0.32) !important;
+}
+
+.sensor-bento-pill .sensor-count {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+  padding: 2px 7px;
+  font-size: 11px;
+}
+
+.landing-search-bar input {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  padding: 12px 22px !important;
+  box-sizing: border-box;
+  transition: all 0.22s ease !important;
+}
+
+.landing-search-bar input:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: #3186ff !important;
+  box-shadow: 0 0 0 3px rgba(49, 134, 255, 0.28), 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* 6. Landing Recipe Card (Antigravity Style) */
+.landing-recipe-card {
+  border-radius: 18px !important;
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(10px);
+  padding: 14px 16px !important;
+  transition: all 0.22s cubic-bezier(0.2, 0, 0, 1) !important;
+  cursor: pointer;
+}
+
+.landing-recipe-card:hover {
+  background: rgba(255, 255, 255, 0.075) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+.landing-recipe-card.active {
+  border-color: #f09a3e !important;
+  box-shadow: 0 0 16px rgba(240, 154, 62, 0.25) !important;
+}
+
+.l-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.l-card-title {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 14.5px;
+  color: #ffffff;
+}
+
+.l-card-sensor {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(49, 134, 255, 0.14);
+  color: #749bff;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  border: 1px solid rgba(49, 134, 255, 0.25);
+}
+
+.l-card-film {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+
+.l-card-meta {
+  display: flex;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* 7. Topbar & Antigravity Back Button */
+.topbar.m3-top-app-bar {
+  background: rgba(12, 13, 18, 0.85) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+}
+
+.m3-back-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(12px) !important;
+  border-radius: 9999px !important;
+  color: #f3f4f8 !important;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 13.5px;
+  padding: 7px 18px 7px 14px !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.m3-back-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: rgba(255, 255, 255, 0.26) !important;
+  transform: translateX(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35) !important;
+}
+
+.m3-back-btn .back-arrow {
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.m3-back-btn:hover .back-arrow {
+  transform: translateX(-3px);
+}
+
+/* 8. Antigravity Stage Info Pill & Telemetry */
+.stage-info-pill {
+  font-family: var(--font-mono) !important;
+  font-size: 12px;
+  background: rgba(18, 20, 26, 0.82) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 9999px !important;
+  backdrop-filter: blur(16px) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.38) !important;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 6px 18px !important;
+}
+
+/* 9. Circular Tools with Antigravity Glow */
+.circular-tool-item {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.circular-tool-item:hover {
+  transform: translateY(-2px);
+}
+
+.circular-tool-item.active .tool-circle-icon {
+  background: linear-gradient(135deg, #f09a3e 0%, #e67e22 100%) !important;
+  color: #121316 !important;
+  box-shadow: 0 0 18px rgba(240, 154, 62, 0.45) !important;
+  border: 2px solid #ffffff !important;
+}

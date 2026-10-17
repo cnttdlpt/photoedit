@@ -1655,13 +1655,45 @@
 
             <div class="card-action-footer">
               <span class="edits-count">Lượt tinh chỉnh: <strong>${s.edit_count || 0}</strong></span>
-              <button class="capsule-btn" onclick="viewLogs('${s.session_id}', '${s.filename}')" style="padding: 4px 12px; font-size: 12px;">
-                📜 Lịch sử
-              </button>
+              <div style="display: flex; gap: 6px;">
+                <button class="capsule-btn" onclick="viewLogs('${s.session_id}', '${s.filename}')" style="padding: 4px 10px; font-size: 12px;">
+                  📜 Lịch sử
+                </button>
+                <button class="capsule-btn danger" onclick="deleteSessionPhoto('${s.session_id}', '${s.filename}')" style="padding: 4px 10px; font-size: 12px; color: #ef4444; border-color: rgba(239, 68, 68, 0.4);" title="Xóa vĩnh viễn ảnh này">
+                  🗑️ Xóa ảnh
+                </button>
+              </div>
             </div>
           </div>
         `;
       }).join('');
+    }
+
+    // 6.5 Delete Session Photo (Admin Action)
+    async function deleteSessionPhoto(sessionId, filename) {
+      const token = localStorage.getItem('iro_admin_token') || localStorage.getItem('iro_token');
+      if (!confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn ảnh "${filename || sessionId}" khỏi máy chủ không?\n\nThao tác này sẽ xóa sạch ảnh gốc, ảnh preview và giải phóng dung lượng đĩa cứng.`)) {
+        return;
+      }
+      try {
+        const res = await fetch('api.php?action=admin_delete_photo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          body: JSON.stringify({ sessionId })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          alert('Đã xóa vĩnh viễn bức ảnh khỏi máy chủ thành công!');
+          fetchSessions();
+        } else {
+          alert('Lỗi: ' + (data.error || 'Không thể xóa ảnh'));
+        }
+      } catch (err) {
+        alert('Lỗi kết nối khi xóa ảnh: ' + err.message);
+      }
     }
 
     // 7. View Logs Modal

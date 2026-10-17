@@ -3379,6 +3379,7 @@ async function loadMyPhotos() {
                   </button>
                 ` : ''}
                 ${thumb ? `<a href="${thumb}" target="_blank" download="${s.filename}" class="btn-download-thumb" title="Tải về">⬇️</a>` : ''}
+                <button type="button" class="btn-download-thumb" onclick="window.iroDeleteCloudPhoto('${s.session_id}', '${encodeURIComponent(s.filename)}')" title="Xóa ảnh này" style="color:var(--danger,#ef4444); border-color:rgba(239,68,68,0.3);">🗑️</button>
               </div>
             </div>
           </div>
@@ -3391,6 +3392,30 @@ async function loadMyPhotos() {
     myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">Lỗi: ${err.message}</p>`;
   }
 }
+
+window.iroDeleteCloudPhoto = async (sessionId, filenameEnc) => {
+  const filename = decodeURIComponent(filenameEnc);
+  if (!confirm(`Bạn có chắc chắn muốn xóa ảnh "${filename}" khỏi tài khoản của bạn?\n\nẢnh sẽ bị xóa vĩnh viễn khỏi máy chủ.`)) return;
+  try {
+    const res = await fetch('api.php?action=delete_my_photo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.authToken}`
+      },
+      body: JSON.stringify({ sessionId })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(`Đã xóa ảnh "${filename}" thành công!`, 'success', '🗑️');
+      loadMyPhotos();
+    } else {
+      alert(data.error || 'Không thể xóa ảnh');
+    }
+  } catch (err) {
+    alert('Lỗi kết nối: ' + err.message);
+  }
+};
 
 window.iroLoadCloudPhoto = async (url, filenameEnc, settingsJsonStr) => {
   try {

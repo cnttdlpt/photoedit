@@ -651,6 +651,94 @@ const server = http.createServer(async (req, res) => {
     }
 
     // -------------------------------------------------------------------------
+    // API: ADMIN DELETE SESSION / PHOTO
+    // -------------------------------------------------------------------------
+    if (pathname === '/api/admin/photo/delete' || action === 'admin_delete_photo' || action === 'admin_delete_session') {
+      if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+      const user = await getAuthUser(req);
+      if (!user || user.role !== 'admin') {
+        return sendJson(res, 403, { ok: false, error: 'Bạn không có quyền quản trị viên' });
+      }
+
+      const raw = await readBody(req);
+      const payload = JSON.parse(raw.toString() || '{}');
+      const sessionId = payload.sessionId;
+      if (!sessionId) return sendJson(res, 400, { ok: false, error: 'Missing sessionId' });
+
+      const session = await dbGet('SELECT * FROM edit_sessions WHERE session_id = ?', [sessionId]);
+      if (!session) {
+        return sendJson(res, 404, { ok: false, error: 'Không tìm thấy phiên làm việc / ảnh' });
+      }
+
+      // Xóa các file ảnh vật lý trên đĩa cứng
+      const filesToDelete = [];
+      if (session.original_url) filesToDelete.push(path.basename(session.original_url.split('?')[0]));
+      if (session.preview_url) filesToDelete.push(path.basename(session.preview_url.split('?')[0]));
+
+      for (const fn of filesToDelete) {
+        if (!fn) continue;
+        const p = path.join(UPLOAD_DIR, fn);
+        try {
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        } catch (e) {
+          console.warn('Lỗi khi xóa file ảnh:', fn, e.message);
+        }
+      }
+
+      // Xóa trong SQLite
+      await dbRun('DELETE FROM edit_logs WHERE session_id = ?', [sessionId]);
+      await dbRun('DELETE FROM edit_sessions WHERE session_id = ?', [sessionId]);
+
+      return sendJson(res, 200, { ok: true, message: 'Đã xóa vĩnh viễn ảnh và phiên làm việc' });
+    }
+
+    // -------------------------------------------------------------------------
+    // API: USER DELETE MY PHOTO
+    // -------------------------------------------------------------------------
+    if (pathname === '/api/photo/delete' || action === 'delete_my_photo') {
+      if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+      const user = await getAuthUser(req);
+      if (!user) {
+        return sendJson(res, 401, { ok: false, error: 'Vui lòng đăng nhập để thực hiện' });
+      }
+
+      const raw = await readBody(req);
+      const payload = JSON.parse(raw.toString() || '{}');
+      const sessionId = payload.sessionId;
+      if (!sessionId) return sendJson(res, 400, { ok: false, error: 'Missing sessionId' });
+
+      const session = await dbGet('SELECT * FROM edit_sessions WHERE session_id = ?', [sessionId]);
+      if (!session) {
+        return sendJson(res, 404, { ok: false, error: 'Không tìm thấy ảnh' });
+      }
+
+      // Chỉ người sở hữu hoặc admin mới được xóa
+      if (session.user_id !== user.id && user.role !== 'admin') {
+        return sendJson(res, 403, { ok: false, error: 'Bạn không có quyền xóa ảnh này' });
+      }
+
+      // Xóa các file ảnh vật lý trên đĩa cứng
+      const filesToDelete = [];
+      if (session.original_url) filesToDelete.push(path.basename(session.original_url.split('?')[0]));
+      if (session.preview_url) filesToDelete.push(path.basename(session.preview_url.split('?')[0]));
+
+      for (const fn of filesToDelete) {
+        if (!fn) continue;
+        const p = path.join(UPLOAD_DIR, fn);
+        try {
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        } catch (e) {
+          console.warn('Lỗi khi xóa file ảnh:', fn, e.message);
+        }
+      }
+
+      await dbRun('DELETE FROM edit_logs WHERE session_id = ?', [sessionId]);
+      await dbRun('DELETE FROM edit_sessions WHERE session_id = ?', [sessionId]);
+
+      return sendJson(res, 200, { ok: true, message: 'Đã xóa ảnh thành công' });
+    }
+
+    // -------------------------------------------------------------------------
     // API: GET SESSIONS (Dashboard monitoring)
     // -------------------------------------------------------------------------
     if (pathname === '/api/sessions' || action === 'get_sessions') {

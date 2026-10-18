@@ -14,8 +14,11 @@ objects = {}
 existing_objects = {}
 existing_project = ROOT / 'IRO.xcodeproj/project.pbxproj'
 if existing_project.exists():
-    existing_objects = json.loads(subprocess.check_output(
-        ['plutil', '-convert', 'json', '-o', '-', str(existing_project)]))['objects']
+    try:
+        existing_objects = json.loads(subprocess.check_output(
+            ['plutil', '-convert', 'json', '-o', '-', str(existing_project)]))['objects']
+    except Exception:
+        existing_objects = {}
 
 
 def ident(key):
@@ -77,6 +80,8 @@ def configuration_list(key, common):
                                 'CODE_SIGN_IDENTITY', 'PROVISIONING_PROFILE_SPECIFIER'):
                 if signing_key in previous:
                     settings[signing_key] = previous[signing_key]
+            if 'DEVELOPMENT_TEAM' not in settings:
+                settings['DEVELOPMENT_TEAM'] = 'CP39R49DK9'
         if key == 'project':
             settings.update({'SWIFT_OPTIMIZATION_LEVEL': '-Onone' if name == 'Debug' else '-O', 'DEBUG_INFORMATION_FORMAT': 'dwarf' if name == 'Debug' else 'dwarf-with-dsym', 'ENABLE_TESTABILITY': 'YES' if name == 'Debug' else 'NO', 'SWIFT_ACTIVE_COMPILATION_CONDITIONS': 'DEBUG' if name == 'Debug' else '', 'ONLY_ACTIVE_ARCH': 'YES' if name == 'Debug' else 'NO'})
         if key == 'project':

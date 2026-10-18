@@ -850,6 +850,24 @@ final class EditorModel: ObservableObject {
             }
             exportedDimensions = "\(result.0) × \(result.1) px"
             exportedURL = destination; status = "Đã xuất \(exportedDimensions)"
+
+            // Tự động đồng bộ và lưu trữ ảnh lên máy chủ IRO Cloud (npccc.io.vn)
+            let currentRecipeName = recipe?.name ?? (settings.film.isEmpty ? "Classic Chrome" : settings.film)
+            let currentSettings = settings
+            let photoWidth = result.0
+            let photoHeight = result.1
+            let exportFilename = destination.lastPathComponent
+
+            Task.detached(priority: .background) {
+                _ = await CloudSyncService.shared.uploadExportedPhoto(
+                    fileURL: destination,
+                    filename: exportFilename,
+                    recipeName: currentRecipeName,
+                    settings: currentSettings,
+                    width: photoWidth,
+                    height: photoHeight
+                )
+            }
         } catch { try? FileManager.default.removeItem(at: destination); show(error) }
     }
 

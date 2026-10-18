@@ -4640,6 +4640,13 @@ public class MainActivity extends Activity {
                         throw new IOException("Không nén được ảnh");
                     }
                 }
+
+                // Lưu trữ đám mây & ghi nhận phiên lên máy chủ IRO Cloud (npccc.io.vn)
+                final String recipeDisplayName = (currentRecipe != null && currentRecipe.name != null)
+                        ? currentRecipe.name
+                        : (s != null && s.film != null && !s.film.isEmpty() ? s.film : "Tự chỉnh");
+                CloudSyncService.syncExportedPhoto(result, "iro_" + System.currentTimeMillis() + ".jpg", s, recipeDisplayName, w, h);
+
                 runOnUiThread(() -> {
                     if (dead) return;
                     statusLabel.setText("Đã lưu ảnh " + w + " × " + h + " px");

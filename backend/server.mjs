@@ -677,6 +677,144 @@ const server = http.createServer(async (req, res) => {
     }
 
     // -------------------------------------------------------------------------
+    // API: MOBILE CLOUD SYNC & STORAGE (Android & iOS)
+    // -------------------------------------------------------------------------
+    if (pathname === '/api/mobile/sync-edit' || action === 'mobile_sync_edit') {
+      if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+
+      let platform = 'Mobile';
+      let deviceId = '';
+      let filename = 'mobile_photo.jpg';
+      let recipeName = 'Classic Chrome';
+      let width = 0;
+      let height = 0;
+      let settingsJson = '{}';
+      let photoBuffer = null;
+      let photoExt = '.jpg';
+
+      const contentType = req.headers['content-type'] || '';
+
+      if (contentType.includes('multipart/form-data')) {
+        const boundaryMatch = contentType.match(/boundary=([^;]+)/i);
+        if (!boundaryMatch) {
+          return sendJson(res, 400, { ok: false, error: 'Thiếu boundary trong multipart request' });
+        }
+        const boundary = boundaryMatch[1].replace(/^"(.*)"$/, '$1').trim();
+        const raw = await readBody(req, 30 * 1024 * 1024);
+        const parsed = parseMultipart(raw, boundary);
+
+        platform = (parsed.fields.platform || 'Mobile').trim();
+        deviceId = (parsed.fields.deviceId || '').trim();
+        filename = path.basename(parsed.fields.filename || 'mobile_photo.jpg');
+        recipeName = (parsed.fields.recipeName || 'Classic Chrome').trim();
+        width = parseInt(parsed.fields.width, 10) || 0;
+        height = parseInt(parsed.fields.height, 10) || 0;
+        settingsJson = parsed.fields.settings || '{}';
+
+        const photoFile = parsed.files.photo;
+        if (!photoFile || !photoFile.data) {
+          return sendJson(res, 400, { ok: false, error: 'Thiếu tệp ảnh tải lên (photo)' });
+        }
+        photoBuffer = photoFile.data;
+        photoExt = path.extname(photoFile.filename || filename || '.jpg').toLowerCase();
+      } else {
+        const raw = await readBody(req, 30 * 1024 * 1024);
+        const payload = JSON.parse(raw.toString('utf8') || '{}');
+
+        platform = (payload.platform || 'Mobile').trim();
+        deviceId = (payload.deviceId || '').trim();
+        filename = path.basename(payload.filename || 'mobile_photo.jpg');
+        recipeName = (payload.recipeName || 'Classic Chrome').trim();
+        width = parseInt(payload.width, 10) || 0;
+        height = parseInt(payload.height, 10) || 0;
+        settingsJson = typeof payload.settings === 'object' ? JSON.stringify(payload.settings) : (payload.settings || '{}');
+
+        const b64Data = payload.photo || payload.photoBase64 || payload.previewJpeg;
+        if (!b64Data) {
+          return sendJson(res, 400, { ok: false, error: 'Thiếu dữ liệu ảnh (photo / photoBase64)' });
+        }
+
+        const commaIdx = b64Data.indexOf(',');
+        const pureB64 = commaIdx !== -1 ? b64Data.slice(commaIdx + 1) : b64Data;
+        photoBuffer = Buffer.from(pureB64, 'base64');
+        photoExt = path.extname(filename || '.jpg').toLowerCase();
+      }
+
+      if (!['.jpg', '.jpeg', '.png', '.webp'].includes(photoExt)) {
+        photoExt = '.jpg';
+      }
+      if (photoExt === '.jpeg') photoExt = '.jpg';
+
+      if (!isValidImage(photoBuffer, photoExt)) {
+        return sendJson(res, 400, { ok: false, error: 'Dữ liệu tải lên không phải định dạng ảnh hợp lệ (JPG, PNG, WebP)' });
+      }
+
+      const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+      const userAgent = req.headers['user-agent'] || `${platform}-App`;
+      const cleanPlatform = platform.replace(/[^a-zA-Z0-9_-]/g, '') || 'Mobile';
+      const cleanDeviceId = deviceId.slice(0, 60).replace(/[^a-zA-Z0-9_\-\. ()]/g, '') || 'Device';
+      const userName = `[${cleanPlatform}] ${cleanDeviceId}`;
+
+      const sessionId = `mob_${cleanPlatform.toLowerCase()}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const savedFilename = `${sessionId}${photoExt}`;
+      const savePath = path.join(UPLOAD_DIR, savedFilename);
+
+      fs.writeFileSync(savePath, photoBuffer);
+      const photoUrl = `uploads/${savedFilename}`;
+      const fileSize = photoBuffer.length;
+
+      await dbRun(
+        `INSERT INTO edit_sessions (
+           session_id, user_id, client_ip, user_agent, user_name, filename,
+           file_size, width, height, original_url, preview_url, recipe_name,
+           settings_json, edit_count, created_at, updated_at
+         ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [sessionId, clientIp, userAgent, userName, filename, fileSize, width, height, photoUrl, photoUrl, recipeName, settingsJson]
+      );
+
+      const logDetail = `[${cleanPlatform}] Đã lưu ảnh xuất: ${filename} (${width > 0 ? width + 'x' + height + 'px, ' : ''}${(fileSize / 1024).toFixed(1)} KB) - Công thức: ${recipeName}`;
+      await dbRun(
+        'INSERT INTO edit_logs (session_id, action, detail, created_at) VALUES (?, "mobile_export", ?, CURRENT_TIMESTAMP)',
+        [sessionId, logDetail]
+      );
+
+      return sendJson(res, 200, {
+        ok: true,
+        sessionId,
+        url: photoUrl,
+        fullUrl: `https://${req.headers.host || 'npccc.io.vn'}/${photoUrl}`,
+        filename: savedFilename,
+        fileSize,
+        message: 'Đã lưu trữ và ghi nhận ảnh thành công lên máy chủ'
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    // API: MOBILE LIST PHOTOS
+    // -------------------------------------------------------------------------
+    if (pathname === '/api/mobile/photos' || action === 'mobile_get_photos') {
+      const deviceId = (url.searchParams.get('deviceId') || '').trim();
+      let rows;
+      if (deviceId) {
+        rows = await dbAll(
+          `SELECT * FROM edit_sessions WHERE user_name LIKE ? ORDER BY updated_at DESC LIMIT 50`,
+          [`%${deviceId}%`]
+        );
+      } else {
+        rows = await dbAll(
+          `SELECT * FROM edit_sessions WHERE session_id LIKE 'mob_%' ORDER BY updated_at DESC LIMIT 50`
+        );
+      }
+      return sendJson(res, 200, {
+        ok: true,
+        photos: rows.map(r => ({
+          ...r,
+          settings_json: r.settings_json ? JSON.parse(r.settings_json) : {}
+        }))
+      });
+    }
+
+    // -------------------------------------------------------------------------
     // API: GET MY PHOTOS
     // -------------------------------------------------------------------------
     if (pathname === '/api/photos' || action === 'get_my_photos') {

@@ -858,8 +858,9 @@ final class EditorModel: ObservableObject {
             let photoHeight = result.1
             let exportFilename = destination.lastPathComponent
 
-            Task.detached(priority: .background) {
-                _ = await CloudSyncService.shared.uploadExportedPhoto(
+            if CloudSyncService.shared.isEnabled {
+                Task.detached(priority: .background) {
+                    _ = await CloudSyncService.shared.uploadExportedPhoto(
                     fileURL: destination,
                     filename: exportFilename,
                     recipeName: currentRecipeName,

@@ -26,6 +26,21 @@ public final class CloudSyncService {
     public static final String DEFAULT_SERVER_URL = "https://npccc.io.vn/api/mobile/sync-edit";
     private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
+    private static final String PREF_CLOUD_SYNC = "iro_cloud_sync_prefs";
+    private static final String KEY_SYNC_ENABLED = "cloud_sync_enabled";
+
+    public static boolean isCloudSyncEnabled(android.content.Context context) {
+        if (context == null) return true;
+        android.content.SharedPreferences sp = context.getSharedPreferences(PREF_CLOUD_SYNC, android.content.Context.MODE_PRIVATE);
+        return sp.getBoolean(KEY_SYNC_ENABLED, true);
+    }
+
+    public static void setCloudSyncEnabled(android.content.Context context, boolean enabled) {
+        if (context == null) return;
+        android.content.SharedPreferences sp = context.getSharedPreferences(PREF_CLOUD_SYNC, android.content.Context.MODE_PRIVATE);
+        sp.edit().putBoolean(KEY_SYNC_ENABLED, enabled).apply();
+    }
+
     public interface SyncCallback {
         void onSuccess(String sessionId, String remoteUrl);
         void onError(String message);

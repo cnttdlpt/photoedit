@@ -12,6 +12,18 @@ public final class CloudSyncService: Sendable {
 
     public static let defaultEndpoint = URL(string: "https://npccc.io.vn/api/mobile/sync-edit")!
 
+    private static let syncEnabledKey = "iro.cloud.sync.enabled"
+
+    /// Tùy chọn quyền riêng tư: Cho phép người dùng bật hoặc tắt tự động tải ảnh lên máy chủ
+    public var isEnabled: Bool {
+        get {
+            UserDefaults.standard.object(forKey: Self.syncEnabledKey) as? Bool ?? true
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Self.syncEnabledKey)
+        }
+    }
+
     public struct SyncResult: Codable, Sendable {
         public let ok: Bool
         public let sessionId: String?

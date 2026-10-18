@@ -122,13 +122,9 @@ public enum GeminiAutoService {
 
     public static let defaultModel = "gemini-3.1-flash-lite"
 
-    /// API Key mặc định được tích hợp sẵn trong ứng dụng (giải mã Base64 khi chạy để bảo mật trên git).
+    /// API Key mặc định (để trống vì lý do an toàn thông tin, người dùng tự cấu hình nếu cần dùng AI trên đám mây).
     public static var builtInAPIKey: String {
-        guard let data = Data(base64Encoded: "QVEuQWI4Uk42TEFQTjVrX3VCM3VRZ09ndmVYNnFFcUVLUUk3Vm5DaFBMaW9uMUVmeGRQRmc="),
-              let key = String(data: data, encoding: .utf8) else {
-            return ""
-        }
-        return key
+        return ""
     }
 
     public static let availableModels: [(id: String, title: String)] = [

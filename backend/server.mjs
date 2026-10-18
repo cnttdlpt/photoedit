@@ -2,7 +2,6 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execFileSync, execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import sqlite3Pkg from 'sqlite3';
 
@@ -108,13 +107,14 @@ async function initDatabase() {
   const existingAdmin = await dbGet('SELECT id FROM users WHERE username = "admin" OR email = "admin@irostudio.local"');
   if (!existingAdmin) {
     const salt = crypto.randomBytes(16).toString('hex');
-    const hash = hashPassword('admin123@', salt);
+    const genPass = 'Iro#' + crypto.randomBytes(6).toString('hex') + '!2026';
+    const hash = hashPassword(genPass, salt);
     await dbRun(
       `INSERT INTO users (username, email, password_hash, salt, role, full_name, status, created_at)
        VALUES (?, ?, ?, ?, 'admin', 'Hệ Thống Quản Trị Viên', 'active', CURRENT_TIMESTAMP)`,
       ['admin', 'admin@irostudio.local', hash, salt]
     );
-    console.log('[Database] Default admin account seeded: admin / admin123@');
+    console.log('[Database] Default admin account seeded with random password.');
   }
 }
 
@@ -132,15 +132,6 @@ function verifyPassword(password, storedHash, storedSalt) {
     const key = parts[2];
     const derived = crypto.scryptSync(password, salt, 64).toString('hex');
     return crypto.timingSafeEqual(Buffer.from(derived, 'hex'), Buffer.from(key, 'hex'));
-  }
-  // Fallback for bcrypt hash from PHP ($2y$ or $2a$)
-  if (storedHash.startsWith('$2y$') || storedHash.startsWith('$2a$')) {
-    try {
-      execFileSync('php', ['-r', 'exit(password_verify($argv[1], $argv[2]) ? 0 : 1);', password, storedHash]);
-      return true;
-    } catch {
-      return false;
-    }
   }
   return false;
 }
@@ -186,22 +177,97 @@ async function getAuthUser(req) {
   return row;
 }
 
-// Simple JSON response helper
-function sendJson(res, statusCode, data) {
+const ALLOWED_ORIGINS = new Set([
+  'https://npccc.io.vn',
+  'http://npccc.io.vn',
+  'http://192.168.88.230',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+]);
+
+function getSafeCorsOrigin(req) {
+  if (!req || !req.headers) return 'https://npccc.io.vn';
+  const origin = req.headers['origin'];
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    return origin;
+  }
+  return 'https://npccc.io.vn';
+}
+
+// Simple JSON response helper with security headers & strict CORS
+function sendJson(res, statusCode, data, req = null) {
+  const origin = req ? getSafeCorsOrigin(req) : 'https://npccc.io.vn';
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
   });
   res.end(JSON.stringify(data));
 }
 
-// Request Body Reader
-function readBody(req) {
+// Periodic purge of expired tokens (every 1 hour)
+setInterval(async () => {
+  try {
+    await dbRun("DELETE FROM user_tokens WHERE datetime(expires_at) <= datetime('now')");
+  } catch (err) {
+    console.warn('[Token Cleanup Error]', err.message);
+  }
+}, 3600000);
+
+// In-memory rate limiting store
+const rateLimitMap = new Map();
+function checkRateLimit(ip, action, maxAttempts, windowMs) {
+  const key = `${action}:${ip}`;
+  const now = Date.now();
+  const entry = rateLimitMap.get(key) || { count: 0, resetAt: now + windowMs };
+  if (now > entry.resetAt) {
+    entry.count = 1;
+    entry.resetAt = now + windowMs;
+    rateLimitMap.set(key, entry);
+    return true;
+  }
+  entry.count++;
+  rateLimitMap.set(key, entry);
+  return entry.count <= maxAttempts;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of rateLimitMap.entries()) {
+    if (now > v.resetAt) rateLimitMap.delete(k);
+  }
+}, 300000);
+
+// Validate image signature (Magic Bytes)
+function isValidImage(buffer, ext) {
+  const cleanExt = (ext || '').toLowerCase();
+  if (!['.jpg', '.jpeg', '.png', '.webp'].includes(cleanExt)) return false;
+  if (!buffer || buffer.length < 12) return false;
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return true;
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return true;
+  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+      buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) return true;
+  return false;
+}
+
+// Request Body Reader with size limit
+function readBody(req, maxBytes = 2 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
+    let size = 0;
     const chunks = [];
-    req.on('data', c => chunks.push(c));
+    req.on('data', c => {
+      size += c.length;
+      if (size > maxBytes) {
+        req.destroy();
+        const err = new Error('PAYLOAD_TOO_LARGE');
+        err.statusCode = 413;
+        return reject(err);
+      }
+      chunks.push(c);
+    });
     req.on('end', () => resolve(Buffer.concat(chunks)));
     req.on('error', reject);
   });
@@ -249,10 +315,13 @@ function parseMultipart(buffer, boundary) {
 const server = http.createServer(async (req, res) => {
   // CORS Preflight
   if (req.method === 'OPTIONS') {
+    const origin = getSafeCorsOrigin(req);
     res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS'
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'X-Content-Type-Options': 'nosniff',
+      'X-Frame-Options': 'DENY'
     });
     return res.end();
   }
@@ -300,6 +369,10 @@ const server = http.createServer(async (req, res) => {
     // -------------------------------------------------------------------------
     if (pathname === '/api/auth/register' || action === 'auth_register') {
       if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+      const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+      if (!checkRateLimit(clientIp, 'register', 5, 600000)) {
+        return sendJson(res, 429, { ok: false, error: 'Quá nhiều yêu cầu đăng ký. Vui lòng thử lại sau.' });
+      }
       const raw = await readBody(req);
       const payload = JSON.parse(raw.toString() || '{}');
 
@@ -311,11 +384,12 @@ const server = http.createServer(async (req, res) => {
       if (username.length < 3 || username.length > 24 || !/^[a-z0-9_.-]+$/.test(username)) {
         return sendJson(res, 400, { ok: false, error: 'Tên đăng nhập phải từ 3-24 ký tự (chữ thường, số, dấu gạch).' });
       }
-      if (!email.includes('@') || !email.includes('.')) {
-        return sendJson(res, 400, { ok: false, error: 'Địa chỉ email không đúng định dạng.' });
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email) || email.length > 100) {
+        return sendJson(res, 400, { ok: false, error: 'Địa chỉ email không đúng định dạng hoặc vượt quá độ dài.' });
       }
-      if (password.length < 6) {
-        return sendJson(res, 400, { ok: false, error: 'Mật khẩu phải có tối thiểu 6 ký tự.' });
+      if (password.length < 8) {
+        return sendJson(res, 400, { ok: false, error: 'Mật khẩu phải có tối thiểu 8 ký tự để đảm bảo an toàn.' });
       }
 
       const dup = await dbGet('SELECT id FROM users WHERE username = ? OR email = ?', [username, email]);
@@ -351,6 +425,10 @@ const server = http.createServer(async (req, res) => {
     // -------------------------------------------------------------------------
     if (pathname === '/api/auth/login' || action === 'auth_login') {
       if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+      const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+      if (!checkRateLimit(clientIp, 'login', 15, 60000)) {
+        return sendJson(res, 429, { ok: false, error: 'Quá nhiều lần đăng nhập không thành công. Vui lòng chờ 1 phút.' });
+      }
       const raw = await readBody(req);
       const payload = JSON.parse(raw.toString() || '{}');
 
@@ -419,15 +497,27 @@ const server = http.createServer(async (req, res) => {
     }
 
     // -------------------------------------------------------------------------
-    // API: INIT SESSION
+    // API: INIT SESSION (Requires Auth)
     // -------------------------------------------------------------------------
     if (pathname === '/api/session/init' || action === 'init_session') {
       if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+      const user = await getAuthUser(req);
+      if (!user) {
+        return sendJson(res, 401, { ok: false, error: 'Vui lòng đăng nhập để bắt đầu chỉnh sửa ảnh.' });
+      }
+
       const raw = await readBody(req);
       const payload = JSON.parse(raw.toString() || '{}');
 
       const sessionId = (payload.sessionId || '').trim();
-      if (!sessionId) return sendJson(res, 400, { ok: false, error: 'Missing sessionId' });
+      if (!sessionId || !/^[a-zA-Z0-9_-]{6,64}$/.test(sessionId)) {
+        return sendJson(res, 400, { ok: false, error: 'Mã sessionId không hợp lệ (từ 6-64 ký tự).' });
+      }
+
+      const existingSession = await dbGet('SELECT user_id FROM edit_sessions WHERE session_id = ?', [sessionId]);
+      if (existingSession && existingSession.user_id && existingSession.user_id !== user.id && user.role !== 'admin') {
+        return sendJson(res, 403, { ok: false, error: 'Bạn không có quyền can thiệp vào phiên của người khác.' });
+      }
 
       const filename = path.basename(payload.filename || 'photo.jpg');
       const fileSize = Number(payload.fileSize || 0);
@@ -435,9 +525,8 @@ const server = http.createServer(async (req, res) => {
       const height = Number(payload.height || 0);
       const recipeName = (payload.recipeName || 'Classic Chrome').trim();
 
-      const user = await getAuthUser(req);
-      const userId = user ? user.id : null;
-      const userName = user ? (user.full_name || user.username) : (payload.userName || 'Khách vãng lai').trim();
+      const userId = user.id;
+      const userName = (user.full_name || user.username).trim();
 
       const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
       const userAgent = req.headers['user-agent'] || '';
@@ -464,15 +553,26 @@ const server = http.createServer(async (req, res) => {
     }
 
     // -------------------------------------------------------------------------
-    // API: SYNC SETTINGS & PREVIEW
+    // API: SYNC SETTINGS & PREVIEW (Requires Auth)
     // -------------------------------------------------------------------------
     if (pathname === '/api/session/sync' || action === 'sync_settings') {
       if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+      const user = await getAuthUser(req);
+      if (!user) {
+        return sendJson(res, 401, { ok: false, error: 'Vui lòng đăng nhập để đồng bộ thông số chỉnh sửa.' });
+      }
       const raw = await readBody(req);
       const payload = JSON.parse(raw.toString() || '{}');
 
       const sessionId = (payload.sessionId || '').trim();
-      if (!sessionId) return sendJson(res, 400, { ok: false, error: 'Missing sessionId' });
+      if (!sessionId || !/^[a-zA-Z0-9_-]{6,64}$/.test(sessionId)) {
+        return sendJson(res, 400, { ok: false, error: 'Mã sessionId không hợp lệ.' });
+      }
+
+      const existingSession = await dbGet('SELECT user_id FROM edit_sessions WHERE session_id = ?', [sessionId]);
+      if (existingSession && existingSession.user_id && existingSession.user_id !== user.id && user.role !== 'admin') {
+        return sendJson(res, 403, { ok: false, error: 'Bạn không có quyền đồng bộ phiên của người khác.' });
+      }
 
       const recipeName = (payload.recipeName || 'Tự chỉnh').trim();
       const settingsJson = JSON.stringify(payload.settings || {});
@@ -516,16 +616,20 @@ const server = http.createServer(async (req, res) => {
     }
 
     // -------------------------------------------------------------------------
-    // API: UPLOAD ORIGINAL PHOTO (Multipart)
+    // API: UPLOAD ORIGINAL PHOTO (Multipart - Requires Auth)
     // -------------------------------------------------------------------------
     if (pathname === '/api/session/upload' || action === 'upload_original') {
       if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+      const user = await getAuthUser(req);
+      if (!user) {
+        return sendJson(res, 401, { ok: false, error: 'Vui lòng đăng nhập để tải ảnh gốc lên máy chủ.' });
+      }
       const contentType = req.headers['content-type'] || '';
       const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
       if (!boundaryMatch) return sendJson(res, 400, { ok: false, error: 'Missing multipart boundary' });
 
       const boundary = boundaryMatch[1] || boundaryMatch[2];
-      const raw = await readBody(req);
+      const raw = await readBody(req, 25 * 1024 * 1024);
       const parsed = parseMultipart(raw, boundary);
 
       const sessionId = (parsed.fields.sessionId || '').trim();
@@ -534,9 +638,25 @@ const server = http.createServer(async (req, res) => {
       if (!sessionId || !photoFile) {
         return sendJson(res, 400, { ok: false, error: 'Missing sessionId or photo' });
       }
+      if (!/^[a-zA-Z0-9_-]{6,64}$/.test(sessionId)) {
+        return sendJson(res, 400, { ok: false, error: 'Mã sessionId không hợp lệ.' });
+      }
+
+      const existingSession = await dbGet('SELECT user_id FROM edit_sessions WHERE session_id = ?', [sessionId]);
+      if (existingSession && existingSession.user_id && existingSession.user_id !== user.id && user.role !== 'admin') {
+        return sendJson(res, 403, { ok: false, error: 'Bạn không có quyền tải ảnh vào phiên của người khác.' });
+      }
+
+      let origExt = path.extname(photoFile.filename || '').toLowerCase();
+      if (!['.jpg', '.jpeg', '.png', '.webp'].includes(origExt)) {
+        return sendJson(res, 400, { ok: false, error: 'Chỉ chấp nhận định dạng ảnh JPG, PNG hoặc WebP' });
+      }
+      if (!isValidImage(photoFile.data, origExt)) {
+        return sendJson(res, 400, { ok: false, error: 'Tập tin tải lên không phải là ảnh hợp lệ' });
+      }
+      if (origExt === '.jpeg') origExt = '.jpg';
 
       const cleanSid = sessionId.replace(/[^a-zA-Z0-9_-]/g, '');
-      const origExt = path.extname(photoFile.filename || '.jpg').toLowerCase() || '.jpg';
       const safeFilename = `orig_${cleanSid}${origExt}`;
       const savePath = path.join(UPLOAD_DIR, safeFilename);
 
@@ -623,6 +743,9 @@ const server = http.createServer(async (req, res) => {
       }
       if (payload.status !== undefined && ['active', 'banned'].includes(payload.status)) {
         await dbRun('UPDATE users SET status = ? WHERE id = ?', [payload.status, targetUserId]);
+        if (payload.status === 'banned') {
+          await dbRun('DELETE FROM user_tokens WHERE user_id = ?', [targetUserId]);
+        }
       }
 
       return sendJson(res, 200, { ok: true, message: 'Đã cập nhật thông tin người dùng' });
@@ -742,6 +865,10 @@ const server = http.createServer(async (req, res) => {
     // API: GET SESSIONS (Dashboard monitoring)
     // -------------------------------------------------------------------------
     if (pathname === '/api/sessions' || action === 'get_sessions') {
+      const user = await getAuthUser(req);
+      if (!user || user.role !== 'admin') {
+        return sendJson(res, 403, { ok: false, error: 'Yêu cầu quyền Quản Trị Viên (Admin) để xem danh sách phiên' });
+      }
       const rows = await dbAll('SELECT * FROM edit_sessions ORDER BY updated_at DESC LIMIT 100');
       return sendJson(res, 200, {
         ok: true,
@@ -756,6 +883,10 @@ const server = http.createServer(async (req, res) => {
     // API: GET LOGS (Dashboard monitoring)
     // -------------------------------------------------------------------------
     if (pathname === '/api/logs' || action === 'get_logs') {
+      const user = await getAuthUser(req);
+      if (!user || user.role !== 'admin') {
+        return sendJson(res, 403, { ok: false, error: 'Yêu cầu quyền Quản Trị Viên (Admin) để xem nhật ký hệ thống' });
+      }
       const sid = url.searchParams.get('sessionId');
       let rows;
       if (sid) {
@@ -766,9 +897,77 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { ok: true, logs: rows });
     }
 
+    // -------------------------------------------------------------------------
+    // API: GET RECIPES STATUS
+    // -------------------------------------------------------------------------
+    if (pathname === '/api/recipes/status' || action === 'get_recipes_status') {
+      const recipesPath = path.join(__dirname, '../frontend/recipes.json');
+      let statusData = { ok: true, count: 0, retrievedOn: null, lastSync: null };
+      try {
+        if (fs.existsSync(recipesPath)) {
+          const cat = JSON.parse(fs.readFileSync(recipesPath, 'utf8'));
+          statusData.count = cat.recipeCount || (cat.recipes ? cat.recipes.length : 0);
+          statusData.retrievedOn = cat.retrievedOn || null;
+          statusData.lastSync = cat.lastSync || null;
+        }
+      } catch (e) {
+        console.warn('Error reading recipes status:', e.message);
+      }
+      return sendJson(res, 200, statusData);
+    }
+
+    // -------------------------------------------------------------------------
+    // API: ADMIN TRIGGER SYNC RECIPES
+    // -------------------------------------------------------------------------
+    if (pathname === '/api/admin/sync-recipes' || action === 'admin_sync_recipes') {
+      if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'Method Not Allowed' });
+      const user = await getAuthUser(req);
+      if (!user || user.role !== 'admin') {
+        return sendJson(res, 403, { ok: false, error: 'Yêu cầu quyền Quản Trị Viên (Admin) để đồng bộ công thức' });
+      }
+
+      const scriptPath = path.join(__dirname, '../scripts/sync_recipes.py');
+      if (!fs.existsSync(scriptPath)) {
+        return sendJson(res, 500, { ok: false, error: 'Không tìm thấy script đồng bộ' });
+      }
+
+      const { spawn } = await import('node:child_process');
+      const child = spawn('python3', [scriptPath], {
+        cwd: path.join(__dirname, '..'),
+        env: { ...process.env, PATH: process.env.PATH }
+      });
+
+      let stdout = '';
+      let stderr = '';
+      child.stdout.on('data', d => { stdout += d.toString(); });
+      child.stderr.on('data', d => { stderr += d.toString(); });
+
+      const exitCode = await new Promise(resolve => child.on('close', resolve));
+      
+      const recipesPath = path.join(__dirname, '../frontend/recipes.json');
+      let count = 0;
+      try {
+        if (fs.existsSync(recipesPath)) {
+          const cat = JSON.parse(fs.readFileSync(recipesPath, 'utf8'));
+          count = cat.recipeCount || (cat.recipes ? cat.recipes.length : 0);
+        }
+      } catch (_) {}
+
+      return sendJson(res, 200, {
+        ok: exitCode === 0,
+        exitCode,
+        message: exitCode === 0 ? 'Đã hoàn tất kiểm tra và đồng bộ công thức màu phim mới!' : 'Đồng bộ thất bại: ' + stderr,
+        output: stdout,
+        recipeCount: count
+      });
+    }
+
     // 404 for unknown endpoints
     return sendJson(res, 404, { ok: false, error: 'Endpoint not found' });
   } catch (err) {
+    if (err.statusCode === 413 || err.message === 'PAYLOAD_TOO_LARGE') {
+      return sendJson(res, 413, { ok: false, error: 'Dung lượng tải lên vượt quá giới hạn cho phép (tối đa 25MB)' });
+    }
     console.error('Server error:', err);
     return sendJson(res, 500, { ok: false, error: 'Internal Server Error: ' + err.message });
   }

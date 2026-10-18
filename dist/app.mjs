@@ -319,35 +319,14 @@ function showScreen(screenId, pushHistory = true) {
 document.querySelector('#editorBackBtn')?.addEventListener('click', () => {
   showScreen('landing');
 });
-document.querySelector('#brandIdentity')?.addEventListener('click', () => {
-  showScreen('landing');
-  if (typeof window !== 'undefined') {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-});
-document.querySelector('#brandIdentity')?.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    showScreen('landing');
-  }
-});
 document.querySelector('#resumeEditorBtn')?.addEventListener('click', () => {
   showScreen('editor');
 });
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('popstate', (e) => {
-    const targetScreen = (e.state && e.state.screen) || (location.hash.startsWith('#/editor') ? 'editor' : 'landing');
+    const targetScreen = (e.state && e.state.screen) || (location.hash === '#/editor' ? 'editor' : 'landing');
     showScreen(targetScreen, false);
-    if (location.hash.includes('tab=film')) {
-      selectDeckTab('tabFilm');
-    }
   });
-  if (location.hash.startsWith('#/editor')) {
-    showScreen('editor', false);
-    if (location.hash.includes('tab=film')) {
-      selectDeckTab('tabFilm');
-    }
-  }
 }
 
 function selectDeckTab(tabId) {
@@ -379,12 +358,6 @@ document.querySelectorAll('.deck-tab-btn').forEach(btn => {
 });
 
 function updateStageInfoPill() {
-  const pill = document.querySelector('#stageInfoPill');
-  if (!state.source) {
-    if (pill) pill.hidden = true;
-    return;
-  }
-  if (pill) pill.hidden = false;
   const dimEl = document.querySelector('#stageDimensionText');
   const filmEl = document.querySelector('#stageFilmText');
   const frameEl = document.querySelector('#stageFrameText');
@@ -763,157 +736,32 @@ stageContainer.addEventListener('touchend', e => {
 // =========================================================================
 // KHỞI TẠO RIBBON PRESET & NẠP 392 CÔNG THỨC TỪ RECIPES.JSON
 // =========================================================================
-// --- Quản lý toàn bộ 392 Bộ lọc & Giả lập Film trong Buồng tối ---
-let currentTabFilmFilter = 'Tất cả';
-
-function buildFilmSimPills() {
-  const container = document.querySelector('#filmSimPillsRow');
-  if (!container) return;
-  const filmSims = [
-    'Original', 'Provia', 'Velvia', 'Astia', 'Classic Chrome',
-    'PRO Neg. Hi', 'PRO Neg. Std', 'Classic Neg.', 'Nostalgic Neg.',
-    'ETERNA', 'ETERNA Bleach Bypass', 'Acros', 'Monochrome', 'Sepia'
-  ];
-  container.innerHTML = '';
-  for (const sim of filmSims) {
-    const pill = document.createElement('button');
-    pill.type = 'button';
-    pill.className = `film-sim-pill ${state.settings.film === sim ? 'active' : ''}`;
-    pill.textContent = sim;
-    pill.addEventListener('click', () => {
-      updateFilmSimPillsActive();
-  const filmSelect = document.querySelector('#film');
-      if (filmSelect) {
-        filmSelect.value = sim;
-        filmSelect.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-    container.append(pill);
-  }
-}
-
-function updateFilmSimPillsActive() {
-  const container = document.querySelector('#filmSimPillsRow');
-  if (!container) return;
-  container.querySelectorAll('.film-sim-pill').forEach(p => {
-    p.classList.toggle('active', p.textContent === state.settings.film);
+const presetRibbon = document.querySelector('#presetRibbon');
+for (const preset of CURATED_PRESETS) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'preset-pill';
+  btn.innerHTML = `<span class="p-name">${preset.name}</span><span class="p-sub">${preset.subtitle}</span>`;
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const currentDiag = state.settings.diagnosticMode;
+    const currentDate = state.settings.dateStamp;
+    state.settings = {
+      ...structuredClone(defaults),
+      ...structuredClone(preset.settings),
+      diagnosticMode: currentDiag,
+      dateStamp: currentDate
+    };
+    state.activeRecipeName = preset.name;
+    state.curvePoints = structuredClone(preset.settings.curvePoints || [[0, 0], [1, 1]]);
+    syncInputsFromSettings();
+    drawCurveEditor();
+    commitHistory(`Preset: ${preset.name}`);
+    render();
   });
+  presetRibbon.append(btn);
 }
-
-function buildTabFilmChips() {
-  const chipsContainer = document.querySelector('#tabFilmChipsRow');
-  if (!chipsContainer) return;
-  const categories = [
-    'Tất cả', '⭐ Yêu thích', 'Classic Chrome', 'Classic Neg', 'Portra / Kodachrome',
-    'Velvia', 'Astia', 'Eterna', 'Acros', 'Nostalgic Neg', 'Bleach Bypass'
-  ];
-  chipsContainer.innerHTML = '';
-  for (const cat of categories) {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = `tab-film-chip ${cat === currentTabFilmFilter ? 'active' : ''}`;
-    chip.textContent = cat;
-    chip.addEventListener('click', () => {
-      currentTabFilmFilter = cat;
-      chipsContainer.querySelectorAll('.tab-film-chip').forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      renderTabFilmRecipes();
-    });
-    chipsContainer.append(chip);
-  }
-}
-
-function renderTabFilmRecipes() {
-  const ribbon = document.querySelector('#presetRibbon');
-  if (!ribbon) return;
-  const q = (document.querySelector('#tabFilmSearchInput')?.value || '').trim().toLowerCase();
-  const countBadge = document.querySelector('#tabFilmCountBadge');
-
-  let list = [];
-  if (state.fullCatalogRecipes && state.fullCatalogRecipes.length > 0) {
-    list = state.fullCatalogRecipes.filter(r => {
-      const matchFav = currentTabFilmFilter === '⭐ Yêu thích' ? state.favoriteRecipeIds.has(r.id) : true;
-      let matchCat = true;
-      if (currentTabFilmFilter !== 'Tất cả' && currentTabFilmFilter !== '⭐ Yêu thích') {
-        if (currentTabFilmFilter === 'Portra / Kodachrome') {
-          matchCat = r.name.toLowerCase().includes('portra') || r.name.toLowerCase().includes('kodachrome');
-        } else {
-          matchCat = r.film.toLowerCase().includes(currentTabFilmFilter.toLowerCase()) ||
-                     r.name.toLowerCase().includes(currentTabFilmFilter.toLowerCase()) ||
-                     (r.settings && r.settings.film && r.settings.film.toLowerCase().includes(currentTabFilmFilter.toLowerCase()));
-        }
-      }
-      const matchQuery = !q ||
-        r.name.toLowerCase().includes(q) ||
-        r.film.toLowerCase().includes(q) ||
-        r.wb.toLowerCase().includes(q);
-
-      return matchFav && matchCat && matchQuery;
-    });
-  } else {
-    list = CURATED_PRESETS.map((p, idx) => ({
-      id: `curated-${idx}`,
-      name: p.name,
-      film: p.subtitle,
-      dr: p.settings.dr || 100,
-      wb: 'Auto',
-      settings: p.settings,
-      isCurated: true
-    }));
-  }
-
-  if (countBadge) {
-    countBadge.textContent = list.length;
-  }
-
-  ribbon.innerHTML = '';
-
-  if (list.length === 0) {
-    ribbon.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 24px 12px; color: var(--muted); font-size: 13px;">Không tìm thấy bộ lọc phù hợp với "${q}".</div>`;
-    return;
-  }
-
-  for (const rec of list) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'preset-pill';
-    if (state.activeRecipeName === rec.name) {
-      btn.classList.add('active');
-    }
-    const subText = rec.isCurated ? rec.film : `${rec.film} · DR${rec.dr}`;
-    btn.innerHTML = `<span class="p-name">${rec.name}</span><span class="p-sub">${subText}</span>`;
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#presetRibbon .preset-pill').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      if (rec.isCurated) {
-        const currentDiag = state.settings.diagnosticMode;
-        const currentDate = state.settings.dateStamp;
-        state.settings = {
-          ...structuredClone(defaults),
-          ...structuredClone(rec.settings),
-          diagnosticMode: currentDiag,
-          dateStamp: currentDate
-        };
-        state.activeRecipeName = rec.name;
-        state.curvePoints = structuredClone(rec.settings.curvePoints || [[0, 0], [1, 1]]);
-        syncInputsFromSettings();
-        drawCurveEditor();
-        commitHistory(`Preset: ${rec.name}`);
-        render();
-        setStatus(`🎞️ Đã áp dụng preset "${rec.name}".`);
-      } else {
-        applyCatalogRecipe(rec);
-      }
-    });
-    ribbon.append(btn);
-  }
-}
-
-// Khởi tạo hiển thị ban đầu
-buildFilmSimPills();
-buildTabFilmChips();
-renderTabFilmRecipes();
-document.querySelector('#tabFilmSearchInput')?.addEventListener('input', () => renderTabFilmRecipes());
 
 // Khởi tạo 30 mẫu Khung ảnh Triển lãm (PhotoFrame.java Parity)
 for (const frame of PHOTO_FRAMES) {
@@ -955,8 +803,6 @@ async function load392Catalog() {
     if (!recipeLibraryModal.hidden) renderRecipeLibraryGrid();
     if (!cmdPaletteModal.hidden) renderCmdPaletteResults();
     renderLandingRecipeGrid();
-    buildTabFilmChips();
-    renderTabFilmRecipes();
   } catch (error) {
     setStatus(`Không tải được kho công thức: ${error.message}. Bạn vẫn có thể dùng preset và chỉnh tay.`, true);
   }
@@ -1113,13 +959,11 @@ function renderLandingRecipeGrid() {
       </div>
     `;
     card.addEventListener('click', () => {
-      applyCatalogRecipe(rec);
       if (!state.source) {
-        showToast(`Đã chọn công thức "${rec.name}". Vui lòng chọn ảnh để áp dụng!`, 'info', '📷');
-        document.querySelector('#photo')?.click();
-      } else {
-        showScreen('editor');
+        generateSampleImage('portrait');
       }
+      applyCatalogRecipe(rec);
+      showScreen('editor');
     });
     grid.append(card);
   }
@@ -1147,13 +991,11 @@ document.querySelectorAll('.frame-preview-pill').forEach(pill => {
       frameStyleSelect.dispatchEvent(new Event('change', { bubbles: true }));
     }
     if (!state.source) {
-      showToast('Đã chọn khung. Vui lòng mở ảnh từ máy để áp dụng!', 'info', '🖼️');
-      document.querySelector('#photo')?.click();
-    } else {
-      render();
-      selectDeckTab('tabFrames');
-      showScreen('editor');
+      generateSampleImage('portrait');
     }
+    render();
+    selectDeckTab('tabFrames');
+    showScreen('editor');
   });
 });
 
@@ -1165,13 +1007,11 @@ document.querySelector('#heroPromptBtn')?.addEventListener('click', () => {
   promptTextInput?.focus();
 });
 document.querySelector('#heroRandomBtn')?.addEventListener('click', () => {
-  applySurpriseRandomRecipe();
   if (!state.source) {
-    showToast(`Đã chọn ngẫu nhiên "${state.activeRecipeName}". Vui lòng mở ảnh để trải nghiệm!`, 'info', '🎲');
-    document.querySelector('#photo')?.click();
-  } else {
-    showScreen('editor');
+    generateSampleImage('portrait');
   }
+  applySurpriseRandomRecipe();
+  showScreen('editor');
 });
 
 function openRecipeLibraryModal() {
@@ -2030,10 +1870,8 @@ function runPromptRecipe(text) {
   syncInputsFromSettings();
   drawCurveEditor();
   promptModal.hidden = true;
-  if (!state.source) {
-    showToast('Đã tạo công thức AI! Vui lòng chọn ảnh để áp dụng.', 'info', '🪄');
-    document.querySelector('#photo')?.click();
-  } else {
+  if (!state.source) generateSampleImage('street');
+  else {
     commitHistory(`AI Tả cảnh: ${text.slice(0, 24)}`);
     render();
   }
@@ -2299,21 +2137,8 @@ function generateSampleImage(type = 'portrait') {
   loadSourceImageData(c.getImageData(0, 0, w, h), `Ảnh mẫu Studio (${type})`);
 }
 
-if (typeof window !== 'undefined') {
-  window.generateSampleImage = generateSampleImage;
-}
-
 document.querySelectorAll('[data-sample]').forEach(btn => {
   btn.addEventListener('click', () => generateSampleImage(btn.dataset.sample));
-});
-
-document.querySelector('#emptyOpenBtn')?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  document.querySelector('#photo')?.click();
-});
-document.querySelector('#empty')?.addEventListener('click', (e) => {
-  if (e.target && e.target.closest('#emptyOpenBtn')) return;
-  document.querySelector('#photo')?.click();
 });
 
 function createDownsampledImageData(srcData, maxDim = 1200) {
@@ -2358,11 +2183,9 @@ function loadSourceImageData(imageData, label, rawFile = null) {
     showScreen('editor', false);
   }
   updateStageInfoPill();
-  const quickPeekBadge = document.querySelector('#quickPeekBadge');
-  if (quickPeekBadge) quickPeekBadge.hidden = false;
 
   const enableIds = [
-    '#export', '#exportRecipeCard', '#compareBtn', '#rotate90', '#aiAuto',
+    '#export', '#compareBtn', '#rotate90', '#aiAuto',
     '#contactSheetBtn', '#quadViewBtn', '#dateStampBtn',
     '#shareCode', '#exportCube', '#matchRefBtn', '#livingFilmBtn', '#lightCraftBtn'
   ];
@@ -3140,6 +2963,9 @@ loginForm?.addEventListener('submit', async (e) => {
       localStorage.setItem('iro_token', data.token);
       updateUserAccountUI();
       unlockAppFromAuth();
+      if (!state.source) {
+        generateSampleImage('portrait');
+      }
       loginForm.reset();
       showToast(`Chào mừng ${data.user.full_name || data.user.username}!`, 'success', '👋');
       setStatus(`👤 Đã đăng nhập: ${data.user.full_name || data.user.username} (${data.user.role.toUpperCase()})`);
@@ -3182,6 +3008,9 @@ registerForm?.addEventListener('submit', async (e) => {
       localStorage.setItem('iro_token', data.token);
       updateUserAccountUI();
       unlockAppFromAuth();
+      if (!state.source) {
+        generateSampleImage('portrait');
+      }
       registerForm.reset();
       showToast('Đăng ký tài khoản thành công!', 'success', '🎉');
       setStatus(`🎉 Chào mừng thành viên mới: ${data.user.full_name || data.user.username}!`);
@@ -3526,7 +3355,6 @@ async function loadMyPhotos() {
                   </button>
                 ` : ''}
                 ${thumb ? `<a href="${thumb}" target="_blank" download="${s.filename}" class="btn-download-thumb" title="Tải về">⬇️</a>` : ''}
-                <button type="button" class="btn-download-thumb" onclick="window.iroDeleteCloudPhoto('${s.session_id}', '${encodeURIComponent(s.filename)}')" title="Xóa ảnh này" style="color:var(--danger,#ef4444); border-color:rgba(239,68,68,0.3);">🗑️</button>
               </div>
             </div>
           </div>
@@ -3539,30 +3367,6 @@ async function loadMyPhotos() {
     myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">Lỗi: ${err.message}</p>`;
   }
 }
-
-window.iroDeleteCloudPhoto = async (sessionId, filenameEnc) => {
-  const filename = decodeURIComponent(filenameEnc);
-  if (!confirm(`Bạn có chắc chắn muốn xóa ảnh "${filename}" khỏi tài khoản của bạn?\n\nẢnh sẽ bị xóa vĩnh viễn khỏi máy chủ.`)) return;
-  try {
-    const res = await fetch('api.php?action=delete_my_photo', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${state.authToken}`
-      },
-      body: JSON.stringify({ sessionId })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      showToast(`Đã xóa ảnh "${filename}" thành công!`, 'success', '🗑️');
-      loadMyPhotos();
-    } else {
-      alert(data.error || 'Không thể xóa ảnh');
-    }
-  } catch (err) {
-    alert('Lỗi kết nối: ' + err.message);
-  }
-};
 
 window.iroLoadCloudPhoto = async (url, filenameEnc, settingsJsonStr) => {
   try {
@@ -3601,406 +3405,9 @@ window.iroLoadCloudPhoto = async (url, filenameEnc, settingsJsonStr) => {
   }
 };
 
-// Khởi tạo trạng thái ban đầu, nạp thước đo M3 (không nạp ảnh mẫu mặc định)
+// Khởi tạo trạng thái ban đầu, tự động nạp ảnh mẫu studio và nạp thước đo M3
 drawCurveEditor();
+generateSampleImage('portrait');
 initM3RulerDock();
 checkCurrentUser();
 
-
-// =========================================================================
-// 🌟 CREATIVE ENGINE 3.0: WEB AUDIO SYNTHESIZER, RECIPE CARD & SHORTCUTS
-// =========================================================================
-
-// --- 1. Web Audio Camera Mechanical Shutter & Haptic Dial Engine ---
-let audioCtx = null;
-let soundEnabled = true;
-
-function getAudioContext() {
-  if (!audioCtx && typeof window !== 'undefined') {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (AudioContextClass) {
-      audioCtx = new AudioContextClass();
-    }
-  }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-  return audioCtx;
-}
-
-function playShutterSound() {
-  if (!soundEnabled) return;
-  try {
-    const ctx = getAudioContext();
-    if (!ctx) return;
-    const now = ctx.currentTime;
-
-    const bufferSize = Math.floor(ctx.sampleRate * 0.07);
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const output = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      output[i] = Math.random() * 2 - 1;
-    }
-    const whiteNoise = ctx.createBufferSource();
-    whiteNoise.buffer = noiseBuffer;
-
-    const noiseFilter = ctx.createBiquadFilter();
-    noiseFilter.type = 'bandpass';
-    noiseFilter.frequency.setValueAtTime(1400, now);
-    noiseFilter.Q.setValueAtTime(1.8, now);
-
-    const noiseGain = ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.25, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-
-    whiteNoise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(ctx.destination);
-    whiteNoise.start(now);
-
-    const osc = ctx.createOscillator();
-    const oscGain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(460, now + 0.022);
-    osc.frequency.exponentialRampToValueAtTime(80, now + 0.065);
-
-    oscGain.gain.setValueAtTime(0.35, now + 0.022);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
-
-    osc.connect(oscGain);
-    oscGain.connect(ctx.destination);
-    osc.start(now + 0.022);
-    osc.stop(now + 0.08);
-  } catch (e) {}
-}
-
-function playDialClick() {
-  if (!soundEnabled) return;
-  try {
-    const ctx = getAudioContext();
-    if (!ctx) return;
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1800, now);
-    osc.frequency.exponentialRampToValueAtTime(600, now + 0.015);
-
-    gain.gain.setValueAtTime(0.08, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.02);
-  } catch (e) {}
-}
-
-const soundToggleBtn = document.querySelector('#soundToggleBtn');
-const soundStatusText = document.querySelector('#soundStatusText');
-soundToggleBtn?.addEventListener('click', () => {
-  soundEnabled = !soundEnabled;
-  if (soundStatusText) soundStatusText.textContent = soundEnabled ? 'Bật' : 'Tắt';
-  showToast(soundEnabled ? '🔊 Đã bật âm thanh buồng tối Leica / Fuji' : '🔇 Đã tắt âm thanh', 'info', soundEnabled ? '🔊' : '🔇');
-  if (soundEnabled) playShutterSound();
-});
-
-// Trigger dial click on sliders
-document.querySelectorAll('input[type="range"]').forEach(range => {
-  range.addEventListener('input', () => playDialClick());
-});
-
-// --- 2. Quick Peek Before / After (Hold Space or Button) ---
-let isPeekingBefore = false;
-
-function setPeekingBefore(peek) {
-  if (!state.source || isPeekingBefore === peek) return;
-  isPeekingBefore = peek;
-  const beforeCanvas = document.querySelector('#beforeCanvas');
-  const mainCanvas = document.querySelector('#canvas');
-  const peekBadge = document.querySelector('#quickPeekBadge');
-
-  if (peek) {
-    if (beforeCanvas && mainCanvas) {
-      beforeCanvas.width = state.source.width;
-      beforeCanvas.height = state.source.height;
-      const bCtx = beforeCanvas.getContext('2d');
-      bCtx.putImageData(state.source, 0, 0);
-      beforeCanvas.hidden = false;
-      mainCanvas.style.opacity = '0';
-      if (peekBadge) {
-        peekBadge.textContent = '👁️ ĐANG XEM ẢNH GỐC (THẢ ĐỂ VỀ MÀU FUJI)';
-        peekBadge.classList.add('active');
-      }
-    }
-  } else {
-    if (beforeCanvas && mainCanvas) {
-      beforeCanvas.hidden = true;
-      mainCanvas.style.opacity = '1';
-      if (peekBadge) {
-        peekBadge.textContent = '👁️ Giữ xem ảnh gốc (Space)';
-        peekBadge.classList.remove('active');
-      }
-    }
-  }
-}
-
-const quickPeekBadge = document.querySelector('#quickPeekBadge');
-quickPeekBadge?.addEventListener('mousedown', () => setPeekingBefore(true));
-quickPeekBadge?.addEventListener('mouseup', () => setPeekingBefore(false));
-quickPeekBadge?.addEventListener('mouseleave', () => setPeekingBefore(false));
-quickPeekBadge?.addEventListener('touchstart', (e) => { e.preventDefault(); setPeekingBefore(true); });
-quickPeekBadge?.addEventListener('touchend', (e) => { e.preventDefault(); setPeekingBefore(false); });
-
-// --- 3. Instant Fujifilm Recipe Share Card Generator ---
-function generateRecipeCardCanvas() {
-  if (!state.source) return null;
-  render(false, true);
-
-  const cardW = 1200;
-  const cardH = 1680;
-  const cardCanvas = document.createElement('canvas');
-  cardCanvas.width = cardW;
-  cardCanvas.height = cardH;
-  const ctx = cardCanvas.getContext('2d');
-
-  const isDark = !document.body.classList.contains('theme-porcelain');
-  const bg = isDark ? '#141416' : '#faf9f6';
-  const cardPanelBg = isDark ? '#1e1f24' : '#ffffff';
-  const textColor = isDark ? '#f3f4f6' : '#1f2937';
-  const textMuted = isDark ? '#9ca3af' : '#6b7280';
-  const accentColor = '#1a73e8';
-  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, cardW, cardH);
-
-  ctx.strokeStyle = borderColor;
-  ctx.lineWidth = 1;
-  ctx.strokeRect(32, 32, cardW - 64, cardH - 64);
-
-  ctx.fillStyle = accentColor;
-  ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('✦ IRO FUJIFILM COLOR LAB · RECIPE DNA', 64, 76);
-
-  ctx.fillStyle = textColor;
-  ctx.font = '800 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  const recipeTitle = (state.activeRecipeName || state.settings.film || 'CLASSIC CHROME').toUpperCase();
-  ctx.fillText(recipeTitle, 64, 120);
-
-  ctx.fillStyle = textMuted;
-  ctx.font = '500 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText('FUJIFILM X-TRANS V · OPTICAL DARKROOM 3.0 RECIPE', 64, 146);
-
-  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
-  ctx.beginPath();
-  ctx.roundRect(cardW - 240, 68, 176, 42, 21);
-  ctx.fill();
-  ctx.fillStyle = textColor;
-  ctx.font = 'bold 14px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText(state.settings.film || 'Classic Chrome', cardW - 152, 94);
-  ctx.textAlign = 'left';
-
-  const photoBoxX = 64;
-  const photoBoxY = 176;
-  const photoBoxW = 1072;
-  const photoBoxH = 920;
-
-  ctx.fillStyle = isDark ? '#0d0d0f' : '#f0f0f2';
-  ctx.beginPath();
-  ctx.roundRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 16);
-  ctx.fill();
-
-  const aspectCanvas = canvas.width / canvas.height;
-  let targetW, targetH, targetX, targetY;
-  if (aspectCanvas > photoBoxW / photoBoxH) {
-    targetW = photoBoxW;
-    targetH = photoBoxW / aspectCanvas;
-    targetX = photoBoxX;
-    targetY = photoBoxY + (photoBoxH - targetH) / 2;
-  } else {
-    targetH = photoBoxH;
-    targetW = photoBoxH * aspectCanvas;
-    targetX = photoBoxX + (photoBoxW - targetW) / 2;
-    targetY = photoBoxY;
-  }
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 16);
-  ctx.clip();
-  ctx.drawImage(canvas, targetX, targetY, targetW, targetH);
-  ctx.restore();
-
-  const paramsY = 1130;
-  const s = state.settings;
-  const wbText = s.wb === 'Kelvin' || s.temperature ? `${s.temperature || 5500}K` : (s.wb || 'Auto');
-  const wbShift = `R:${s.red > 0 ? '+' : ''}${s.red || 0} B:${s.blue > 0 ? '+' : ''}${s.blue || 0}`;
-
-  const specCards = [
-    { label: 'FILM SIMULATION', val: s.film || 'Classic Chrome' },
-    { label: 'DYNAMIC RANGE', val: `DR${s.dr || 100}` },
-    { label: 'GRAIN EFFECT', val: s.grain > 0 ? `${s.grain > 50 ? 'Strong' : 'Weak'}, ${s.grainSize > 1 ? 'Large' : 'Small'}` : 'Off' },
-    { label: 'WHITE BALANCE', val: `${wbText} (${wbShift})` },
-    { label: 'HIGHLIGHT / SHADOW', val: `${s.highlight > 0 ? '+' : ''}${s.highlight} / ${s.shadow > 0 ? '+' : ''}${s.shadow}` },
-    { label: 'COLOR / SHARPNESS', val: `${s.color > 0 ? '+' : ''}${s.color} / ${s.sharpness > 0 ? '+' : ''}${s.sharpness}` },
-    { label: 'NOISE REDUCTION', val: `${s.nr > 0 ? '+' : ''}${s.nr}` },
-    { label: 'CLARITY & OPTICAL', val: s.clarity !== 0 ? `Clarity ${s.clarity > 0 ? '+' : ''}${s.clarity}` : (s.proMist > 0 ? `Pro-Mist ${s.proMist}%` : 'Standard') }
-  ];
-
-  const colW = (1072 - 36) / 4;
-  const rowH = 78;
-
-  specCards.forEach((c, idx) => {
-    const col = idx % 4;
-    const row = Math.floor(idx / 4);
-    const x = 64 + col * (colW + 12);
-    const y = paramsY + row * (rowH + 12);
-
-    ctx.fillStyle = cardPanelBg;
-    ctx.beginPath();
-    ctx.roundRect(x, y, colW, rowH, 12);
-    ctx.fill();
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.fillStyle = textMuted;
-    ctx.font = '600 11px monospace';
-    ctx.fillText(c.label, x + 16, y + 26);
-
-    ctx.fillStyle = textColor;
-    ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillText(c.val, x + 16, y + 54);
-  });
-
-  const footerY = 1350;
-  ctx.strokeStyle = borderColor;
-  ctx.beginPath();
-  ctx.moveTo(64, footerY);
-  ctx.lineTo(cardW - 64, footerY);
-  ctx.stroke();
-
-  const barcodeX = 64;
-  const barcodeY = footerY + 22;
-  const barPattern = [2, 1, 3, 1, 1, 4, 2, 1, 2, 3, 1, 1, 3, 2, 1, 4, 1, 2, 3, 1, 2, 1, 4, 2, 1, 3, 1, 2];
-  let currX = barcodeX;
-  ctx.fillStyle = isDark ? '#ffffff' : '#000000';
-  barPattern.forEach((w, i) => {
-    if (i % 2 === 0) {
-      ctx.fillRect(currX, barcodeY, w * 2, 32);
-    }
-    currX += w * 2 + 2;
-  });
-
-  ctx.fillStyle = textMuted;
-  ctx.font = '12px monospace';
-  ctx.fillText(`SN: IRO-XTRANS-V-${Date.now().toString(36).toUpperCase()}`, currX + 16, barcodeY + 20);
-
-  ctx.textAlign = 'right';
-  ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillStyle = textColor;
-  ctx.fillText('npccc.io.vn · IRO Studio 3.0', cardW - 64, barcodeY + 14);
-  ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillStyle = textMuted;
-  ctx.fillText('Agentic Fujifilm X-Trans V Color Laboratory', cardW - 64, barcodeY + 30);
-  ctx.textAlign = 'left';
-
-  return cardCanvas;
-}
-
-document.querySelector('#exportRecipeCard')?.addEventListener('click', () => {
-  if (!state.source) return;
-  const cardCanvas = generateRecipeCardCanvas();
-  if (!cardCanvas) return;
-
-  playShutterSound();
-  cardCanvas.toBlob(blob => {
-    if (!blob) return;
-    const a = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    a.href = url;
-    const title = (state.activeRecipeName || state.settings.film || 'fuji-recipe').toLowerCase().replace(/\s+/g, '-');
-    a.download = `recipe-card-${title}.png`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    showToast('📇 Đã xuất Thẻ Công Thức Fujifilm Recipe Card thành công!', 'success', '📇');
-  }, 'image/png');
-});
-
-// --- 4. Keyboard Shortcuts Modal & Global Key Listener ---
-const shortcutsModal = document.querySelector('#shortcutsModal');
-const closeShortcutsModal = document.querySelector('#closeShortcutsModal');
-const shortcutsBtn = document.querySelector('#shortcutsBtn');
-
-shortcutsBtn?.addEventListener('click', () => {
-  if (shortcutsModal) shortcutsModal.hidden = false;
-});
-closeShortcutsModal?.addEventListener('click', () => {
-  if (shortcutsModal) shortcutsModal.hidden = true;
-});
-
-window.addEventListener('keydown', (e) => {
-  if (e.target && (e.target.matches('input, textarea, select') || e.target.isContentEditable)) return;
-
-  if (e.code === 'Space') {
-    e.preventDefault();
-    setPeekingBefore(true);
-    return;
-  }
-
-  if (e.key === '?' || (e.key === '/' && (e.ctrlKey || e.metaKey))) {
-    e.preventDefault();
-    if (shortcutsModal) shortcutsModal.hidden = !shortcutsModal.hidden;
-    return;
-  }
-
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-    e.preventDefault();
-    document.querySelector('#export')?.click();
-    return;
-  }
-
-  if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    document.querySelector('#compareBtn')?.click();
-    return;
-  }
-
-  if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    document.querySelector('#rotate90')?.click();
-    return;
-  }
-
-  if (e.key.toLowerCase() === 'o' && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    document.querySelector('#photo')?.click();
-    return;
-  }
-
-  if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    openRecipeLibraryModal();
-    return;
-  }
-
-  if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    document.querySelector('#themeToggleBtn')?.click();
-    return;
-  }
-
-  if (e.key.toLowerCase() === 'q' && !e.ctrlKey && !e.metaKey) {
-    e.preventDefault();
-    document.querySelector('#quadViewBtn')?.click();
-    return;
-  }
-});
-
-window.addEventListener('keyup', (e) => {
-  if (e.code === 'Space') {
-    setPeekingBefore(false);
-  }
-});

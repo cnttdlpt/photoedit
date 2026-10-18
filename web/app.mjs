@@ -869,7 +869,7 @@ function renderTabFilmRecipes() {
   ribbon.innerHTML = '';
 
   if (list.length === 0) {
-    ribbon.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 24px 12px; color: var(--muted); font-size: 13px;">Không tìm thấy bộ lọc phù hợp với "${q}".</div>`;
+    ribbon.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 24px 12px; color: var(--muted); font-size: 13px;">Không tìm thấy bộ lọc phù hợp với "${escapeHTML(q)}".</div>`;
     return;
   }
 
@@ -881,7 +881,7 @@ function renderTabFilmRecipes() {
       btn.classList.add('active');
     }
     const subText = rec.isCurated ? rec.film : `${rec.film} · DR${rec.dr}`;
-    btn.innerHTML = `<span class="p-name">${rec.name}</span><span class="p-sub">${subText}</span>`;
+    btn.innerHTML = `<span class="p-name">${escapeHTML(rec.name)}</span><span class="p-sub">${escapeHTML(subText)}</span>`;
     btn.addEventListener('click', () => {
       document.querySelectorAll('#presetRibbon .preset-pill').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -937,7 +937,7 @@ frameExifInput.addEventListener('change', () => commitHistory('Đổi thông tin
 // Tải kho 392 công thức từ recipes.json
 async function load392Catalog() {
   try {
-    const res = await fetch('./recipes.json');
+    const res = await fetch(`./recipes.json?v=${Date.now().toString().slice(0, 7)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const catalog = await res.json();
     const rawList = Array.isArray(catalog) ? catalog : catalog.recipes;
@@ -948,7 +948,9 @@ async function load392Catalog() {
         ...parsed,
         id: String(record.id || record.sourceUrl || `recipe-${index}`),
         wb: String(parsed.settings.wb || 'Auto'),
-        dr: parsed.settings.dr || 100
+        dr: parsed.settings.dr || 100,
+        isNew: Boolean(record.isNew),
+        addedDate: record.addedDate || null
       };
     });
     buildFilmFilterChips();
@@ -1041,7 +1043,7 @@ function renderRecipeLibraryGrid() {
     card.className = 'recipe-lib-card' + (isCurrent ? ' active' : '');
     card.innerHTML = `
       <div class="r-head">
-        <span class="r-title">${escapeHTML(rec.name)}</span>
+        <span class="r-title">${escapeHTML(rec.name)}${rec.isNew ? ' <span style="background:#059669;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;vertical-align:middle;">MỚI</span>' : ''}</span>
         <button type="button" class="fav-star-btn ${isFav ? 'is-fav' : ''}" title="Đánh dấu Yêu thích">${isFav ? '★' : '☆'}</button>
       </div>
       <span class="r-film">🎞️ ${escapeHTML(rec.film)}</span>
@@ -2220,6 +2222,11 @@ window.addEventListener('keyup', e => {
 // TẠO ẢNH MẪU STUDIO & MỞ TỆP ẢNH / KÉO THẢ
 // =========================================================================
 function generateSampleImage(type = 'portrait') {
+  if (!state.currentUser) {
+    lockAppToAuth();
+    showToast('Vui lòng đăng nhập để bắt đầu chỉnh sửa ảnh.', 'warning', '🔒');
+    return;
+  }
   const w = 960, h = 640;
   const off = document.createElement('canvas');
   off.width = w; off.height = h;
@@ -2339,6 +2346,11 @@ function createDownsampledImageData(srcData, maxDim = 1200) {
 }
 
 function loadSourceImageData(imageData, label, rawFile = null) {
+  if (!state.currentUser) {
+    lockAppToAuth();
+    showToast('Vui lòng đăng nhập để bắt đầu chỉnh sửa ảnh.', 'warning', '🔒');
+    return;
+  }
   state.source = imageData;
   // Tạo bản preview nén nhẹ để tương tác slider siêu tốc 60fps
   state.previewSource = createDownsampledImageData(imageData, 1200);
@@ -2489,6 +2501,11 @@ async function readImageFile(file) {
 }
 
 async function handleImageFile(file) {
+  if (!state.currentUser) {
+    lockAppToAuth();
+    showToast('Vui lòng đăng nhập để bắt đầu chỉnh sửa ảnh.', 'warning', '🔒');
+    return;
+  }
   if (!file) return;
   const fileName = file.name || 'Ảnh tải lên';
   setStatus(`Đang nạp tệp ${fileName}...`);
@@ -2915,7 +2932,7 @@ function showToast(message, type = 'info', icon = '✨') {
 
   const toast = document.createElement('div');
   toast.className = `iro-toast iro-toast-${type}`;
-  toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-text">${message}</span>`;
+  toast.innerHTML = `<span class="toast-icon">${escapeHTML(icon)}</span><span class="toast-text">${escapeHTML(message)}</span>`;
   toastContainer.appendChild(toast);
 
   requestAnimationFrame(() => toast.classList.add('show'));
@@ -3003,13 +3020,13 @@ const loginErrorMsg = document.getElementById('loginErrorMsg');
 const registerErrorMsg = document.getElementById('registerErrorMsg');
 
 function lockAppToAuth() {
-  document.body.classList.remove('auth-locked');
+  document.body.classList.add('auth-locked');
   if (authModal) {
-    authModal.hidden = true;
-    authModal.classList.remove('mandatory-gate');
+    authModal.hidden = false;
+    authModal.classList.add('mandatory-gate');
   }
   if (closeAuthModal) {
-    closeAuthModal.style.display = '';
+    closeAuthModal.style.display = 'none';
   }
 }
 
@@ -3018,6 +3035,9 @@ function unlockAppFromAuth() {
   if (authModal) {
     authModal.hidden = true;
     authModal.classList.remove('mandatory-gate');
+  }
+  if (closeAuthModal) {
+    closeAuthModal.style.display = 'none';
   }
 }
 
@@ -3031,17 +3051,7 @@ function openAuthModal(mode = 'login') {
   }
 }
 
-const fillAdminDemoBtn = document.getElementById('fillAdminDemoBtn');
-if (fillAdminDemoBtn) {
-  fillAdminDemoBtn.addEventListener('click', () => {
-    authTabLogin?.click();
-    const accountInput = document.getElementById('loginAccountInput');
-    const pwdInput = document.getElementById('loginPasswordInput');
-    if (accountInput) accountInput.value = 'admin';
-    if (pwdInput) pwdInput.value = 'admin123@';
-    showToast('Đã điền tài khoản Quản trị: admin / admin123@', 'info', '🔑');
-  });
-}
+// Demo button removed for security
 
 if (authTriggerBtn) {
   authTriggerBtn.addEventListener('click', (e) => {
@@ -3263,6 +3273,7 @@ function updateUserAccountUI() {
 async function checkCurrentUser() {
   if (!state.authToken) {
     updateUserAccountUI();
+    lockAppToAuth();
     return;
   }
   try {
@@ -3283,10 +3294,12 @@ async function checkCurrentUser() {
         }
       } catch (_) {}
       updateUserAccountUI();
+      lockAppToAuth();
     }
   } catch (err) {
     console.debug('Failed to verify token:', err);
     updateUserAccountUI();
+    lockAppToAuth();
   }
 }
 
@@ -3336,10 +3349,10 @@ async function loadAdminUsers() {
       allCachedUsers = data.users;
       renderAdminUsersTable();
     } else {
-      adminUsersTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px;">${data.error || 'Không thể tải danh sách'}</td></tr>`;
+      adminUsersTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px;">${escapeHTML(data.error || 'Không thể tải danh sách')}</td></tr>`;
     }
   } catch (err) {
-    adminUsersTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px;">Lỗi: ${err.message}</td></tr>`;
+    adminUsersTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px;">Lỗi: ${escapeHTML(err.message)}</td></tr>`;
   }
 }
 
@@ -3361,37 +3374,47 @@ function renderAdminUsersTable(filter = '') {
     const isAdmin = u.role === 'admin';
     const isBanned = u.status === 'banned';
     const isMe = state.currentUser && state.currentUser.id === u.id;
+    const safeId = Number(u.id);
+    const safeUsername = escapeHTML(u.username || '');
+    const safeFullName = escapeHTML(u.full_name || u.username || '');
+    const safeEmail = escapeHTML(u.email || '');
+    const safeRole = escapeHTML(u.role || 'user');
+    const safeAvatar = escapeHTML((u.username && u.username[0] || 'U').toUpperCase());
+    const safeCreatedAt = escapeHTML((u.created_at || '').slice(0, 10));
+    const sessionCount = Number(u.session_count || 0);
+    const encUsername = encodeURIComponent(u.username || '');
+
     return `
       <tr>
-        <td style="font-family:monospace;font-size:12px;color:var(--text-sub);">${u.id}</td>
+        <td style="font-family:monospace;font-size:12px;color:var(--text-sub);">${safeId}</td>
         <td>
           <div style="display:flex;align-items:center;gap:8px;">
-            <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-high);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;">${(u.username[0] || 'U').toUpperCase()}</div>
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-high);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;">${safeAvatar}</div>
             <div>
-              <strong>${u.full_name || u.username}</strong>
-              <div style="font-size:11px;color:var(--text-sub);">@${u.username}</div>
+              <strong>${safeFullName}</strong>
+              <div style="font-size:11px;color:var(--text-sub);">@${safeUsername}</div>
             </div>
           </div>
         </td>
-        <td style="font-size:12px;">${u.email}</td>
+        <td style="font-size:12px;">${safeEmail}</td>
         <td>
-          <span class="badge-role ${isAdmin ? 'admin' : 'user'}">${u.role.toUpperCase()}</span>
+          <span class="badge-role ${isAdmin ? 'admin' : 'user'}">${safeRole.toUpperCase()}</span>
         </td>
         <td>
           <span class="badge-status ${isBanned ? 'banned' : 'active'}">${isBanned ? 'BỊ KHÓA' : 'HOẠT ĐỘNG'}</span>
         </td>
-        <td style="font-family:monospace;font-size:12px;text-align:center;">${u.session_count || 0}</td>
-        <td style="font-size:11px;color:var(--text-sub);">${(u.created_at || '').slice(0, 10)}</td>
+        <td style="font-family:monospace;font-size:12px;text-align:center;">${sessionCount}</td>
+        <td style="font-size:11px;color:var(--text-sub);">${safeCreatedAt}</td>
         <td>
           <div class="admin-actions-cell">
             ${!isMe ? `
-              <button type="button" class="btn-table-action" onclick="window.iroToggleRole(${u.id}, '${isAdmin ? 'user' : 'admin'}')" title="Đổi quyền Admin/User">
+              <button type="button" class="btn-table-action" onclick="window.iroToggleRole(${safeId}, '${isAdmin ? 'user' : 'admin'}')" title="Đổi quyền Admin/User">
                 ${isAdmin ? 'Hạ User' : 'Nâng Admin'}
               </button>
-              <button type="button" class="btn-table-action ${isBanned ? 'btn-unban' : 'btn-ban'}" onclick="window.iroToggleStatus(${u.id}, '${isBanned ? 'active' : 'banned'}')" title="Khóa/Mở khóa">
+              <button type="button" class="btn-table-action ${isBanned ? 'btn-unban' : 'btn-ban'}" onclick="window.iroToggleStatus(${safeId}, '${isBanned ? 'active' : 'banned'}')" title="Khóa/Mở khóa">
                 ${isBanned ? 'Mở khóa' : 'Khóa'}
               </button>
-              <button type="button" class="btn-table-action btn-del" onclick="window.iroDeleteUser(${u.id}, '${u.username}')" title="Xóa tài khoản">
+              <button type="button" class="btn-table-action btn-del" onclick="window.iroDeleteUser(${safeId}, '${encUsername}')" title="Xóa tài khoản">
                 🗑️
               </button>
             ` : '<span style="font-size:11px;color:var(--accent);font-weight:600;">(Chính bạn)</span>'}
@@ -3403,7 +3426,9 @@ function renderAdminUsersTable(filter = '') {
 }
 
 window.iroToggleRole = async (userId, newRole) => {
-  if (!confirm(`Bạn có chắc muốn chuyển tài khoản #${userId} sang vai trò "${newRole.toUpperCase()}"?`)) return;
+  const safeId = Number(userId);
+  const targetRole = newRole === 'admin' ? 'admin' : 'user';
+  if (!confirm(`Bạn có chắc muốn chuyển tài khoản #${safeId} sang vai trò "${targetRole.toUpperCase()}"?`)) return;
   try {
     const res = await fetch('api.php?action=admin_update_user', {
       method: 'POST',
@@ -3411,7 +3436,7 @@ window.iroToggleRole = async (userId, newRole) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.authToken}`
       },
-      body: JSON.stringify({ userId, role: newRole })
+      body: JSON.stringify({ userId: safeId, role: targetRole })
     });
     const d = await res.json();
     if (d.ok) {
@@ -3426,8 +3451,10 @@ window.iroToggleRole = async (userId, newRole) => {
 };
 
 window.iroToggleStatus = async (userId, newStatus) => {
-  const isBan = newStatus === 'banned';
-  if (!confirm(`Bạn có chắc muốn ${isBan ? 'KHÓA' : 'MỞ KHÓA'} tài khoản #${userId}?`)) return;
+  const safeId = Number(userId);
+  const targetStatus = newStatus === 'banned' ? 'banned' : 'active';
+  const isBan = targetStatus === 'banned';
+  if (!confirm(`Bạn có chắc muốn ${isBan ? 'KHÓA' : 'MỞ KHÓA'} tài khoản #${safeId}?`)) return;
   try {
     const res = await fetch('api.php?action=admin_update_user', {
       method: 'POST',
@@ -3435,7 +3462,7 @@ window.iroToggleStatus = async (userId, newStatus) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.authToken}`
       },
-      body: JSON.stringify({ userId, status: newStatus })
+      body: JSON.stringify({ userId: safeId, status: targetStatus })
     });
     const d = await res.json();
     if (d.ok) {
@@ -3449,8 +3476,11 @@ window.iroToggleStatus = async (userId, newStatus) => {
   }
 };
 
-window.iroDeleteUser = async (userId, username) => {
-  if (!confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA vĩnh viễn tài khoản "${username}" (ID: ${userId})? Thao tác này không thể hoàn tác!`)) return;
+window.iroDeleteUser = async (userId, usernameEnc) => {
+  const safeId = Number(userId);
+  let username = String(usernameEnc || '');
+  try { username = decodeURIComponent(username); } catch (_) {}
+  if (!confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA vĩnh viễn tài khoản "${username}" (ID: ${safeId})? Thao tác này không thể hoàn tác!`)) return;
   try {
     const res = await fetch('api.php?action=admin_delete_user', {
       method: 'POST',
@@ -3492,6 +3522,8 @@ if (closeMyPhotosModal) {
   });
 }
 
+let cachedMySessions = {};
+
 async function loadMyPhotos() {
   if (!myPhotosGrid) return;
   myPhotosGrid.innerHTML = '<p class="empty-hint">Đang tải lịch sử ảnh...</p>';
@@ -3505,40 +3537,79 @@ async function loadMyPhotos() {
         myPhotosGrid.innerHTML = '<p class="empty-hint">Bạn chưa có bức ảnh nào được chỉnh sửa trên máy chủ.</p>';
         return;
       }
+      cachedMySessions = {};
       myPhotosGrid.innerHTML = data.sessions.map(s => {
+        cachedMySessions[s.session_id] = s;
         const thumb = s.preview_url || s.original_url || '';
+        const safeThumb = escapeHTML(thumb);
+        const safeFilename = escapeHTML(s.filename || 'photo.jpg');
+        const safeSid = escapeHTML(s.session_id);
+        const safeRecipe = escapeHTML(s.recipe_name || 'Tự chỉnh');
+        const safeDate = escapeHTML((s.updated_at || s.created_at || '').slice(0, 10));
+
         return `
           <div class="my-photo-card">
             <div class="photo-thumb-wrap">
-              ${thumb ? `<img src="${thumb}" alt="${s.filename}" loading="lazy" />` : '<div class="no-thumb">🖼️</div>'}
+              ${thumb ? `<img src="${safeThumb}" alt="${safeFilename}" loading="lazy" />` : '<div class="no-thumb">🖼️</div>'}
             </div>
             <div class="photo-info">
-              <div class="photo-title" title="${s.filename}">${s.filename}</div>
+              <div class="photo-title" title="${safeFilename}">${safeFilename}</div>
               <div class="photo-meta">
-                <span>${s.recipe_name || 'Tự chỉnh'}</span>
+                <span>${safeRecipe}</span>
                 <span>·</span>
-                <span>${(s.updated_at || s.created_at || '').slice(0, 10)}</span>
+                <span>${safeDate}</span>
               </div>
               <div class="photo-actions">
                 ${s.original_url ? `
-                  <button type="button" class="btn-load-photo" onclick="window.iroLoadCloudPhoto('${s.original_url}', '${encodeURIComponent(s.filename)}', ${JSON.stringify(s.settings_json || '{}').replace(/"/g, '&quot;')})">
+                  <button type="button" class="btn-load-photo" onclick="window.iroLoadCloudPhotoById('${safeSid}')">
                     Mở ảnh này
                   </button>
                 ` : ''}
-                ${thumb ? `<a href="${thumb}" target="_blank" download="${s.filename}" class="btn-download-thumb" title="Tải về">⬇️</a>` : ''}
-                <button type="button" class="btn-download-thumb" onclick="window.iroDeleteCloudPhoto('${s.session_id}', '${encodeURIComponent(s.filename)}')" title="Xóa ảnh này" style="color:var(--danger,#ef4444); border-color:rgba(239,68,68,0.3);">🗑️</button>
+                ${thumb ? `<a href="${safeThumb}" target="_blank" download="${safeFilename}" class="btn-download-thumb" title="Tải về">⬇️</a>` : ''}
+                <button type="button" class="btn-download-thumb" onclick="window.iroDeleteCloudPhotoById('${safeSid}')" title="Xóa ảnh này" style="color:var(--danger,#ef4444); border-color:rgba(239,68,68,0.3);">🗑️</button>
               </div>
             </div>
           </div>
         `;
       }).join('');
     } else {
-      myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">${data.error || 'Không thể tải ảnh'}</p>`;
+      myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">${escapeHTML(data.error || 'Không thể tải ảnh')}</p>`;
     }
   } catch (err) {
-    myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">Lỗi: ${err.message}</p>`;
+    myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">Lỗi: ${escapeHTML(err.message)}</p>`;
   }
 }
+
+window.iroDeleteCloudPhotoById = async (sessionId) => {
+  const s = cachedMySessions[sessionId];
+  const filename = s ? s.filename : 'ảnh này';
+  if (!confirm(`Bạn có chắc chắn muốn xóa ảnh "${filename}" khỏi tài khoản của bạn?\n\nẢnh sẽ bị xóa vĩnh viễn khỏi máy chủ.`)) return;
+  try {
+    const res = await fetch('api.php?action=delete_my_photo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.authToken}`
+      },
+      body: JSON.stringify({ sessionId })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(`Đã xóa ảnh "${filename}" thành công!`, 'success', '🗑️');
+      loadMyPhotos();
+    } else {
+      alert(data.error || 'Không thể xóa ảnh');
+    }
+  } catch (err) {
+    alert('Lỗi kết nối: ' + err.message);
+  }
+};
+
+window.iroLoadCloudPhotoById = async (sessionId) => {
+  const s = cachedMySessions[sessionId];
+  if (!s || !s.original_url) return;
+  return window.iroLoadCloudPhoto(s.original_url, encodeURIComponent(s.filename || 'photo.jpg'), s.settings_json);
+};
 
 window.iroDeleteCloudPhoto = async (sessionId, filenameEnc) => {
   const filename = decodeURIComponent(filenameEnc);
@@ -4004,3 +4075,29 @@ window.addEventListener('keyup', (e) => {
     setPeekingBefore(false);
   }
 });
+
+window.iroSyncRecipesNow = async () => {
+  if (!confirm('Bạn có muốn kích hoạt trình đồng bộ để quét và cập nhật các công thức màu phim mới từ Fuji X Weekly ngay bây giờ?')) return;
+  showToast('Đang quét và đồng bộ công thức màu mới...', 'info', '⏳');
+  try {
+    const res = await fetch('api.php?action=admin_sync_recipes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.authToken}`
+      }
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(data.message || 'Đã đồng bộ công thức thành công!', 'success', '✨');
+      await load392Catalog();
+      if (typeof renderRecipeLibraryGrid === 'function' && !recipeLibraryModal.hidden) {
+        renderRecipeLibraryGrid();
+      }
+    } else {
+      alert(data.error || 'Đồng bộ thất bại');
+    }
+  } catch (err) {
+    alert('Lỗi kết nối: ' + err.message);
+  }
+};

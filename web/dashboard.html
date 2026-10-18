@@ -1157,6 +1157,11 @@
           <span>Cập nhật ngay</span>
         </button>
 
+        <!-- Nút Quản Trị Viên -->
+        <button id="adminAuthBtn" class="capsule-btn" style="border-color: var(--accent); color: var(--accent);" onclick="handleAdminAuthClick()" title="Quản lý xác thực Quản Trị Viên">
+          <span>🔑 Đăng nhập Admin</span>
+        </button>
+
         <!-- Nút đổi theme sáng/tối -->
         <button id="themeToggleBtn" class="capsule-btn" title="Chuyển chế độ Sáng (Porcelain) / Tối (Darkroom)">
           <span>☀️ Giao diện Sáng</span>
@@ -1409,7 +1414,34 @@
   <!-- =========================================================================
        MODAL XEM LỊCH SỬ CHỈNH SỬA CHI TIẾT
        ========================================================================= -->
-  <div id="logModal" class="admin-modal-overlay">
+    <!-- =======================================================================
+       MODAL ĐĂNG NHẬP ADMIN (DEFENSIVE HARDENING)
+       ======================================================================= -->
+  <div id="adminLoginModal" class="admin-modal-overlay">
+    <div class="admin-modal-card" style="max-width: 400px; padding: 24px;">
+      <div class="admin-modal-header" style="margin-bottom: 20px;">
+        <h3 style="margin: 0; font-size: 18px;">Xác Thực Quản Trị Viên</h3>
+        <button class="close-btn" onclick="closeAdminLoginModal()">✕</button>
+      </div>
+      <form id="adminLoginForm" onsubmit="submitAdminLogin(event)">
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Tài khoản / Email:</label>
+          <input type="text" id="adminAccountInput" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); box-sizing: border-box;" placeholder="admin" />
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Mật khẩu:</label>
+          <input type="password" id="adminPasswordInput" required style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); box-sizing: border-box;" placeholder="••••••••" />
+        </div>
+        <div id="adminLoginError" style="display: none; padding: 10px; margin-bottom: 14px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; color: #ef4444; font-size: 13px;"></div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="capsule-btn" onclick="closeAdminLoginModal()">Hủy</button>
+          <button type="submit" class="capsule-btn active" style="background: var(--accent); color: #fff;">Đăng nhập</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<div id="logModal" class="admin-modal-overlay">
     <div class="admin-modal-card">
       <div class="admin-modal-header">
         <h3 id="modalTitle">Lịch Sử Từng Bước Tinh Chỉnh</h3>
@@ -1525,12 +1557,125 @@
 
     closeModalBtn.addEventListener('click', () => logModal.classList.remove('open'));
 
+        // Helper: Escape HTML preventing Stored XSS
+    function escapeHTML(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function getAdminToken() {
+      return localStorage.getItem('iro_admin_token') || localStorage.getItem('iro_token') || '';
+    }
+
+    function updateAdminAuthUI() {
+      const btn = document.getElementById('adminAuthBtn');
+      if (!btn) return;
+      const token = getAdminToken();
+      if (token) {
+        btn.innerHTML = '<span>🔒 Admin Đã Đăng Nhập (Thoát)</span>';
+        btn.style.color = '#10b981';
+        btn.style.borderColor = '#10b981';
+      } else {
+        btn.innerHTML = '<span>🔑 Đăng nhập Admin</span>';
+        btn.style.color = 'var(--accent)';
+        btn.style.borderColor = 'var(--accent)';
+      }
+    }
+
+    function openAdminLoginModal() {
+      const modal = document.getElementById('adminLoginModal');
+      const err = document.getElementById('adminLoginError');
+      if (err) err.style.display = 'none';
+      if (modal) modal.classList.add('open');
+      const inp = document.getElementById('adminAccountInput');
+      if (inp) inp.focus();
+    }
+
+    function closeAdminLoginModal() {
+      const modal = document.getElementById('adminLoginModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function handleAdminAuthClick() {
+      const token = getAdminToken();
+      if (token) {
+        if (confirm('Bạn có muốn đăng xuất quyền Quản Trị Viên trên trình duyệt này?')) {
+          localStorage.removeItem('iro_admin_token');
+          localStorage.removeItem('iro_token');
+          updateAdminAuthUI();
+          fetchSessions();
+          if (document.getElementById('tabUsers').classList.contains('active')) fetchUsers();
+          if (document.getElementById('tabLogs').classList.contains('active')) fetchGlobalLogs();
+        }
+      } else {
+        openAdminLoginModal();
+      }
+    }
+
+    async function submitAdminLogin(e) {
+      e.preventDefault();
+      const account = document.getElementById('adminAccountInput').value.trim();
+      const password = document.getElementById('adminPasswordInput').value;
+      const errDiv = document.getElementById('adminLoginError');
+
+      try {
+        const res = await fetch('api.php?action=auth_login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ account, password })
+        });
+        const data = await res.json();
+        if (data.ok && data.token) {
+          if (data.user && data.user.role !== 'admin') {
+            errDiv.textContent = 'Tài khoản này không có quyền Quản Trị Viên (Admin).';
+            errDiv.style.display = 'block';
+            return;
+          }
+          localStorage.setItem('iro_token', data.token);
+          localStorage.setItem('iro_admin_token', data.token);
+          closeAdminLoginModal();
+          updateAdminAuthUI();
+          fetchSessions();
+          if (document.getElementById('tabUsers').classList.contains('active')) fetchUsers();
+          if (document.getElementById('tabLogs').classList.contains('active')) fetchGlobalLogs();
+        } else {
+          errDiv.textContent = data.error || 'Đăng nhập không thành công.';
+          errDiv.style.display = 'block';
+        }
+      } catch (err) {
+        errDiv.textContent = 'Lỗi kết nối máy chủ: ' + err.message;
+        errDiv.style.display = 'block';
+      }
+    }
+
     // 5. Fetch Sessions API
     async function fetchSessions() {
       try {
-        const res = await fetch('api.php?action=get_sessions');
+        const token = getAdminToken();
+        const res = await fetch('api.php?action=get_sessions', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
         const data = await res.json();
-        if (!data.ok) return;
+        if (!data.ok) {
+          if (res.status === 401 || res.status === 403) {
+            sessionsGrid.innerHTML = `
+              <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-dim); background: var(--surface-elevated); border-radius: 24px; border: 1px dashed var(--border);">
+                <div style="font-size: 36px; margin-bottom: 10px;">🔒</div>
+                <div style="font-size: 16px; font-weight: 600; color: var(--text);">Yêu Cầu Đăng Nhập Quản Trị Viên</div>
+                <p style="font-size: 13.5px; margin: 6px 0 16px; color: var(--text-muted);">
+                  Danh sách phiên chỉnh ảnh và kho ảnh khách hàng đã được gia cố bảo mật. Vui lòng đăng nhập Admin để xem.
+                </p>
+                <button class="capsule-btn active" onclick="openAdminLoginModal()" style="padding: 8px 18px; font-size: 13px; background: var(--accent); color: #fff;">🔑 Đăng nhập Admin</button>
+              </div>`;
+            document.getElementById('statSyncStatus').textContent = 'Chưa xác thực Admin';
+          }
+          return;
+        }
 
         cachedSessions = data.sessions || [];
         document.getElementById('statTotalPhotos').textContent = data.totalCount || cachedSessions.length;
@@ -1603,11 +1748,11 @@
             <div class="session-card-head">
               <div class="client-badge-block">
                 <span class="client-ip">
-                  <span>●</span> IP: ${s.client_ip || '127.0.0.1'}
+                  <span>●</span> IP: ${escapeHTML(s.client_ip || '127.0.0.1')}
                 </span>
-                <span class="client-time">${timeStr}</span>
+                <span class="client-time">${escapeHTML(timeStr)}</span>
               </div>
-              <span class="recipe-pill">${s.recipe_name || 'Original'}</span>
+              <span class="recipe-pill">${escapeHTML(s.recipe_name || 'Original')}</span>
             </div>
 
             <div class="card-dual-images">
@@ -1639,7 +1784,7 @@
             <div class="card-meta-details">
               <div class="meta-line">
                 <span>Tên tập tin:</span>
-                <strong style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${s.filename || 'photo.jpg'}</strong>
+                <strong style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(s.filename || 'photo.jpg')}</strong>
               </div>
               <div class="meta-line">
                 <span>Độ phân giải:</span>
@@ -1703,7 +1848,10 @@
       logModal.classList.add('open');
 
       try {
-        const res = await fetch(`api.php?action=get_logs&sessionId=${encodeURIComponent(sessionId)}`);
+        const token = getAdminToken();
+        const res = await fetch(`api.php?action=get_logs&sessionId=${encodeURIComponent(sessionId)}`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
         const data = await res.json();
         if (!data.ok || !data.logs || !data.logs.length) {
           modalBody.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 24px;">Chưa ghi nhận bước chỉnh sửa nào.</div>';
@@ -1714,8 +1862,8 @@
           const t = new Date(log.created_at).toLocaleTimeString('vi-VN');
           return `
             <div class="timeline-log-row">
-              <div>${log.detail || log.action}</div>
-              <div class="timeline-log-time">${t}</div>
+              <div>${escapeHTML(log.detail || log.action)}</div>
+              <div class="timeline-log-time">${escapeHTML(t)}</div>
             </div>
           `;
         }).join('');
@@ -1765,16 +1913,16 @@
 
           return `
             <tr>
-              <td><code>#${u.id}</code></td>
-              <td><strong>${u.username}</strong></td>
-              <td>${u.email}</td>
-              <td><span class="role-badge ${u.role}">${u.role}</span></td>
-              <td><span class="status-badge ${u.status}">● ${u.status}</span></td>
-              <td><strong>${u.photo_count || 0}</strong></td>
-              <td><strong>${u.total_edits || 0}</strong></td>
-              <td style="font-size:12px;color:var(--text-dim);">${lastLog}</td>
+              <td><code>#${escapeHTML(u.id)}</code></td>
+              <td><strong>${escapeHTML(u.username)}</strong></td>
+              <td>${escapeHTML(u.email)}</td>
+              <td><span class="role-badge ${escapeHTML(u.role)}">${escapeHTML(u.role)}</span></td>
+              <td><span class="status-badge ${escapeHTML(u.status)}">● ${escapeHTML(u.status)}</span></td>
+              <td><strong>${Number(u.photo_count || 0)}</strong></td>
+              <td><strong>${Number(u.total_edits || 0)}</strong></td>
+              <td style="font-size:12px;color:var(--text-dim);">${escapeHTML(lastLog)}</td>
               <td>
-                <button class="capsule-btn" onclick="toggleUserStatus(${u.id}, '${u.status}')" style="padding: 3px 9px; font-size: 11px;">
+                <button class="capsule-btn" onclick="toggleUserStatus(${Number(u.id)}, '${escapeHTML(u.status)}')" style="padding: 3px 9px; font-size: 11px;">
                   ${u.status === 'active' ? 'Khóa' : 'Kích hoạt'}
                 </button>
               </td>
@@ -1814,8 +1962,15 @@
       c.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-dim);">Đang tải nhật ký...</div>';
 
       try {
-        const res = await fetch('api.php?action=get_logs');
+        const token = getAdminToken();
+        const res = await fetch('api.php?action=get_logs', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
         const data = await res.json();
+        if (!data.ok && (res.status === 401 || res.status === 403)) {
+          c.innerHTML = '<div style="color: var(--text-dim); padding: 30px; text-align: center;">🔒 Vui lòng đăng nhập tài khoản Quản Trị Viên để xem nhật ký hệ thống.</div>';
+          return;
+        }
         if (!data.ok || !data.logs || !data.logs.length) {
           c.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-dim);">Chưa có nhật ký hoạt động nào.</div>';
           return;
@@ -1826,10 +1981,10 @@
           return `
             <div class="timeline-log-row">
               <div>
-                <span style="font-family:var(--font-mono);font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.06);margin-right:8px;">${log.action}</span>
-                <span>${log.detail}</span>
+                <span style="font-family:var(--font-mono);font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.06);margin-right:8px;">${escapeHTML(log.action)}</span>
+                <span>${escapeHTML(log.detail)}</span>
               </div>
-              <div class="timeline-log-time">${t}</div>
+              <div class="timeline-log-time">${escapeHTML(t)}</div>
             </div>
           `;
         }).join('');
@@ -1861,6 +2016,7 @@
     }
 
     // Boot
+    updateAdminAuthUI();
     fetchSessions();
     startPolling();
   </script>

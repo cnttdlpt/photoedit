@@ -1,0 +1,18 @@
+[Unit]
+Description=IRO Studio 3.0 - Automated Film Recipe Synchronizer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/iro-studio
+ExecStart=/usr/bin/python3 /var/www/iro-studio/scripts/sync_recipes.py
+StandardOutput=append:/var/log/iro-recipe-sync.log
+StandardError=append:/var/log/iro-recipe-sync.log
+
+# Security Sandboxing
+ProtectSystem=full
+ProtectHome=true
+NoNewPrivileges=true

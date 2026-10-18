@@ -2082,6 +2082,9 @@ button:disabled {
    ========================================================================== */
 body.auth-locked .topbar,
 body.auth-locked .workspace,
+body.auth-locked #screenLanding,
+body.auth-locked #screenEditor,
+body.auth-locked .deck-screen,
 body.auth-locked .m3-bottom-nav {
   filter: blur(20px) brightness(0.45);
   pointer-events: none !important;

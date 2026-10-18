@@ -36,7 +36,7 @@
         <span class="back-text">Quay lại</span>
       </button>
 
-      <div class="brand" id="brandIdentity" role="button" tabindex="0" title="Về trang chủ IRO Studio" aria-label="Về trang chủ">
+      <div class="brand" id="brandIdentity">
         <div class="brand-badge" aria-hidden="true">
           <span class="brand-dot"></span>
         </div>
@@ -123,10 +123,7 @@
           <div class="dropdown-divider"></div>
           <div class="dropdown-section-title">Mã & 3D LUT</div>
           <button id="importLutBtn" type="button" class="dropdown-item">📂 Nạp tệp 3D LUT (.cube)</button>
-          <button id="exportRecipeCard" type="button" class="dropdown-item" disabled>📇 Xuất Thẻ Công Thức (Recipe Card)</button>
           <button id="exportCube" type="button" class="dropdown-item" disabled>🧊 Xuất 3D LUT (.cube)</button>
-          <button id="shortcutsBtn" type="button" class="dropdown-item">⌨️ Bảng phím tắt nhanh (Phím ?)</button>
-          <button id="soundToggleBtn" type="button" class="dropdown-item">🔊 Âm thanh buồng tối: <strong id="soundStatusText">Bật</strong></button>
           <button id="shareCode" type="button" class="dropdown-item" disabled>🔗 Sao chép mã công thức IRO1</button>
           <button id="quickCmdBtn" type="button" class="dropdown-item">🔍 Tìm nhanh (Ctrl+K)</button>
           <a href="dashboard.html" target="_blank" class="dropdown-item" style="text-decoration:none;color:inherit;">📊 Bảng giám sát Realtime</a>
@@ -165,6 +162,15 @@
         <div class="hero-action-buttons">
           <button type="button" class="hero-btn primary" id="heroOpenBtn">
             <span>📷 Mở ảnh từ máy</span>
+          </button>
+          <button type="button" class="hero-btn tonal sample-btn" data-sample="portrait">
+            <span>👩 Chân dung Hoàng hôn</span>
+          </button>
+          <button type="button" class="hero-btn tonal sample-btn" data-sample="street">
+            <span>🏮 Phố đêm Neon</span>
+          </button>
+          <button type="button" class="hero-btn tonal sample-btn" data-sample="landscape">
+            <span>🏔️ Phong cảnh Núi</span>
           </button>
           <button type="button" class="hero-btn outlined" id="heroPromptBtn">
             <span>🪄 Tả cảnh AI</span>
@@ -248,24 +254,15 @@
     <!-- SÂN KHẤU TRUNG TÂM (CENTER PHOTO STAGE) -->
     <section class="stage-column">
       <div class="stage" id="stageContainer">
-        <!-- Vùng rỗng buồng tối (Empty State Dropzone) -->
-        <div id="empty" class="empty-state">
-          <div class="empty-icon-wrapper">
-            <span class="empty-sparkle">✦</span>
-            <div class="empty-icon">📷</div>
-          </div>
-          <h2>Chưa có ảnh trong buồng tối</h2>
-          <p>Kéo & thả ảnh vào đây, hoặc nhấn để duyệt tệp từ thiết bị của bạn.</p>
-          <div class="empty-actions">
-            <button type="button" class="btn primary empty-open-btn" id="emptyOpenBtn">
-              <span>🖼️ Chọn ảnh từ thiết bị</span>
-            </button>
-          </div>
-          <div class="empty-hint">Hỗ trợ JPG, PNG, WebP, AVIF, RAW (RAF / DNG)</div>
+        <!-- Vùng rỗng dự phòng -->
+        <div id="empty" class="empty-state" hidden>
+          <div class="empty-icon">📷</div>
+          <h2>IRO Studio 3.0 · Material Design 3 Expressive</h2>
+          <p>Kéo & thả ảnh vào đây, hoặc bấm <b>Mở ảnh</b>.</p>
         </div>
 
         <div class="canvas-viewport" id="canvasViewport">
-          <div class="canvas-wrapper" id="canvasWrapper" hidden>
+          <div class="canvas-wrapper" id="canvasWrapper">
             <canvas id="canvas"></canvas>
             <canvas id="beforeCanvas" class="before-canvas" hidden></canvas>
             <div id="splitSlider" class="split-slider" hidden>
@@ -277,18 +274,13 @@
         </div>
 
         <!-- Chỉ báo thông tin ảnh dưới sân khấu (App Caption Pill) -->
-        <div class="stage-info-pill" id="stageInfoPill" hidden>
+        <div class="stage-info-pill" id="stageInfoPill">
           <span id="stageDimensionText">1200 × 800</span>
           <span class="dot-separator">·</span>
           <span id="stageFilmText">Classic Chrome</span>
           <span class="dot-separator">·</span>
           <span id="stageFrameText">Không khung</span>
         </div>
-
-        <!-- Nút nổi Giữ xem ảnh gốc (Quick Peek Before) -->
-        <button id="quickPeekBadge" type="button" class="quick-peek-badge" hidden title="Nhấn & giữ để xem ảnh gốc ban đầu (Phím Space)">
-          👁️ Giữ xem ảnh gốc (Space)
-        </button>
 
         <!-- Nút nổi Zoom 100% -->
         <button id="zoomResetBadge" type="button" class="m3-zoom-badge" hidden title="Nhấp để đặt lại khung nhìn 100%">
@@ -500,22 +492,15 @@
               <select id="dr"><option value="100">DR100 (Chuẩn)</option><option value="200">DR200</option><option value="400">DR400</option></select>
             </label>
           </div>
-          <!-- Băng chuyền chọn nhanh toàn bộ các loại Giả lập Film gốc -->
-          <div class="film-sim-pills-row" id="filmSimPillsRow"></div>
         </div>
 
         <div class="deck-card-box">
           <div class="section-header">
-            <span>Toàn bộ Bộ Lọc & Công thức Fujifilm (<strong id="tabFilmCountBadge">392</strong>)</span>
+            <span>Kho 392 Công thức Fujifilm</span>
             <div class="section-header-links">
               <button id="inlineSurpriseBtn" type="button" class="reset-link" title="Chọn ngẫu nhiên">🎲 Ngẫu nhiên</button>
-              <button id="openFullCatalogInline" type="button" class="reset-link">Mở kho lớn ➔</button>
+              <button id="openFullCatalogInline" type="button" class="reset-link">Mở kho ➔</button>
             </div>
-          </div>
-          <!-- Thanh tìm kiếm & phân loại nhanh toàn bộ bộ lọc -->
-          <div class="tab-film-toolbar" style="margin-bottom: 10px;">
-            <input id="tabFilmSearchInput" type="search" placeholder="🔍 Tìm trong 392 bộ lọc (Portra, Kodachrome, Cine, Acros...)" style="width: 100%; padding: 8px 14px; font-size: 12.5px; border-radius: 9999px; border: 1px solid var(--border); background: var(--panel-elevated); color: var(--text); outline: none; box-sizing: border-box;" />
-            <div id="tabFilmChipsRow" class="tab-film-chips"></div>
           </div>
           <div class="preset-ribbon" id="presetRibbon"></div>
         </div>
@@ -861,33 +846,6 @@
           </thead>
           <tbody id="adminUsersTableBody"></tbody>
         </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- HỘP THOẠI BẢNG PHÍM TẮT NHANH (KEYBOARD SHORTCUTS MODAL) -->
-  <div id="shortcutsModal" class="contact-sheet-modal shortcuts-dialog-modal" hidden>
-    <div class="contact-sheet-header">
-      <div>
-        <h3>⌨️ Bảng Phím Tắt Nhanh (Keyboard Shortcuts)</h3>
-        <p class="modal-sub">Thao tác buồng tối quang học chuẩn Studio với phím bấm</p>
-      </div>
-      <button id="closeShortcutsModal" type="button">✕ Đóng</button>
-    </div>
-    <div class="shortcuts-modal-body" style="padding: 24px; max-height: 70vh; overflow-y: auto;">
-      <div class="shortcuts-grid">
-        <div class="shortcut-item"><span class="shortcut-desc">Giữ xem ảnh gốc (Quick Peek)</span><kbd>Space</kbd></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Bật / Tắt thanh trượt so sánh Trước / Sau</span><kbd>C</kbd></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Hoàn tác thao tác (Undo)</span><div><kbd>Ctrl</kbd> + <kbd>Z</kbd></div></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Làm lại thao tác (Redo)</span><div><kbd>Ctrl</kbd> + <kbd>Y</kbd></div></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Mở tệp ảnh từ thiết bị</span><kbd>O</kbd></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Xuất ảnh chất lượng cao</span><div><kbd>Ctrl</kbd> + <kbd>S</kbd></div></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Xoay ảnh 90°</span><kbd>R</kbd></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Mở kho 392 công thức màu Fujifilm</span><kbd>L</kbd></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Tìm kiếm nhanh lệnh & công thức</span><div><kbd>Ctrl</kbd> + <kbd>K</kbd></div></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Đổi giao diện Sáng / Tối</span><kbd>T</kbd></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Lưới 4 phương án màu so sánh</span><kbd>Q</kbd></div>
-        <div class="shortcut-item"><span class="shortcut-desc">Bật trợ giúp phím tắt</span><kbd>?</kbd></div>
       </div>
     </div>
   </div>

@@ -12,7 +12,7 @@ const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 const catalog = JSON.parse(await readFile(new URL('./recipes.json', import.meta.url), 'utf8'));
 let instance = 0;
 
-async function boot(favorites = '[]', storageBlocked = false, loadSample = true) {
+async function boot(favorites = '[]', storageBlocked = false) {
   const { window, document } = parseHTML(html);
   const canvases = new WeakMap();
   function native(element) {
@@ -82,9 +82,6 @@ async function boot(favorites = '[]', storageBlocked = false, loadSample = true)
   try {
     await import(`./app.mjs?integration=${++instance}`);
     await new Promise(resolve => setImmediate(resolve));
-    if (loadSample && globalThis.generateSampleImage) {
-      globalThis.generateSampleImage('portrait');
-    }
     const element = selector => assertElement(document.querySelector(selector), selector);
     return {
       document, element, requests, downloads, cleanup,
@@ -104,16 +101,9 @@ async function boot(favorites = '[]', storageBlocked = false, loadSample = true)
 
 function assertElement(element, selector) { assert.ok(element, `Missing element ${selector}`); return element; }
 
-test('real page starts with empty dropzone, hides canvas until image is loaded, and wires exposure, undo, frames and navigation', async () => {
-  const app = await boot('[]', false, false);
+test('real page starts, renders sample and wires exposure, undo, frames and navigation', async () => {
+  const app = await boot();
   try {
-    assert.equal(app.element('#empty').hidden, false, 'Empty dropzone should be visible on boot');
-    assert.equal(app.element('#canvasWrapper').hidden, true, 'Canvas should be hidden on boot');
-    assert.equal(app.element('#stageInfoPill').hidden, true, 'Stage info pill should be hidden on boot');
-
-    globalThis.generateSampleImage('portrait');
-    assert.equal(app.element('#empty').hidden, true);
-    assert.equal(app.element('#canvasWrapper').hidden, false);
     assert.equal(app.element('#canvas').width, 960);
     assert.equal(app.element('#canvas').height, 640);
     assert.match(app.element('#status').textContent, /Sẵn sàng/);

@@ -2,11 +2,1027 @@
   "schemaVersion": 1,
   "source": "Fuji X Weekly public website",
   "indexUrl": "https://fujixweekly.com/recipes/",
-  "retrievedOn": "2026-10-08",
+  "retrievedOn": "2026-10-18",
   "coverage": "Public articles linked by the 10 sensor / IR / video indexes. Not an export of the app; excludes inaccessible Patron recipes. Extracted automatically; verify source before camera use.",
   "articleCount": 364,
-  "recipeCount": 391,
+  "recipeCount": 421,
   "recipes": [
+    {
+      "id": "fs_23a4e2d0bf2ca",
+      "name": "[FujiStyle] Summer by Alyssa",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/summer-by-alyssa-6c1edb14/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR100",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "Strong",
+        "Color": "4",
+        "Sharpness": "0",
+        "Highlight": "-1.0",
+        "Shadow": "0.0",
+        "Noise Reduction": "-4",
+        "Clarity": "-2",
+        "White Balance": "AUTO, +3 Red & -5 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2025/12/27/8b34bac4-3d00-429e-8080-7b61c23bce70.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2025/12/27/8b34bac4-3d00-429e-8080-7b61c23bce70.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_2136e274ff63a",
+      "name": "[FujiStyle] ZL Portra 400",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/zl-portra-400-9727701e/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "Strong",
+        "Grain Size": "Small",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "Weak",
+        "Color": "2",
+        "Sharpness": "-2",
+        "Highlight": "-2.0",
+        "Shadow": "-2.0",
+        "Noise Reduction": "-4",
+        "Clarity": "-2",
+        "ISO": "400-3200",
+        "White Balance": "AUTO AMBIENCE PRIORITY, +2 Red & -6 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/838c0505-860b-4d11-bc84-4494e9e93e55.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/838c0505-860b-4d11-bc84-4494e9e93e55.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_e90d83405249a",
+      "name": "[FujiStyle] Kawaguchiko",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/kawaguchiko-6f0e32c2/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Neg",
+      "rawSettings": {
+        "Film Simulation": "Classic Neg",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "None",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "Strong",
+        "Color": "4",
+        "Sharpness": "0",
+        "Highlight": "-2.0",
+        "Shadow": "1.0",
+        "Noise Reduction": "-4",
+        "Clarity": "-4",
+        "White Balance": "AUTO, +4 Red & -5 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/06a49caf-fb08-428c-b3bb-d0096080875e.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/06a49caf-fb08-428c-b3bb-d0096080875e.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_e414d4e33b88b",
+      "name": "[FujiStyle] Trắng Hồng",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/trang-hong-f9935b40/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "Auto",
+        "Grain Effect": "None",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "None",
+        "Color": "3",
+        "Sharpness": "3",
+        "Highlight": "-1.0",
+        "Shadow": "-1.0",
+        "Noise Reduction": "-2",
+        "Clarity": "0",
+        "White Balance": "AUTO WHITE PRIORITY, -1 Red & +1 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2025/12/27/10d7357d-d25e-4e5c-8e22-a8973a16dfb2.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2025/12/27/10d7357d-d25e-4e5c-8e22-a8973a16dfb2.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_ee0ffe8402414",
+      "name": "[FujiStyle] Japan Allday Recipe",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/japan-allday-recipe-b6ca8ce1/",
+      "sensors": [
+        "X-TRANS-V"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR100",
+        "Grain Effect": "Strong",
+        "Grain Size": "Small",
+        "Color Chrome Effect": "Off",
+        "Color Chrome FX Blue": "Strong",
+        "Color": "3",
+        "Sharpness": "-2",
+        "Highlight": "-2.0",
+        "Shadow": "0.0",
+        "Noise Reduction": "-4",
+        "Clarity": "-2",
+        "White Balance": "COLOUR TEMPERATURE, +4 Red & -5 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/03/02/557ce13a-1d5b-418d-a82f-267cf4792331.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/03/02/557ce13a-1d5b-418d-a82f-267cf4792331.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_b68b3ea9b6685",
+      "name": "[FujiStyle] Beach Orange 🏖️",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/beach-orange-f3969502/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "Auto",
+        "Grain Effect": "None",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "Strong",
+        "Color": "2",
+        "Sharpness": "4",
+        "Highlight": "-2.0",
+        "Shadow": "-1.0",
+        "Noise Reduction": "2",
+        "Clarity": "1",
+        "White Balance": "AUTO, +0 Red & -2 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/68d2e010-04c2-46c5-a8ae-266cc47162ce.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/68d2e010-04c2-46c5-a8ae-266cc47162ce.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_78b17f5c350f2",
+      "name": "[FujiStyle] Italian Summer",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/italian-summer-4c352790/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "None",
+        "Color Chrome Effect": "Weak",
+        "Color Chrome FX Blue": "Weak",
+        "Color": "4",
+        "Sharpness": "2",
+        "Highlight": "-2.0",
+        "Shadow": "-2.0",
+        "Noise Reduction": "-4",
+        "Clarity": "0",
+        "White Balance": "AUTO, +5 Red & -6 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2025/12/28/3400dc6f-c2e2-4231-b756-20dafe9e1920.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2025/12/28/3400dc6f-c2e2-4231-b756-20dafe9e1920.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_6be5dff90460c",
+      "name": "[FujiStyle] Tone nâu",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/tone-nau-bbfdc4dc/",
+      "sensors": [
+        "X-TRANS-III"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "None",
+        "Color Chrome Effect": "Off",
+        "Color Chrome FX Blue": "None",
+        "Color": "-4",
+        "Sharpness": "2",
+        "Highlight": "-2.0",
+        "Shadow": "1.0",
+        "Noise Reduction": "-1",
+        "Clarity": "0",
+        "White Balance": "FLUORESCENT LIGHT-2, +4 Red & +0 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/dffc7458-3be4-4b48-806d-17c962109932.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/dffc7458-3be4-4b48-806d-17c962109932.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_a5380b456a7a3",
+      "name": "[FujiStyle] Simon’s Negative",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/simon-s-negative-ed815334/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Neg",
+      "rawSettings": {
+        "Film Simulation": "Classic Neg",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "Strong",
+        "Color": "4",
+        "Sharpness": "0",
+        "Highlight": "0.5",
+        "Shadow": "0.5",
+        "Noise Reduction": "-4",
+        "Clarity": "0",
+        "White Balance": "AUTO, +2 Red & -2 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/9514224a-1dc9-47bd-8073-1ae71ec6b806.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/9514224a-1dc9-47bd-8073-1ae71ec6b806.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_1cbce16a516f9",
+      "name": "[FujiStyle] Coastal Chrome",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/coastal-chrome-bd8ddd18/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "Auto",
+        "Grain Effect": "Weak",
+        "Grain Size": "Large",
+        "Color Chrome Effect": "Weak",
+        "Color Chrome FX Blue": "None",
+        "Color": "3",
+        "Sharpness": "-2",
+        "Highlight": "-1.5",
+        "Shadow": "0.5",
+        "Noise Reduction": "0",
+        "Clarity": "-2",
+        "White Balance": "AUTO, +4 Red & -5 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/5475537c-725b-4380-a261-04b4f6e7c328.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/5475537c-725b-4380-a261-04b4f6e7c328.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_dc4f433ec42db",
+      "name": "[FujiStyle] Go to",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/go-to-28c5d9af/",
+      "sensors": [
+        "X-TRANS-III"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR100",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color Chrome Effect": "Off",
+        "Color Chrome FX Blue": "None",
+        "Color": "0",
+        "Sharpness": "0",
+        "Highlight": "-0.5",
+        "Shadow": "-0.5",
+        "Noise Reduction": "-1",
+        "Clarity": "0",
+        "White Balance": "6700 K"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/11684c4a-19c0-4e58-9374-64de21b0de49.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/11684c4a-19c0-4e58-9374-64de21b0de49.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_b0b83534e4327",
+      "name": "[FujiStyle] Cherry Negative",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/cherry-negative-b17fad33/",
+      "sensors": [
+        "X-TRANS-V"
+      ],
+      "film": "Classic Neg",
+      "rawSettings": {
+        "Film Simulation": "Classic Neg",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "None",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "Strong",
+        "Color": "4",
+        "Sharpness": "0",
+        "Highlight": "-0.5",
+        "Shadow": "-0.5",
+        "Noise Reduction": "-4",
+        "Clarity": "-4",
+        "White Balance": "6500 K, +4 Red & +1 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2025/12/27/6f3e15c6-5a88-4393-ae7b-ea973d07f895.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2025/12/27/6f3e15c6-5a88-4393-ae7b-ea973d07f895.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_2e01f9f5eddec",
+      "name": "[FujiStyle] NC Recipe Daylight",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/nc-recipe-daylight-42b876f9/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Neg",
+      "rawSettings": {
+        "Film Simulation": "Classic Neg",
+        "Dynamic Range": "Auto",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "Weak",
+        "Color": "1",
+        "Sharpness": "-2",
+        "Highlight": "-2.0",
+        "Shadow": "-2.0",
+        "Noise Reduction": "0",
+        "Clarity": "0",
+        "White Balance": "DAYLIGHT, +1 Red & -3 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2025/12/28/ed0eaaa2-5f35-4819-be55-c7d53563d74b.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2025/12/28/ed0eaaa2-5f35-4819-be55-c7d53563d74b.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_b3b5f9e1d1036",
+      "name": "[FujiStyle] Gold Aura Neg (v2)",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/gold-aura-neg-v2-f6229081/",
+      "sensors": [
+        "X-TRANS-V"
+      ],
+      "film": "Nostalgic Neg",
+      "rawSettings": {
+        "Film Simulation": "Nostalgic Neg",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "None",
+        "Color": "4",
+        "Sharpness": "-1",
+        "Highlight": "-2.0",
+        "Shadow": "1.0",
+        "Noise Reduction": "-4",
+        "Clarity": "0",
+        "ISO": "80-800",
+        "White Balance": "FLUORESCENT LIGHT-1, -4 Red & -2 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2025/12/28/eed458ee-923a-4ed8-a9d8-af3dcf497b5a.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2025/12/28/eed458ee-923a-4ed8-a9d8-af3dcf497b5a.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_65ee0522fc963",
+      "name": "[FujiStyle] MAGAZINE",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/magazine-8f384c1c/",
+      "sensors": [
+        "X-TRANS-V"
+      ],
+      "film": "Classic Neg",
+      "rawSettings": {
+        "Film Simulation": "Classic Neg",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "None",
+        "Grain Size": "None",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "None",
+        "Color": "1",
+        "Sharpness": "4",
+        "Highlight": "-2.0",
+        "Shadow": "-2.0",
+        "Noise Reduction": "4",
+        "Clarity": "0",
+        "ISO": "80-12800",
+        "White Balance": "AUTO WHITE PRIORITY, +0 Red & +2 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/21/9ded4383-6230-4d66-9d52-f21105b29763.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/21/9ded4383-6230-4d66-9d52-f21105b29763.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_7f822e2ba4193",
+      "name": "[FujiStyle] Cyberpunk",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/cyberpunk-515573af/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "None",
+        "Color Chrome Effect": "Off",
+        "Color Chrome FX Blue": "None",
+        "Color": "4",
+        "Sharpness": "-2",
+        "Highlight": "0.0",
+        "Shadow": "1.0",
+        "Noise Reduction": "-4",
+        "Clarity": "-2",
+        "White Balance": "INCANDESCENT, -3 Red & +4 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/871656dc-2280-4ea3-9ee1-26623dcf6d9b.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/871656dc-2280-4ea3-9ee1-26623dcf6d9b.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_a3da2acbd8e87",
+      "name": "[FujiStyle] Summer Drift",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/summer-drift-1ef67540/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "Auto",
+        "Grain Effect": "None",
+        "Color Chrome Effect": "Off",
+        "Color Chrome FX Blue": "None",
+        "Color": "3",
+        "Sharpness": "-1",
+        "Highlight": "-1.0",
+        "Shadow": "-1.0",
+        "Noise Reduction": "0",
+        "Clarity": "-1",
+        "White Balance": "5700 K, -3 Red & -2 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2025/12/28/354d2a1d-3f8f-4bd1-8fab-77dfcce47db5.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2025/12/28/354d2a1d-3f8f-4bd1-8fab-77dfcce47db5.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_d4a01da37b206",
+      "name": "[FujiStyle] Last Summer Roll V2",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/last-summer-roll-v2-c33668d2/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Provia",
+      "rawSettings": {
+        "Film Simulation": "Provia",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "None",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "Strong",
+        "Color": "3",
+        "Sharpness": "0",
+        "Highlight": "-2.0",
+        "Shadow": "0.5",
+        "Noise Reduction": "-4",
+        "Clarity": "0",
+        "White Balance": "AUTO, +2 Red & -5 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/bc3d54f0-e2ec-4e13-9623-e70868fccbce.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/bc3d54f0-e2ec-4e13-9623-e70868fccbce.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_bbdc3803538de",
+      "name": "[FujiStyle] Tokyo 2000",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/tokyo-2000-e0c4ce0f/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Neg",
+      "rawSettings": {
+        "Film Simulation": "Classic Neg",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "None",
+        "Color": "4",
+        "Sharpness": "-1",
+        "Highlight": "-2.0",
+        "Shadow": "1.0",
+        "Noise Reduction": "-4",
+        "Clarity": "-3",
+        "White Balance": "AUTO, +0 Red & -3 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/30bee8bd-5dc6-4bf6-a751-034b5d8ff09f.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/30bee8bd-5dc6-4bf6-a751-034b5d8ff09f.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_40c06a8ffb5aa",
+      "name": "[FujiStyle] Cinestill 800T",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/cinestill-800t-cf3676f9/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Eterna",
+      "rawSettings": {
+        "Film Simulation": "Eterna",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "Weak",
+        "Grain Size": "Large",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "Strong",
+        "Color": "4",
+        "Sharpness": "-3",
+        "Highlight": "0.0",
+        "Shadow": "0.0",
+        "Clarity": "-5",
+        "ISO": "6400-6400",
+        "White Balance": "FLUORESCENT LIGHT-3, -8 Red & -4 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2025/12/27/61410286-67ed-4822-a66d-b9cccc8b2dc2.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2025/12/27/61410286-67ed-4822-a66d-b9cccc8b2dc2.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_17ee0586091b2",
+      "name": "[FujiStyle] Portra 400",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/portra-400-05b11ef9/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR100",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color Chrome Effect": "Strong",
+        "Color Chrome FX Blue": "Weak",
+        "Color": "2",
+        "Sharpness": "-2",
+        "Highlight": "-1.0",
+        "Shadow": "-1.0",
+        "Noise Reduction": "-4",
+        "Clarity": "0",
+        "ISO": "200-6400",
+        "White Balance": "AUTO, +2 Red & -4 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/30a23fc0-004e-4e6c-8588-1d611b464752.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/30a23fc0-004e-4e6c-8588-1d611b464752.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_765766e6ff4d2",
+      "name": "[FujiStyle] Cinematic Gold",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/cinematic-gold-6db3f54c/",
+      "sensors": [
+        "X-TRANS-IV"
+      ],
+      "film": "Classic Neg",
+      "rawSettings": {
+        "Film Simulation": "Classic Neg",
+        "Dynamic Range": "DR400",
+        "Grain Effect": "Strong",
+        "Grain Size": "Small",
+        "Color Chrome Effect": "Off",
+        "Color Chrome FX Blue": "None",
+        "Color": "3",
+        "Sharpness": "-2",
+        "Highlight": "0.0",
+        "Shadow": "0.0",
+        "Noise Reduction": "-4",
+        "Clarity": "-2",
+        "ISO": "600-1600",
+        "White Balance": "DAYLIGHT, +4 Red & -5 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/18/2ea595d1-e9b6-42eb-9bce-0df3848908d0.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/18/2ea595d1-e9b6-42eb-9bce-0df3848908d0.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "fs_a28d409a3e0ac",
+      "name": "[FujiStyle] Kodak Gold 200",
+      "source": "FujiStyle Community",
+      "sourceUrl": "https://www.fujistyleapp.com/fujifilm-recipes/kodak-gold-200-313cb5b8/",
+      "sensors": [
+        "X-TRANS"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "Auto",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color Chrome Effect": "Off",
+        "Color Chrome FX Blue": "None",
+        "Color": "3",
+        "Sharpness": "-2",
+        "Highlight": "-2.0",
+        "Shadow": "1.0",
+        "Noise Reduction": "-4",
+        "Clarity": "0",
+        "ISO": "12800-6400",
+        "White Balance": "DAYLIGHT, +4 Red & -5 Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://image.fujistyleapp.com/2026/02/08/0dbcccde-ba37-49c0-b8ae-3b7c8f7be133.jpg",
+      "sampleImages": [
+        "https://image.fujistyleapp.com/2026/02/08/0dbcccde-ba37-49c0-b8ae-3b7c8f7be133.jpg"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "b225578f7b0f6cf6",
+      "name": "How to Program Film Simulation Recipes to your Fujifilm Camera",
+      "sourceUrl": "https://fujixweekly.com/2024/02/27/how-to-program-film-simulation-recipes-to-your-fujifilm-camera/",
+      "sensors": [
+        "X-TRANS-V",
+        "X-TRANS-IV",
+        "X-TRANS-III",
+        "X-TRANS-II",
+        "X-TRANS-I",
+        "GFX",
+        "BAYER"
+      ],
+      "film": "Provia",
+      "rawSettings": {
+        "Color": "#ffffff;",
+        "Film Simulation": "Provia",
+        "White Balance": "Shift"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2023/10/53012633272_a665e9cce9_h.jpg?resize=1000%2C668&#038;ssl=1",
+      "sampleImages": [
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2023/10/53012633272_a665e9cce9_h.jpg?resize=1000%2C668&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2024/02/Screenshot-2024-02-26-at-4.20.14-PM.png?resize=1000%2C1023&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2024/02/Screenshot-2024-02-26-at-4.20.26-PM.png?resize=1000%2C736&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2023/07/53069078940_ef0672dd32_h.jpg?resize=1000%2C667&#038;ssl=1"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "970b8fa41969b69f",
+      "name": "11 Nikon Z Film Simulation Recipes!",
+      "sourceUrl": "https://fujixweekly.com/2022/07/03/11-nikon-z-film-simulation-recipes/",
+      "sensors": [
+        "X-TRANS-V",
+        "X-TRANS-IV",
+        "X-TRANS-III",
+        "X-TRANS-II",
+        "X-TRANS-I",
+        "GFX",
+        "BAYER"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Color": "#ffffff;",
+        "Film Simulation": "Classic Chrome",
+        "Clarity": "-4.00",
+        "High ISO NR": "Low",
+        "White Balance": "Natural Light Auto",
+        "ISO": "up to 3200",
+        "Noise Reduction": "Low"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/07/51836349316_8f7b5bebfe_c.jpg?resize=799%2C534&#038;ssl=1",
+      "sampleImages": [
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/07/51836349316_8f7b5bebfe_c.jpg?resize=799%2C534&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/07/51835392532_0bd6a0ab94_c.jpg?resize=799%2C534&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/07/51841343053_b3d246af59_c.jpg?resize=799%2C533&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/07/51841555569_0061ff76c0_c.jpg?resize=799%2C533&#038;ssl=1"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "14296e55e3b2bc77",
+      "name": "3 (More) Nikon Z Film Simulation Recipes",
+      "sourceUrl": "https://fujixweekly.com/2022/08/15/3-more-nikon-z-film-simulation-recipes/",
+      "sensors": [
+        "X-TRANS-V",
+        "X-TRANS-IV",
+        "X-TRANS-III",
+        "X-TRANS-II",
+        "X-TRANS-I",
+        "GFX",
+        "BAYER"
+      ],
+      "film": "Sepia",
+      "rawSettings": {
+        "Color": "#ffffff;",
+        "Film Simulation": "Sepia",
+        "Clarity": "-2.00",
+        "High ISO NR": "Low",
+        "White Balance": "Cloudy",
+        "ISO": "up to 3200",
+        "Noise Reduction": "Low"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/08/52219417665_e0c774fbc1_c.jpg?resize=799%2C533&#038;ssl=1",
+      "sampleImages": [
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/08/52219417665_e0c774fbc1_c.jpg?resize=799%2C533&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/08/52288073629_17c3e16b5e_c.jpg?resize=800%2C532&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/08/52288078319_63a1aae876_c.jpg?resize=533%2C799&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/08/52288294525_de35e665e6_c.jpg?resize=533%2C799&#038;ssl=1"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "6ae9eb6d2d9e51ad",
+      "name": "3 B&amp;W Nikon Z Film Simulation Recipes + 1 Bonus Color Recipe",
+      "sourceUrl": "https://fujixweekly.com/2022/08/24/3-bw-nikon-z-film-simulation-recipes-1-bonus-color-recipe/",
+      "sensors": [
+        "X-TRANS-V",
+        "X-TRANS-IV",
+        "X-TRANS-III",
+        "X-TRANS-II",
+        "X-TRANS-I",
+        "GFX",
+        "BAYER"
+      ],
+      "film": "Acros",
+      "rawSettings": {
+        "Color": "#ffffff;",
+        "Film Simulation": "Acros",
+        "Clarity": "+1.00",
+        "High ISO NR": "Low",
+        "White Balance": "Cloudy",
+        "ISO": "up to 6400",
+        "Noise Reduction": "Low"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/08/52219417665_e0c774fbc1_c.jpg?resize=799%2C533&#038;ssl=1",
+      "sampleImages": [
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/08/52219417665_e0c774fbc1_c.jpg?resize=799%2C533&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/08/52307291757_ac712d0699_c.jpg?resize=799%2C533&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/08/52308547390_755d5f359b_c.jpg?resize=799%2C533&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/08/52307291652_22c3aacc93_c.jpg?resize=799%2C533&#038;ssl=1"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "37eb73a4d90e4161",
+      "name": "Fujifilm White Balance Shift: What It Is + How To Use It",
+      "sourceUrl": "https://fujixweekly.com/2020/08/19/fujifilm-white-balance-shift-what-it-is-how-to-use-it/",
+      "sensors": [
+        "X-TRANS-V",
+        "X-TRANS-IV",
+        "X-TRANS-III",
+        "X-TRANS-II",
+        "X-TRANS-I",
+        "GFX",
+        "BAYER"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Color": "#ffffff;",
+        "Film Simulation": "Classic Chrome",
+        "White Balance": "Daylight. Shift: +3 Red & +1 Blue",
+        "Color Chrome Effect": "Blue"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2020/06/50048547758_7fafde046d_c.jpg?resize=799%2C533&#038;ssl=1",
+      "sampleImages": [
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2020/06/50048547758_7fafde046d_c.jpg?resize=799%2C533&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2020/08/50237041743_91125f0cc6_c.jpg?resize=800%2C582&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2020/08/50237050153_47f368c4a5_c.jpg?resize=800%2C539&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2020/08/50238530887_c51c522d3f_c.jpg?resize=799%2C533&#038;ssl=1"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "36bd47b3eafa0d83",
+      "name": "FXW App: Filter by White Balance — How To Use This New Feature",
+      "sourceUrl": "https://fujixweekly.com/2021/11/26/fxw-app-filter-by-white-balance-how-to-use-this-new-feature/",
+      "sensors": [
+        "X-TRANS-V",
+        "X-TRANS-IV",
+        "X-TRANS-III",
+        "X-TRANS-II",
+        "X-TRANS-I",
+        "GFX",
+        "BAYER"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Color": "#ffffff;",
+        "Film Simulation": "Classic Chrome",
+        "White Balance": "Shift"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2021/11/img_3949.jpeg?resize=1000%2C750&#038;ssl=1",
+      "sampleImages": [
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2021/11/img_3949.jpeg?resize=1000%2C750&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2021/11/img_2329.jpg?resize=401%2C767&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2021/11/img_2327.jpg?resize=400%2C768&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2021/03/img_5106.jpg?resize=646%2C250&#038;ssl=1"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
+    {
+      "id": "e9e7dc93729917fd",
+      "name": "Which Film Simulation Recipes, When? — Part III (X-Trans III)",
+      "sourceUrl": "https://fujixweekly.com/2022/11/15/which-film-simulation-recipes-when-part-iii-x-trans-iii/",
+      "sensors": [
+        "X-TRANS-V",
+        "X-TRANS-IV",
+        "X-TRANS-III",
+        "X-TRANS-II",
+        "X-TRANS-I",
+        "GFX",
+        "BAYER"
+      ],
+      "film": "Classic Chrome",
+      "rawSettings": {
+        "Color": "#ffffff;",
+        "Film Simulation": "Classic Chrome",
+        "White Balance": "Shift"
+      },
+      "reviewRequired": false,
+      "missingFields": [],
+      "sampleAsset": null,
+      "sampleImageUrl": "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/11/52360444881_0eba8fbea0_c.jpg?resize=799%2C533&#038;ssl=1",
+      "sampleImages": [
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/11/52360444881_0eba8fbea0_c.jpg?resize=799%2C533&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/11/51902722482_88e67f7ce1_c.jpg?resize=533%2C799&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/11/49773820533_10e0d0b78e_c.jpg?resize=799%2C533&#038;ssl=1",
+        "https://i0.wp.com/fujixweekly.com/wp-content/uploads/2022/11/51685732174_25b4ed2bbc_c.jpg?resize=799%2C533&#038;ssl=1"
+      ],
+      "isNew": true,
+      "addedDate": "2026-10-18"
+    },
     {
       "id": "81d5fe70de5f1d99-1",
       "name": "Golden Negative",
@@ -12960,5 +13976,11 @@
       ],
       "reason": "no_structured_recipe_found"
     }
+  ],
+  "lastSync": "2026-10-18T21:01:39.209022",
+  "newRecipesCount": 7,
+  "sources": [
+    "Fuji X Weekly",
+    "FujiStyle Community"
   ]
 }

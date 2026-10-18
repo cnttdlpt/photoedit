@@ -23,7 +23,7 @@ Icon launcher riêng: sáu lá khẩu độ bao quanh chữ “i”, nền xanh 
 
 Danh sách Chọn màu có ảnh thu nhỏ lấy từ ảnh đang mở. Với film đã gắn LUT, thumbnail chạy LUT và thông số recipe thực tế; với film chưa gắn LUT, hiển thị ảnh gốc và nhãn “Chưa có LUT”, không giả làm preview màu Fuji. Mục LUT của tôi có ảnh trước/sau (LUT + chỉnh tay hiện tại). Nếu chưa mở ảnh, các ô nhắc mở ảnh để xem trước. `ThumbnailSession.java` tạo ảnh nền, cache tối đa 64 thumbnail / 2 LUT và hủy công việc khi đóng hộp thoại. Thumbnail giới hạn cạnh dài 192 px, nên độ hạt/nét có thể khác ảnh xuất.
 
-- Thư viện offline: **391 bộ thông số** trích từ **359 bài có recipe**, trong tổng số 364 đường dẫn bài được liên kết từ 10 danh mục công khai của Fuji X Weekly. Thêm 1 recipe từ ảnh người dùng gửi, tổng 392 mục.
+- Thư viện offline: **421 bộ thông số** trích xuất từ đa nguồn gồm **Fuji X Weekly** và **FujiStyle Community** (fujistyleapp.com). Thêm 1 recipe mẫu, tổng cộng 422 mục cập nhật liên tục.
 - Tìm kiếm theo tên / film simulation; lọc nhóm cảm biến, IR và video. Nhóm cảm biến là nhóm trên trang chỉ mục, **không phải danh sách tương thích chính xác của từng thân máy**.
 - Xem thông số nguồn, mở bài gốc, sửa bản riêng của recipe và nhập/xuất JSON.
 - Nhập LUT 3D `.cube` 2–65 điểm mỗi chiều; nội suy trilinear, hỗ trợ DOMAIN_MIN/MAX, lưu LUT trong bộ nhớ riêng của app và gắn theo tên film simulation.

@@ -1,0 +1,43 @@
+name: IRO Studio Android Build & OTA Release
+
+on:
+  push:
+    branches:
+      - main
+      - android
+    paths:
+      - 'android/**'
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Make Gradle Wrapper Executable
+        run: |
+          cd android
+          chmod +x gradlew
+
+      - name: Build APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon || ./gradlew assembleDebug --no-daemon
+
+      - name: Archive Built APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: iro-studio-apk
+          path: android/app/build/outputs/apk/**/*.apk
+          retention-days: 30

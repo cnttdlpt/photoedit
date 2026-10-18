@@ -14,3 +14,5 @@
 # Bảo vệ các thành phần Android cốt lõi
 -keepattributes SourceFile,LineNumberTable
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keep class vn.iro.editor.IroFileProvider { *; }
+-keep class vn.iro.editor.OtaUpdateService { *; }

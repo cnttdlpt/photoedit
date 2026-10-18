@@ -815,6 +815,81 @@ const server = http.createServer(async (req, res) => {
     }
 
     // -------------------------------------------------------------------------
+    // API: MOBILE OTA (Over-The-Air Update System)
+    // -------------------------------------------------------------------------
+    if (pathname === '/api/mobile/ota/check' || action === 'ota_check') {
+      const platform = (url.searchParams.get('platform') || 'android').toLowerCase();
+      const currentVersionCode = parseInt(url.searchParams.get('versionCode') || '0', 10);
+
+      const manifestPath = path.join(DATA_DIR, 'ota_manifest.json');
+      let manifest = {
+        latestVersionCode: 3,
+        latestVersionName: '0.3.0',
+        apkUrl: 'https://npccc.io.vn/downloads/iro-studio-latest.apk',
+        fileSize: 0,
+        sha256: '',
+        releaseNotes: '- Tự động đồng bộ và sao lưu ảnh lên đám mây IRO Cloud\n- Bổ sung 421 công thức màu film (Fuji X Weekly & FujiStyle)\n- Cập nhật Over-The-Air (OTA) tức thì không cần cắm cáp\n- Nâng cấp độ mượt và tối ưu hóa xử lý ảnh',
+        publishedAt: new Date().toISOString()
+      };
+
+      if (fs.existsSync(manifestPath)) {
+        try {
+          manifest = { ...manifest, ...JSON.parse(fs.readFileSync(manifestPath, 'utf8')) };
+        } catch (e) {
+          console.warn('[OTA] Error reading manifest:', e.message);
+        }
+      } else {
+        fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+      }
+
+      const downloadsDir = path.join(__dirname, '../frontend/downloads');
+      const apkPath = path.join(downloadsDir, 'iro-studio-latest.apk');
+      if (fs.existsSync(apkPath)) {
+        manifest.fileSize = fs.statSync(apkPath).size;
+      }
+
+      const hasUpdate = manifest.latestVersionCode > currentVersionCode;
+
+      return sendJson(res, 200, {
+        ok: true,
+        platform,
+        hasUpdate,
+        ...manifest
+      });
+    }
+
+    // API: ADMIN PUBLISH NEW OTA RELEASE
+    if (pathname === '/api/admin/ota/publish' || action === 'admin_ota_publish') {
+      const user = await getAuthUser(req);
+      if (!user || user.role !== 'admin') {
+        return sendJson(res, 403, { ok: false, error: 'Yêu cầu quyền quản trị viên (Admin)' });
+      }
+
+      const raw = await readBody(req);
+      const payload = JSON.parse(raw.toString('utf8') || '{}');
+      const manifestPath = path.join(DATA_DIR, 'ota_manifest.json');
+
+      const manifest = {
+        latestVersionCode: parseInt(payload.versionCode, 10) || 3,
+        latestVersionName: (payload.versionName || '0.3.0').trim(),
+        apkUrl: (payload.apkUrl || 'https://npccc.io.vn/downloads/iro-studio-latest.apk').trim(),
+        fileSize: parseInt(payload.fileSize, 10) || 0,
+        sha256: (payload.sha256 || '').trim(),
+        releaseNotes: (payload.releaseNotes || 'Cập nhật phiên bản mới').trim(),
+        publishedAt: new Date().toISOString()
+      };
+
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+
+      await dbRun(
+        'INSERT INTO edit_logs (session_id, action, detail, created_at) VALUES ("system", "ota_publish", ?, CURRENT_TIMESTAMP)',
+        [`Phát hành bản cập nhật OTA v${manifest.latestVersionName} (Build ${manifest.latestVersionCode})`]
+      );
+
+      return sendJson(res, 200, { ok: true, manifest });
+    }
+
+    // -------------------------------------------------------------------------
     // API: GET MY PHOTOS
     // -------------------------------------------------------------------------
     if (pathname === '/api/photos' || action === 'get_my_photos') {

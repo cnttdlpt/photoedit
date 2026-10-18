@@ -3309,6 +3309,7 @@ public class MainActivity extends Activity {
                         case 14: choose(OPEN_RECIPE, "*/*"); break;
                         case 15: editPhotoFrame(); break;
                         case 16: showHelpDialog(); break;
+                        case 17: OtaUpdateService.checkForUpdates(MainActivity.this, true); break;
                     }
                 })
                 .show();
@@ -3835,11 +3836,66 @@ public class MainActivity extends Activity {
     // THƯ VIỆN 392 CÔNG THỨC MÀU (Recipe Library)
     // =========================================================================
 
+
+    /**
+     * Tự động đồng bộ OTA công thức màu mới nhất từ máy chủ IRO Cloud (npccc.io.vn)
+     * mà không cần cập nhật hay cài đặt lại file APK.
+     */
+    private void syncRecipesOtaAsync() {
+        executor.execute(() -> {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL("https://npccc.io.vn/recipes.json");
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(15000);
+                conn.setRequestProperty("User-Agent", "IRO-Android-RecipeSync");
+
+                File cached = new File(getFilesDir(), "cached_recipes.json");
+                if (cached.exists()) {
+                    conn.setIfModifiedSince(cached.lastModified());
+                }
+
+                int code = conn.getResponseCode();
+                if (code == 200) {
+                    byte[] data = readLimited(conn.getInputStream(), 16 * 1024 * 1024);
+                    JSONObject j = new JSONObject(new String(data, StandardCharsets.UTF_8));
+                    int count = j.optInt("recipeCount", 0);
+                    if (count > 0 && j.has("recipes")) {
+                        File tmp = new File(getFilesDir(), "cached_recipes.json.tmp");
+                        try (FileOutputStream fos = new FileOutputStream(tmp)) {
+                            fos.write(data);
+                        }
+                        if (tmp.renameTo(cached)) {
+                            runOnUiThread(() -> {
+                                if (!dead) {
+                                    loadLibrary();
+                                    message("Đã đồng bộ OTA " + count + " công thức màu từ máy chủ!");
+                                }
+                            });
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {
+                // Ngoại tuyến hoặc mạng chập chờn: tự động dùng danh mục cục bộ
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        });
+    }
+
     private void loadLibrary() {
         executor.execute(() -> {
             try {
+                File cachedRecipes = new File(getFilesDir(), "cached_recipes.json");
+                InputStream recipeStream;
+                if (cachedRecipes.exists() && cachedRecipes.length() > 5000) {
+                    recipeStream = new java.io.FileInputStream(cachedRecipes);
+                } else {
+                    recipeStream = getAssets().open("recipes.json");
+                }
                 JSONObject j = new JSONObject(new String(
-                        readLimited(getAssets().open("recipes.json"), 8 * 1024 * 1024),
+                        readLimited(recipeStream, 16 * 1024 * 1024),
                         StandardCharsets.UTF_8));
                 JSONArray list = j.getJSONArray("recipes");
                 List<Recipe> parsed = new ArrayList<>();

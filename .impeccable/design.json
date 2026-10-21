@@ -1,0 +1,361 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T02:32:15.200Z",
+  "title": "Design System: IRO Silver Print",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "primary",
+        "tonalRamp": [
+          "oklch(15% 0.0529 168.51)",
+          "oklch(26% 0.0529 168.51)",
+          "oklch(38% 0.0529 168.51)",
+          "oklch(49% 0.0529 168.51)",
+          "oklch(61% 0.0529 168.51)",
+          "oklch(72% 0.0529 168.51)",
+          "oklch(84% 0.0529 168.51)",
+          "oklch(95% 0.0529 168.51)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "paper",
+        "tonalRamp": [
+          "oklch(15% 0.0026 106.45)",
+          "oklch(26% 0.0026 106.45)",
+          "oklch(38% 0.0026 106.45)",
+          "oklch(49% 0.0026 106.45)",
+          "oklch(61% 0.0026 106.45)",
+          "oklch(72% 0.0026 106.45)",
+          "oklch(84% 0.0026 106.45)",
+          "oklch(95% 0.0026 106.45)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "panel",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "raised": {
+        "role": "neutral",
+        "displayName": "raised",
+        "tonalRamp": [
+          "oklch(15% 0.0041 121.56)",
+          "oklch(26% 0.0041 121.56)",
+          "oklch(38% 0.0041 121.56)",
+          "oklch(49% 0.0041 121.56)",
+          "oklch(61% 0.0041 121.56)",
+          "oklch(72% 0.0041 121.56)",
+          "oklch(84% 0.0041 121.56)",
+          "oklch(95% 0.0041 121.56)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "ink",
+        "tonalRamp": [
+          "oklch(15% 0.0048 174.03)",
+          "oklch(26% 0.0048 174.03)",
+          "oklch(38% 0.0048 174.03)",
+          "oklch(49% 0.0048 174.03)",
+          "oklch(61% 0.0048 174.03)",
+          "oklch(72% 0.0048 174.03)",
+          "oklch(84% 0.0048 174.03)",
+          "oklch(95% 0.0048 174.03)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "muted",
+        "tonalRamp": [
+          "oklch(15% 0.0116 154.86)",
+          "oklch(26% 0.0116 154.86)",
+          "oklch(38% 0.0116 154.86)",
+          "oklch(49% 0.0116 154.86)",
+          "oklch(61% 0.0116 154.86)",
+          "oklch(72% 0.0116 154.86)",
+          "oklch(84% 0.0116 154.86)",
+          "oklch(95% 0.0116 154.86)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "border",
+        "tonalRamp": [
+          "oklch(15% 0.0086 145.50)",
+          "oklch(26% 0.0086 145.50)",
+          "oklch(38% 0.0086 145.50)",
+          "oklch(49% 0.0086 145.50)",
+          "oklch(61% 0.0086 145.50)",
+          "oklch(72% 0.0086 145.50)",
+          "oklch(84% 0.0086 145.50)",
+          "oklch(95% 0.0086 145.50)"
+        ]
+      },
+      "stage": {
+        "role": "neutral",
+        "displayName": "stage",
+        "tonalRamp": [
+          "oklch(15% 0.0057 128.53)",
+          "oklch(26% 0.0057 128.53)",
+          "oklch(38% 0.0057 128.53)",
+          "oklch(49% 0.0057 128.53)",
+          "oklch(61% 0.0057 128.53)",
+          "oklch(72% 0.0057 128.53)",
+          "oklch(84% 0.0057 128.53)",
+          "oklch(95% 0.0057 128.53)"
+        ]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "focus",
+        "tonalRamp": [
+          "oklch(15% 0.0771 164.34)",
+          "oklch(26% 0.0771 164.34)",
+          "oklch(38% 0.0771 164.34)",
+          "oklch(49% 0.0771 164.34)",
+          "oklch(61% 0.0771 164.34)",
+          "oklch(72% 0.0771 164.34)",
+          "oklch(84% 0.0771 164.34)",
+          "oklch(95% 0.0771 164.34)"
+        ]
+      },
+      "dark-paper": {
+        "role": "neutral",
+        "displayName": "dark paper",
+        "tonalRamp": [
+          "oklch(15% 0.0036 164.68)",
+          "oklch(26% 0.0036 164.68)",
+          "oklch(38% 0.0036 164.68)",
+          "oklch(49% 0.0036 164.68)",
+          "oklch(61% 0.0036 164.68)",
+          "oklch(72% 0.0036 164.68)",
+          "oklch(84% 0.0036 164.68)",
+          "oklch(95% 0.0036 164.68)"
+        ]
+      },
+      "dark-panel": {
+        "role": "neutral",
+        "displayName": "dark panel",
+        "tonalRamp": [
+          "oklch(15% 0.0058 156.79)",
+          "oklch(26% 0.0058 156.79)",
+          "oklch(38% 0.0058 156.79)",
+          "oklch(49% 0.0058 156.79)",
+          "oklch(61% 0.0058 156.79)",
+          "oklch(72% 0.0058 156.79)",
+          "oklch(84% 0.0058 156.79)",
+          "oklch(95% 0.0058 156.79)"
+        ]
+      },
+      "dark-raised": {
+        "role": "neutral",
+        "displayName": "dark raised",
+        "tonalRamp": [
+          "oklch(15% 0.0077 153.43)",
+          "oklch(26% 0.0077 153.43)",
+          "oklch(38% 0.0077 153.43)",
+          "oklch(49% 0.0077 153.43)",
+          "oklch(61% 0.0077 153.43)",
+          "oklch(72% 0.0077 153.43)",
+          "oklch(84% 0.0077 153.43)",
+          "oklch(95% 0.0077 153.43)"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "dark ink",
+        "tonalRamp": [
+          "oklch(15% 0.0057 128.53)",
+          "oklch(26% 0.0057 128.53)",
+          "oklch(38% 0.0057 128.53)",
+          "oklch(49% 0.0057 128.53)",
+          "oklch(61% 0.0057 128.53)",
+          "oklch(72% 0.0057 128.53)",
+          "oklch(84% 0.0057 128.53)",
+          "oklch(95% 0.0057 128.53)"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "dark muted",
+        "tonalRamp": [
+          "oklch(15% 0.0132 149.20)",
+          "oklch(26% 0.0132 149.20)",
+          "oklch(38% 0.0132 149.20)",
+          "oklch(49% 0.0132 149.20)",
+          "oklch(61% 0.0132 149.20)",
+          "oklch(72% 0.0132 149.20)",
+          "oklch(84% 0.0132 149.20)",
+          "oklch(95% 0.0132 149.20)"
+        ]
+      },
+      "dark-border": {
+        "role": "neutral",
+        "displayName": "dark border",
+        "tonalRamp": [
+          "oklch(15% 0.0156 148.92)",
+          "oklch(26% 0.0156 148.92)",
+          "oklch(38% 0.0156 148.92)",
+          "oklch(49% 0.0156 148.92)",
+          "oklch(61% 0.0156 148.92)",
+          "oklch(72% 0.0156 148.92)",
+          "oklch(84% 0.0156 148.92)",
+          "oklch(95% 0.0156 148.92)"
+        ]
+      },
+      "dark-primary": {
+        "role": "primary",
+        "displayName": "dark primary",
+        "tonalRamp": [
+          "oklch(15% 0.0401 155.74)",
+          "oklch(26% 0.0401 155.74)",
+          "oklch(38% 0.0401 155.74)",
+          "oklch(49% 0.0401 155.74)",
+          "oklch(61% 0.0401 155.74)",
+          "oklch(72% 0.0401 155.74)",
+          "oklch(84% 0.0401 155.74)",
+          "oklch(95% 0.0401 155.74)"
+        ]
+      },
+      "dark-stage": {
+        "role": "neutral",
+        "displayName": "dark stage",
+        "tonalRamp": [
+          "oklch(15% 0.0038 164.60)",
+          "oklch(26% 0.0038 164.60)",
+          "oklch(38% 0.0038 164.60)",
+          "oklch(49% 0.0038 164.60)",
+          "oklch(61% 0.0038 164.60)",
+          "oklch(72% 0.0038 164.60)",
+          "oklch(84% 0.0038 164.60)",
+          "oklch(95% 0.0038 164.60)"
+        ]
+      }
+    },
+    "shadows": [
+      {
+        "name": "menu",
+        "value": "0 12px 32px #0002",
+        "purpose": "Transient dropdown separation."
+      },
+      {
+        "name": "loading",
+        "value": "0 8px 24px #0002",
+        "purpose": "Transient image-loading notice."
+      }
+    ],
+    "motion": [
+      {
+        "name": "reduced-motion",
+        "value": "animation:none;transition:none;scroll-behavior:auto",
+        "purpose": "Applied under prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "760px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1100px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main action, including export.",
+      "html": "<button class=\"ds-primary\">Xuất ảnh</button>",
+      "css": ".ds-primary{font:14px/1.5 \"Google Sans Flex\",system-ui,sans-serif;cursor:pointer;min-height:44px;background:var(--text,#202322);color:var(--bg,#f4f4f2);border:1px solid var(--text,#202322);border-radius:8px;padding:10px 18px;font-weight:600}.ds-primary:hover{opacity:.88}.ds-primary:focus-visible{outline:2px solid var(--studio-focus,#29684f);outline-offset:3px}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Open image and secondary actions.",
+      "html": "<button class=\"ds-secondary\">Mở ảnh</button>",
+      "css": ".ds-secondary{font:14px/1.5 \"Google Sans Flex\",system-ui,sans-serif;cursor:pointer;min-height:44px;background:transparent;color:var(--text,#202322);border:1px solid var(--border,#d8ddd8);border-radius:8px;padding:9px 14px}.ds-secondary:hover{background:var(--panel-elevated,#f0f1ee)}.ds-secondary:focus-visible{outline:2px solid var(--studio-focus,#29684f);outline-offset:3px}"
+    },
+    {
+      "name": "Search field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Full-width catalog search.",
+      "html": "<input class=\"ds-search\" aria-label=\"Tìm màu\" placeholder=\"Tìm màu, film, cân bằng trắng…\">",
+      "css": ".ds-search{font:14px/1.5 \"Google Sans Flex\",system-ui,sans-serif;cursor:pointer;width:100%;min-height:44px;border:1px solid var(--border,#d8ddd8);border-radius:8px;padding:10px 12px;background:var(--panel,#fff);color:var(--text,#202322)}.ds-search::placeholder{color:var(--muted,#606762)}.ds-search:hover{border-color:var(--muted,#606762)}.ds-search:focus-visible{outline:2px solid var(--studio-focus,#29684f);outline-offset:3px}"
+    },
+    {
+      "name": "Filter chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Scrollable recipe categories.",
+      "html": "<button class=\"ds-chip\" aria-pressed=\"true\">Tất cả</button>",
+      "css": ".ds-chip{font:14px/1.5 \"Google Sans Flex\",system-ui,sans-serif;cursor:pointer;min-height:36px;padding:7px 12px;border:1px solid var(--muted,#606762);border-radius:6px;color:var(--text,#202322);background:var(--panel-elevated,#f0f1ee)}.ds-chip:hover{background:var(--panel,#fff)}.ds-chip:focus-visible{outline:2px solid var(--studio-focus,#29684f);outline-offset:3px}"
+    },
+    {
+      "name": "Recipe choice",
+      "kind": "card",
+      "refersTo": "recipe",
+      "description": "Name and film summary in an inline choice.",
+      "html": "<button class=\"ds-recipe\"><strong>Phố trầm</strong><span>Classic Chrome · DR100</span></button>",
+      "css": ".ds-recipe{font:14px/1.5 \"Google Sans Flex\",system-ui,sans-serif;cursor:pointer;min-height:64px;text-align:left;display:flex;flex-direction:column;gap:4px;padding:10px;background:var(--panel,#fff);color:var(--text,#202322);border:1px solid var(--border,#d8ddd8);border-radius:8px}.ds-recipe strong{font-size:13px;line-height:1.4;font-weight:600}.ds-recipe span{font-size:12px;color:var(--muted,#606762)}.ds-recipe:hover{background:var(--panel-elevated,#f0f1ee)}.ds-recipe:focus-visible{outline:2px solid var(--studio-focus,#29684f);outline-offset:3px}"
+    },
+    {
+      "name": "Tool tabs",
+      "kind": "nav",
+      "description": "Four equal tabs with a green selected line.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"Công cụ\"><button role=\"tab\" aria-selected=\"true\">Màu phim</button><button role=\"tab\" aria-selected=\"false\">Tinh chỉnh</button><button role=\"tab\" aria-selected=\"false\">Khung ảnh</button><button role=\"tab\" aria-selected=\"false\">Nâng cao</button></div>",
+      "css": ".ds-tabs{display:grid;grid-template-columns:repeat(4,1fr);background:var(--panel,#fff);border-bottom:1px solid var(--border,#d8ddd8);padding:0 8px}.ds-tabs button{font:14px/1.5 \"Google Sans Flex\",system-ui,sans-serif;cursor:pointer;font-size:12px;min-height:44px;border:0;border-bottom:2px solid transparent;background:transparent;padding:12px 2px;color:var(--muted,#606762)}.ds-tabs button[aria-selected=true]{color:var(--text,#202322);border-bottom-color:var(--accent,#365f50)}.ds-tabs button:hover{background:var(--panel-elevated,#f0f1ee)}.ds-tabs button:focus-visible{outline:2px solid var(--studio-focus,#29684f);outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "IRO silver print",
+    "overview": "Quiet neutral paper surfaces frame the photograph. Restrained green selection and clear Vietnamese labels distinguish controls without competing with the image. The current web implementation uses flat surfaces, thin borders and compact rounded controls.",
+    "keyCharacteristics": [
+      "The photograph supplies the colour.",
+      "Neutral surfaces with restrained green selection.",
+      "Clear controls and visible keyboard focus.",
+      "Native platform conventions remain native."
+    ],
+    "rules": [
+      {
+        "name": "The Photo Colour Rule",
+        "body": "Keep interface surfaces neutral so image colour remains easy to judge.",
+        "section": "colors"
+      },
+      {
+        "name": "The Readable Label Rule",
+        "body": "Use the label role for supporting recipe information; do not inherit smaller legacy microtext as a new standard.",
+        "section": "typography"
+      },
+      {
+        "name": "The Quiet Surface Rule",
+        "body": "Reuse flat borders and tonal fills for persistent tools; reserve elevation for transient overlays.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use semantic light and dark roles for new tools.",
+      "Do retain visible focus, readable labels and reduced-motion support.",
+      "Do preserve the whole photo in the stage at each viewport."
+    ],
+    "donts": [
+      "Don't copy legacy gradient text, coloured glows or decorative emoji into new chrome.",
+      "Don't turn this web record into a claim that native device layouts have been verified."
+    ]
+  }
+}

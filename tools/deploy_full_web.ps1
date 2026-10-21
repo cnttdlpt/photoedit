@@ -10,6 +10,7 @@ ssh -o StrictHostKeyChecking=no $target "mkdir -p /home/nguyennam/photoedit/web/
 Write-Host "-> [2/4] Uploading all web frontend & backend files..." -ForegroundColor Cyan
 scp -o StrictHostKeyChecking=no "${localWeb}\index.html" "${target}:/home/nguyennam/photoedit/web/index.html"
 scp -o StrictHostKeyChecking=no "${localWeb}\style.css" "${target}:/home/nguyennam/photoedit/web/style.css"
+scp -o StrictHostKeyChecking=no "${localWeb}\studio.css" "${target}:/home/nguyennam/photoedit/web/studio.css"
 scp -o StrictHostKeyChecking=no "${localWeb}\app.mjs" "${target}:/home/nguyennam/photoedit/web/app.mjs"
 scp -o StrictHostKeyChecking=no "${localWeb}\engine.mjs" "${target}:/home/nguyennam/photoedit/web/engine.mjs"
 scp -o StrictHostKeyChecking=no "${localWeb}\dashboard.html" "${target}:/home/nguyennam/photoedit/web/dashboard.html"
@@ -25,6 +26,7 @@ Write-Host "-> [3/4] Copying to /var/www/iro-studio, fixing ownership & permissi
 $remoteCommands = @'
 echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/index.html /var/www/iro-studio/frontend/index.html
 echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/style.css /var/www/iro-studio/frontend/style.css
+echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/studio.css /var/www/iro-studio/frontend/studio.css
 echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/app.mjs /var/www/iro-studio/frontend/app.mjs
 echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/engine.mjs /var/www/iro-studio/frontend/engine.mjs
 echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/dashboard.html /var/www/iro-studio/frontend/dashboard.html

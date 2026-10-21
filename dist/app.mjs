@@ -2343,7 +2343,7 @@ document.querySelector('#empty')?.addEventListener('click', (e) => {
   document.querySelector('#photo')?.click();
 });
 
-function createDownsampledImageData(srcData, maxDim = 1200) {
+function createDownsampledImageData(srcData, maxDim = 1280) {
   if (!srcData) return null;
   const w0 = srcData.width;
   const h0 = srcData.height;
@@ -2361,6 +2361,8 @@ function createDownsampledImageData(srcData, maxDim = 1200) {
   c2.width = w;
   c2.height = h;
   const ctx2 = c2.getContext('2d');
+  ctx2.imageSmoothingEnabled = true;
+  ctx2.imageSmoothingQuality = 'high';
   ctx2.drawImage(c1, 0, 0, w, h);
   return ctx2.getImageData(0, 0, w, h);
 }
@@ -2369,7 +2371,7 @@ function loadSourceImageData(imageData, label, rawFile = null) {
   state.source = imageData;
   state.isDemo = label.startsWith('Ảnh mẫu Studio');
   // Tạo bản preview nén nhẹ để tương tác slider siêu tốc 60fps
-  state.previewSource = createDownsampledImageData(imageData, 960);
+  state.previewSource = createDownsampledImageData(imageData, 1280);
 
   state.stageZoom = 1.0;
   state.stagePanX = 0;
@@ -2537,7 +2539,7 @@ async function handleImageFile(file) {
   try {
     const img = await readImageFile(file);
     if (version !== imageLoadVersion) { img.close?.(); return; }
-    const maxDim = 2560; // Hỗ trợ độ phân giải lên tới 2.5K sắc nét
+    const maxDim = 4096; // Giữ nguyên độ phân giải gốc cao nhất tới chuẩn 4K Ultra HD sắc nét
     const w0 = img.naturalWidth || img.width;
     const h0 = img.naturalHeight || img.height;
     if (!w0 || !h0) throw new Error('Không đọc được kích thước ảnh');
@@ -2550,6 +2552,8 @@ async function handleImageFile(file) {
     tempCanvas.width = w;
     tempCanvas.height = h;
     const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+    tempCtx.imageSmoothingEnabled = true;
+    tempCtx.imageSmoothingQuality = 'high';
     tempCtx.drawImage(img, 0, 0, w, h);
     if (typeof img.close === 'function') img.close();
 
@@ -2886,7 +2890,7 @@ function render(isLivingFrame = false, forExport = false, isInteractive = false)
   // Tăng tốc siêu mượt 60fps khi kéo slider: sử dụng bản preview nén nhẹ previewSource
   if (renderSource !== state.source) {
     renderSource = state.source;
-    state.previewSource = createDownsampledImageData(state.source, 960);
+    state.previewSource = createDownsampledImageData(state.source, 1280);
     previewCache.clear();
   }
   if (renderLut !== state.lut) { renderLut = state.lut; previewCache.clear(); }

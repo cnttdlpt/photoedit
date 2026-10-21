@@ -96,10 +96,10 @@ public class MainActivity extends Activity {
      * Tương đương {@code enum EditorToolTab} trong {@code Studio.swift}.
      */
     public enum EditorToolTab {
-        FILTERS("Màu phim", "film"),
         ADJUST("Tinh chỉnh", "sliders"),
+        FILTERS("Màu phim", "sparkles"),
         FRAME("Khung ảnh", "frame"),
-        LIGHTCRAFT("Nâng cao", "lightcraft");
+        LIGHTCRAFT("LightCraft", "lightcraft");
 
         public final String title;
         public final String icon;
@@ -275,7 +275,7 @@ public class MainActivity extends Activity {
     private int cachedFrameStyle = -1;
 
     // Cờ trạng thái điều khiển luồng và UI
-    private EditorToolTab selectedTab = EditorToolTab.FILTERS;
+    private EditorToolTab selectedTab = EditorToolTab.ADJUST;
     private AdjustParam selectedAdjust = AdjustParam.EXPOSURE;
     private boolean isAutoBalanced = false;
     private boolean sliderUndoRecorded = false;
@@ -333,7 +333,6 @@ public class MainActivity extends Activity {
     private TextView filterLutStatusBadge;
     private LinearLayout filterPreviewModeRow;
     private LinearLayout filterCarouselContainer;
-    private String inlineRecipeQuery = "";
     private LinearLayout landingFilmShowcaseRow;
     private boolean showFujiSampleThumbnails = true;
 
@@ -710,14 +709,14 @@ public class MainActivity extends Activity {
         albumTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         sectionHeader.addView(albumTitle, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
-        TextView openQuickBtn = text("Tất cả màu", 12f, StudioStyle.MUTED);
+        TextView openQuickBtn = text("Tất cả 392 ›", 12f, StudioStyle.MUTED);
         openQuickBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         openQuickBtn.setOnClickListener(v -> showLibrary());
         sectionHeader.addView(openQuickBtn);
         col.addView(sectionHeader);
 
         LinearLayout gridRow1 = row();
-        gridRow1.addView(buildAlbumCard("Fuji Chrome", "Công thức màu phim", "film", StudioStyle.INK, this::showLibrary),
+        gridRow1.addView(buildAlbumCard("Fuji Chrome", "392 công thức phim", "film", StudioStyle.INK, this::showLibrary),
                 new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         View spacer1 = new View(this);
         gridRow1.addView(spacer1, new LinearLayout.LayoutParams(dp(10), 1));
@@ -1129,21 +1128,21 @@ public class MainActivity extends Activity {
         LinearLayout header = row();
         header.setPadding(dp(2), 0, dp(2), dp(6));
 
-        View backBtn = createCircleIconButton("back", StudioStyle.INK, dp(48), this::confirmClosePhoto);
+        View backBtn = createCircleIconButton("back", StudioStyle.INK, dp(38), this::confirmClosePhoto);
         backBtn.setContentDescription("Đóng ảnh hiện tại");
-        header.addView(backBtn, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        header.addView(backBtn, new LinearLayout.LayoutParams(dp(38), dp(38)));
 
         View leftSpacer = new View(this);
         header.addView(leftSpacer, new LinearLayout.LayoutParams(0, 1, 1f));
 
         LinearLayout undoRedoGroup = row();
-        undoButton = createCircleIconButton("undo", StudioStyle.INK, dp(48), this::performUndo);
+        undoButton = createCircleIconButton("undo", StudioStyle.INK, dp(36), this::performUndo);
         undoButton.setContentDescription("Hoàn tác (Undo)");
-        undoRedoGroup.addView(undoButton, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        undoRedoGroup.addView(undoButton, new LinearLayout.LayoutParams(dp(36), dp(36)));
 
-        redoButton = createCircleIconButton("redo", StudioStyle.INK, dp(48), this::performRedo);
+        redoButton = createCircleIconButton("redo", StudioStyle.INK, dp(36), this::performRedo);
         redoButton.setContentDescription("Làm lại (Redo)");
-        LinearLayout.LayoutParams redoParams = new LinearLayout.LayoutParams(dp(48), dp(48));
+        LinearLayout.LayoutParams redoParams = new LinearLayout.LayoutParams(dp(36), dp(36));
         redoParams.leftMargin = dp(8);
         undoRedoGroup.addView(redoButton, redoParams);
         header.addView(undoRedoGroup);
@@ -1156,26 +1155,25 @@ public class MainActivity extends Activity {
         View themeBtn = createCircleIconButton(
                 StudioStyle.isDarkTheme() ? "theme_light" : "theme_dark",
                 StudioStyle.WARM_AMBER,
-                dp(48),
+                dp(36),
                 this::toggleTheme);
         themeBtn.setContentDescription("Chuyển đổi giao diện Sáng / Tối");
-        LinearLayout.LayoutParams themeParams = new LinearLayout.LayoutParams(dp(48), dp(48));
+        LinearLayout.LayoutParams themeParams = new LinearLayout.LayoutParams(dp(36), dp(36));
         themeParams.rightMargin = dp(8);
         rightGroup.addView(themeBtn, themeParams);
 
         TextView exportBtn = text("Xuất", 12.5f, Color.WHITE);
         exportBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         exportBtn.setGravity(Gravity.CENTER);
-        exportBtn.setMinHeight(dp(48));
         exportBtn.setPadding(dp(14), dp(7), dp(14), dp(7));
         exportBtn.setBackground(StudioStyle.warmAmberPill(dp(20)));
         exportBtn.setOnClickListener(v -> chooseExport());
         MotionStudio.attachExpressiveTouch(exportBtn, 0.94f);
         rightGroup.addView(exportBtn);
 
-        View moreBtn = createCircleTextButton("⋯", StudioStyle.INK, dp(48), this::showMore);
+        View moreBtn = createCircleTextButton("⋯", StudioStyle.INK, dp(36), this::showMore);
         moreBtn.setContentDescription("Thêm tùy chọn");
-        LinearLayout.LayoutParams moreParams = new LinearLayout.LayoutParams(dp(48), dp(48));
+        LinearLayout.LayoutParams moreParams = new LinearLayout.LayoutParams(dp(36), dp(36));
         moreParams.leftMargin = dp(8);
         rightGroup.addView(moreBtn, moreParams);
         header.addView(rightGroup);
@@ -1189,9 +1187,8 @@ public class MainActivity extends Activity {
         modePill.setBackground(StudioStyle.shape(0x0c000000, StudioStyle.LINE, dp(20)));
 
         for (EditorToolTab tab : EditorToolTab.values()) {
-            TextView tabBtn = text(tab.title, 12f, StudioStyle.INK);
+            TextView tabBtn = text(tab.title, 11.5f, StudioStyle.INK);
             tabBtn.setGravity(Gravity.CENTER);
-            tabBtn.setMinHeight(dp(48));
             tabBtn.setPadding(dp(11), dp(6), dp(11), dp(6));
             tabBtn.setOnClickListener(v -> switchToolTab(tab));
             MotionStudio.attachExpressiveTouch(tabBtn, 0.94f);
@@ -1204,7 +1201,9 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER));
-
+        workspace.addView(pillWrapper, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
 
         // 3. SPACIOUS PHOTO STAGE
         FrameLayout stage = buildPhotoStageContainer();
@@ -1218,11 +1217,7 @@ public class MainActivity extends Activity {
         statusLabel.setEllipsize(TextUtils.TruncateAt.END);
         workspace.addView(statusLabel);
 
-        workspace.addView(pillWrapper, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        // 4. Bottom tool panel
+        // 4. LIQUID GLASS BOTTOM CONTROLS DOCK
         bottomDockContent = new FrameLayout(this);
         bottomDockContent.setPadding(dp(14), dp(12), dp(14), dp(12));
         bottomDockContent.setBackground(StudioStyle.liquidGlassCard(dp(28)));
@@ -1492,8 +1487,7 @@ public class MainActivity extends Activity {
         filterLutStatusBadge = text("＋ LUT", 11, StudioStyle.INK);
         filterLutStatusBadge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         filterLutStatusBadge.setPadding(dp(9), dp(4), dp(9), dp(4));
-        filterLutStatusBadge.setBackground(StudioStyle.shape(StudioStyle.SURFACE, StudioStyle.LINE, dp(14)));
-        filterLutStatusBadge.setMinHeight(dp(48));
+        filterLutStatusBadge.setBackground(StudioStyle.shape(Color.WHITE, StudioStyle.LINE, dp(14)));
         filterLutStatusBadge.setOnClickListener(v -> showLutOptions());
         LinearLayout.LayoutParams lutBadgeParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -1501,12 +1495,11 @@ public class MainActivity extends Activity {
         lutBadgeParams.rightMargin = dp(6);
         topRow.addView(filterLutStatusBadge, lutBadgeParams);
 
-        TextView openLibraryPill = text("Thư viện", 11.5f, StudioStyle.INK);
+        TextView openLibraryPill = text("+ Kho 392 màu", 11.5f, StudioStyle.INK);
         openLibraryPill.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         openLibraryPill.setPadding(dp(10), dp(4), dp(10), dp(4));
         openLibraryPill.setBackground(StudioStyle.shape(StudioStyle.WARM_AMBER_LIGHT, StudioStyle.LINE, dp(14)));
         openLibraryPill.setOnClickListener(v -> showLibrary());
-        openLibraryPill.setMinHeight(dp(48));
         topRow.addView(openLibraryPill);
 
         section.addView(topRow);
@@ -1514,32 +1507,22 @@ public class MainActivity extends Activity {
         // Hàng chuyển đổi chế độ xem thu nhỏ: Ảnh mẫu FujiXWeekly vs Áp lên ảnh đang mở
         filterPreviewModeRow = row();
         filterPreviewModeRow.setPadding(dp(2), 0, dp(2), dp(6));
-        // Inline recipes are text entries; thumbnail modes belong to the full library.
-        filterPreviewModeRow.setVisibility(View.GONE);
+        section.addView(filterPreviewModeRow);
 
-        EditText search = new EditText(this);
-        search.setSingleLine(true);
-        search.setTextSize(14);
-        search.setTextColor(StudioStyle.INK);
-        search.setHintTextColor(StudioStyle.MUTED);
-        search.setHint("Tìm tên màu hoặc film…");
-        search.setContentDescription("Tìm công thức màu");
-        search.setText(inlineRecipeQuery);
-        search.setMinHeight(dp(48));
-        section.addView(search);
-        search.addTextChangedListener(new android.text.TextWatcher() {
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                inlineRecipeQuery = s.toString();
-                syncFiltersSection();
-            }
-            public void afterTextChanged(android.text.Editable value) {}
-        });
-        ScrollView scroll = new ScrollView(this);
-        filterCarouselContainer = column();
-        scroll.addView(filterCarouselContainer);
-        section.addView(scroll, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, wideLayoutActive ? 0 : dp(190), wideLayoutActive ? 1f : 0f));
+        if (wideLayoutActive) {
+            ScrollView vScroll = new ScrollView(this);
+            vScroll.setVerticalScrollBarEnabled(false);
+            filterCarouselContainer = column();
+            vScroll.addView(filterCarouselContainer);
+            section.addView(vScroll, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        } else {
+            HorizontalScrollView hScroll = new HorizontalScrollView(this);
+            hScroll.setHorizontalScrollBarEnabled(false);
+            filterCarouselContainer = row();
+            hScroll.addView(filterCarouselContainer);
+            section.addView(hScroll);
+        }
 
         return section;
     }
@@ -2102,40 +2085,53 @@ public class MainActivity extends Activity {
         }
 
         filterCarouselContainer.removeAllViews();
-        TextView original = text("Ảnh gốc", 14, StudioStyle.INK);
-        original.setMinHeight(dp(48));
-        original.setGravity(Gravity.CENTER_VERTICAL);
-        original.setOnClickListener(v -> applyOriginalLook(false));
-        filterCarouselContainer.addView(original);
-        String query = inlineRecipeQuery.trim().toLowerCase(java.util.Locale.ROOT);
-        LinearLayout gridRow = null;
-        int count = 0;
-        for (Recipe recipe : recipes) {
-            if (!query.isEmpty() && !(recipe.name + " " + recipe.film).toLowerCase(java.util.Locale.ROOT).contains(query)) continue;
-            if (count % 2 == 0) {
-                gridRow = row();
+
+        if (wideLayoutActive) {
+            // TRÊN TABLET & KHỔ NGANG: Lưới 3 cột ảnh thu nhỏ Recipe trực quan
+            int maxRecipes = Math.min(29, recipes.size());
+            int totalCells = 1 + maxRecipes; // Ô 0 là "Gốc", tiếp theo là 29 Recipes
+            int cols = 3;
+            for (int base = 0; base < totalCells; base += cols) {
+                LinearLayout gridRow = row();
                 gridRow.setPadding(0, dp(4), 0, dp(4));
+                for (int c = 0; c < cols; c++) {
+                    int cellIdx = base + c;
+                    View cellView;
+                    if (cellIdx == 0) {
+                        cellView = buildFilterGridCard(null);
+                    } else if (cellIdx - 1 < maxRecipes) {
+                        cellView = buildFilterGridCard(recipes.get(cellIdx - 1));
+                    } else {
+                        cellView = new View(this);
+                    }
+                    LinearLayout.LayoutParams cellLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+                    if (c > 0) cellLp.leftMargin = dp(8);
+                    gridRow.addView(cellView, cellLp);
+                }
                 filterCarouselContainer.addView(gridRow);
             }
-            final Recipe selectedRecipe = recipe;
-            boolean selected = currentRecipe != null && currentRecipe.id.equals(recipe.id);
-            TextView cell = text(recipe.name + "\n" + recipe.film, 13, StudioStyle.INK);
-            cell.setPadding(dp(10), dp(10), dp(10), dp(10));
-            cell.setMinHeight(dp(72));
-            cell.setMaxLines(4);
-            cell.setEllipsize(TextUtils.TruncateAt.END);
-            cell.setGravity(Gravity.CENTER_VERTICAL);
-            cell.setSelected(selected);
-            cell.setBackground(StudioStyle.shape(selected ? StudioStyle.SURFACE_CONTAINER : StudioStyle.SURFACE,
-                    selected ? StudioStyle.ACCENT : StudioStyle.LINE, dp(10)));
-            cell.setOnClickListener(v -> applyRecipe(selectedRecipe));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            if (count % 2 == 1) lp.leftMargin = dp(8);
-            gridRow.addView(cell, lp);
-            count++;
+        } else {
+            // TRÊN ĐIỆN THOẠI DỌC: Carousel ngang
+            View originalItem = buildCircularToolItem(
+                    "Gốc",
+                    "compare",
+                    null,
+                    currentRecipe == null,
+                    false,
+                    () -> applyOriginalLook(false));
+            filterCarouselContainer.addView(originalItem);
+
+            int limit = Math.min(25, recipes.size());
+            for (int i = 0; i < limit; i++) {
+                final Recipe r = recipes.get(i);
+                View card = buildFilterGridCard(r);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        dp(76),
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
+                lp.leftMargin = dp(10);
+                filterCarouselContainer.addView(card, lp);
+            }
         }
-        if (count == 0) filterCarouselContainer.addView(text("Không tìm thấy màu. Thử tên film khác.", 14, StudioStyle.MUTED));
-        if (count % 2 == 1) gridRow.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
     }
 
     private View buildFilterGridCard(final Recipe r) {

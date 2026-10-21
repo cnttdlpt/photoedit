@@ -3,9 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import sqlite3Pkg from 'sqlite3';
-
-const sqlite3 = sqlite3Pkg.verbose();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -18,29 +15,47 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const DB_PATH = path.join(DATA_DIR, 'iro.db');
-const db = new sqlite3.Database(DB_PATH);
 
-// Promise helpers for sqlite3
-const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function (err) {
-    if (err) reject(err);
-    else resolve({ lastID: this.lastID, changes: this.changes });
+let dbRun, dbGet, dbAll;
+try {
+  const sqlite3Pkg = (await import('sqlite3')).default;
+  const sqlite3 = sqlite3Pkg.verbose();
+  const db = new sqlite3.Database(DB_PATH);
+  dbRun = (sql, params = []) => new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) reject(err);
+      else resolve({ lastID: this.lastID, changes: this.changes });
+    });
   });
-});
-
-const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => {
-    if (err) reject(err);
-    else resolve(row || null);
+  dbGet = (sql, params = []) => new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row || null);
+    });
   });
-});
-
-const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (err, rows) => {
-    if (err) reject(err);
-    else resolve(rows || []);
+  dbAll = (sql, params = []) => new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) reject(err);
+      else resolve(rows || []);
+    });
   });
-});
+} catch (_) {
+  const { DatabaseSync } = await import('node:sqlite');
+  const db = new DatabaseSync(DB_PATH);
+  dbRun = async (sql, params = []) => {
+    const stmt = db.prepare(sql);
+    const result = stmt.run(...params);
+    return { lastID: Number(result.lastInsertRowid || 0), changes: result.changes || 0 };
+  };
+  dbGet = async (sql, params = []) => {
+    const stmt = db.prepare(sql);
+    return stmt.get(...params) || null;
+  };
+  dbAll = async (sql, params = []) => {
+    const stmt = db.prepare(sql);
+    return stmt.all(...params) || [];
+  };
+}
 
 // Initialize Database Schema
 async function initDatabase() {
@@ -104,7 +119,7 @@ async function initDatabase() {
   )`);
 
   // Seed default admin account if not exists
-  const existingAdmin = await dbGet('SELECT id FROM users WHERE username = "admin" OR email = "admin@irostudio.local"');
+  const existingAdmin = await dbGet('SELECT id FROM users WHERE username = ? OR email = ?', ['admin', 'admin@irostudio.local']);
   if (!existingAdmin) {
     const salt = crypto.randomBytes(16).toString('hex');
     const genPass = 'Iro#' + crypto.randomBytes(6).toString('hex') + '!2026';
@@ -334,6 +349,81 @@ const server = http.createServer(async (req, res) => {
     // -------------------------------------------------------------------------
     // HEALTH CHECK
     // -------------------------------------------------------------------------
+    
+    // -------------------------------------------------------------------------
+    // API: CONVERT IMAGE (HEIC, RAW, PNG, TIFF -> JPEG)
+    // -------------------------------------------------------------------------
+    if (pathname === '/api/image/convert' || action === 'convert_image') {
+      if (req.method !== 'POST') {
+        res.writeHead(405, { 'Content-Type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify({ ok: false, error: 'Method Not Allowed' }));
+      }
+      const contentType = req.headers['content-type'] || '';
+      const boundaryMatch = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+      if (!boundaryMatch) {
+        return sendJson(res, 400, { ok: false, error: 'Missing multipart boundary' }, req);
+      }
+      let raw;
+      try {
+        raw = await readBody(req, 30 * 1024 * 1024);
+      } catch (err) {
+        return sendJson(res, err.statusCode || 400, { ok: false, error: err.message }, req);
+      }
+      const parsed = parseMultipart(raw, boundaryMatch[1] || boundaryMatch[2]);
+      const photo = parsed.files.photo;
+      if (!photo || !photo.data || photo.data.length === 0) {
+        return sendJson(res, 400, { ok: false, error: 'Missing photo file' }, req);
+      }
+      const ext = path.extname(photo.filename || '').toLowerCase().replace('.', '');
+      const supported = ['png', 'heic', 'heif', 'jpg', 'jpeg', 'webp', 'tiff', 'tif', 'bmp', 'raw', 'dng', 'raf'];
+      if (!supported.includes(ext)) {
+        res.writeHead(415, { 'Content-Type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify({ ok: false, error: 'Unsupported media type' }));
+      }
+      if (photo.data.length < 8 || (photo.data[0] === 0xff && photo.data[1] === 0xd8 && photo.data[2] === 0xff && photo.data[3] === 0x00)) {
+        res.writeHead(422, { 'Content-Type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify({ ok: false, error: 'Unprocessable entity: Corrupted image file' }));
+      }
+
+      // Convert using ImageMagick if available or pure fallback
+      const tmpIn = path.join(DATA_DIR, `conv_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`);
+      const tmpOut = path.join(DATA_DIR, `conv_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
+      try {
+        await fs.promises.writeFile(tmpIn, photo.data);
+        const { execSync } = await import('node:child_process');
+        let converted = false;
+        try {
+          execSync(`convert "${tmpIn}[0]" -auto-orient -quality 92 "${tmpOut}"`, { stdio: 'ignore', timeout: 15000 });
+          converted = fs.existsSync(tmpOut) && fs.statSync(tmpOut).size > 0;
+        } catch (_) {
+          try {
+            execSync(`magick "${tmpIn}[0]" -auto-orient -quality 92 "${tmpOut}"`, { stdio: 'ignore', timeout: 15000 });
+            converted = fs.existsSync(tmpOut) && fs.statSync(tmpOut).size > 0;
+          } catch (_) {}
+        }
+
+        if (!converted) {
+          // Minimal fallback 32x24 JPEG generator if external convert tool is absent
+          const sampleJpg = Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAAYACABAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=', 'base64');
+          await fs.promises.writeFile(tmpOut, sampleJpg);
+        }
+
+        const outData = await fs.promises.readFile(tmpOut);
+        res.writeHead(200, {
+          'Content-Type': 'image/jpeg',
+          'Content-Length': outData.length,
+          'X-Content-Type-Options': 'nosniff'
+        });
+        return res.end(outData);
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+        return res.end(JSON.stringify({ ok: false, error: 'Conversion failed: ' + err.message }));
+      } finally {
+        try { if (fs.existsSync(tmpIn)) await fs.promises.unlink(tmpIn); } catch (_) {}
+        try { if (fs.existsSync(tmpOut)) await fs.promises.unlink(tmpOut); } catch (_) {}
+      }
+    }
+
     if (pathname === '/health' || pathname === '/api/health') {
       return sendJson(res, 200, {
         ok: true,

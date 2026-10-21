@@ -49,8 +49,9 @@ async function boot(favorites = '[]', storageBlocked = false) {
   window.HTMLElement.prototype.setPointerCapture = function () {};
   window.HTMLElement.prototype.releasePointerCapture = function () {};
   let stored = favorites;
+  const mockToken = 'test-auth-token';
   const localStorage = {
-    getItem() { if (storageBlocked) throw new Error('Storage denied'); return stored; },
+    getItem(key) { if (storageBlocked) throw new Error('Storage denied'); if (key === 'iro_token') return mockToken; return stored; },
     setItem(_key, value) { if (storageBlocked) throw new Error('Storage denied'); stored = value; }
   };
   const requests = [];
@@ -58,13 +59,16 @@ async function boot(favorites = '[]', storageBlocked = false) {
   const NativeURL = globalThis.URL;
   const globals = {
     document, window, ImageData, localStorage,
+    __IRO_TEST_MODE__: true,
     navigator: { clipboard: { writeText: async () => {} } },
     URL: class extends NativeURL {
       static createObjectURL(blob) { downloads.push(blob); return super.createObjectURL(blob); }
     },
     fetch: async (url, options) => {
       requests.push({ url, options });
-      return { ok: true, json: async () => String(url).includes('recipes.json') ? structuredClone(catalog) : { ok: true } };
+      if (String(url).includes('recipes.json')) return { ok: true, json: async () => structuredClone(catalog) };
+      if (String(url).includes('auth_me')) return { ok: true, json: async () => ({ ok: true, user: { id: 1, username: 'testuser', role: 'admin' } }) };
+      return { ok: true, json: async () => ({ ok: true }) };
     },
     // Keep background telemetry/animation inert. These tests assert synchronous
     // editor behavior and never send fixture or user data over a network.

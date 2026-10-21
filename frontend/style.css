@@ -4340,3 +4340,37 @@ kbd {
   background: var(--border-strong, rgba(0, 0, 0, 0.15));
   border-radius: 9999px;
 }
+
+/* =========================================================================
+   MORPHICONS & TASTE SKILL SPRING MICRO-INTERACTIONS
+   ========================================================================= */
+morph-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.capsule-icon-btn:hover morph-icon,
+.capsule-pill-btn:hover morph-icon {
+  transform: scale(1.12);
+}
+
+.capsule-icon-btn:active morph-icon,
+.capsule-pill-btn:active morph-icon {
+  transform: scale(0.92);
+}
+
+/* Taste Skill Anti-Slop: Tactile Focus Rings & Crisp Typography */
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent, #d97706);
+  outline-offset: 2px;
+}

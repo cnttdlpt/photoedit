@@ -13,6 +13,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,slnt,wdth,wght,ROND@8..144,-10..0,25..150,400..500,0..100&family=Google+Sans+Code:ital,wght@0,400..700;1,400..700&display=swap" />
   <link rel="stylesheet" href="style.css?v=20261017-agy-card-deck" />
+  <!-- Morphicons v2: Universal spring-physics SVG icon morphing -->
+  <script type="module">
+    import { defineMorphIcon } from "./vendor/morphicons/dist/element.js";
+    if (typeof customElements !== "undefined") { defineMorphIcon(); }
+  </script>
 </head>
 <body class="theme-porcelain">
   <!-- =========================================================================
@@ -62,7 +67,7 @@
       <button id="undoBtn" type="button" class="capsule-icon-btn" title="Hoàn tác (Ctrl+Z)" disabled>↶</button>
       <button id="redoBtn" type="button" class="capsule-icon-btn" title="Làm lại (Ctrl+Y)" disabled>↷</button>
       <span class="capsule-divider"></span>
-      <button id="compareBtn" type="button" class="capsule-pill-btn" title="Bật/tắt thanh gạt so sánh Trước/Sau hoặc nhấn giữ Phím Space" disabled>⇄ So sánh</button>
+      <button id="compareBtn" type="button" class="capsule-pill-btn" title="Bật/tắt thanh gạt so sánh Trước/Sau hoặc nhấn giữ Phím Space" disabled><morph-icon id="compareMorphIcon" icon="M4 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5z" size="15" spring="snappy" style="margin-right:4px;display:inline-block;vertical-align:middle;"></morph-icon><span class="btn-text">So sánh</span></button>
       <button id="rotate90" type="button" class="capsule-icon-btn" title="Xoay ảnh 90° (Phím R)" disabled>↻</button>
     </div>
 
@@ -76,7 +81,7 @@
       <button id="export" type="button" class="primary m3-filled-cta" disabled>💾 Xuất ảnh</button>
 
       <!-- Nút Đổi Theme Sáng / Tối trực tiếp trên thanh công cụ -->
-      <button id="themeToggleBtn" type="button" class="capsule-icon-btn theme-toggle-btn" title="Chuyển đổi giao diện Sáng (Porcelain) / Tối (Darkroom)">🌙</button>
+      <button id="themeToggleBtn" type="button" class="capsule-icon-btn theme-toggle-btn" title="Chuyển đổi giao diện Sáng (Porcelain) / Tối (Darkroom)" aria-label="Đổi chế độ sáng tối"><morph-icon id="themeMorphIcon" icon="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" size="18" spring="bouncy"></morph-icon><span id="themeToggleFallback" style="display:none;">🌙</span></button>
 
       <!-- Khối Tài khoản Người dùng & Phân quyền -->
       <div class="user-account-container" style="position: relative;">

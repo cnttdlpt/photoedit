@@ -817,6 +817,7 @@ struct EditorView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: isComparing ? "eye.slash.fill" : "eye.fill")
+                                    .symbolMorphReplace()
                                     .font(.system(size: 11, weight: .semibold))
                                 Text(isComparing ? "Ảnh gốc" : "So sánh")
                                     .font(.system(size: 11.5, weight: .bold, design: .rounded))
@@ -1388,6 +1389,7 @@ struct EditorView: View {
                         inlineFilterQuery = ""
                     } label: {
                         Image(systemName: "xmark.circle.fill")
+                            .symbolMorphReplace()
                             .font(.system(size: 12))
                             .foregroundStyle(Studio.muted)
                     }

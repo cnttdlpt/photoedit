@@ -25,6 +25,9 @@ const mimeTypes = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.cube': 'text/plain; charset=utf-8',
+  '.woff2': 'font/woff2',
+  '.woff': 'font/woff',
+  '.ttf': 'font/ttf',
   '.apk': 'application/vnd.android.package-archive'
 };
 
@@ -150,10 +153,12 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
+  const actualPort = server.address() ? server.address().port : PORT;
+  console.log(`Local: http://localhost:${actualPort}`);
   console.log(`\n======================================================`);
   console.log(`  IRO Studio 3.0 Frontend Server (Hardened)`);
-  console.log(`  Cổng:    ${PORT}`);
-  console.log(`  Địa chỉ: http://${HOST}:${PORT}`);
+  console.log(`  Cổng:    ${actualPort}`);
+  console.log(`  Địa chỉ: http://${HOST}:${actualPort}`);
   console.log(`  Proxy API -> ${BACKEND_URL}`);
   console.log(`======================================================\n`);
 });

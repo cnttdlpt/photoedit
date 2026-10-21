@@ -54,6 +54,8 @@ import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1660,6 +1662,8 @@ public class MainActivity extends Activity {
     private View createCircleIconButton(String iconType, int tintColor, int sizePx, Runnable action) {
         FrameLayout frame = new FrameLayout(this);
         frame.setBackground(StudioStyle.liquidGlassCircle());
+        frame.setMinimumWidth(dp(48));
+        frame.setMinimumHeight(dp(48));
         ImageView icon = new ImageView(this);
         icon.setImageDrawable(new StudioStyle.Icon(iconType, tintColor, (int) (sizePx * 0.46f)));
         frame.addView(icon, new FrameLayout.LayoutParams(
@@ -1679,6 +1683,8 @@ public class MainActivity extends Activity {
         btn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         btn.setGravity(Gravity.CENTER);
         btn.setBackground(StudioStyle.liquidGlassCircle());
+        btn.setMinimumWidth(dp(48));
+        btn.setMinimumHeight(dp(48));
         btn.setOnClickListener(v -> {
             v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
             action.run();

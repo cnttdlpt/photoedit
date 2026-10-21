@@ -31,3 +31,7 @@ android/tools/ui.xml
 # Node
 node_modules/
 *.zip
+
+*.db
+*.db-shm
+*.db-wal

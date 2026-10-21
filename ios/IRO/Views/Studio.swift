@@ -74,6 +74,24 @@ enum EditorToolTab: String, CaseIterable, Identifiable {
     }
 }
 
+
+// MARK: - Impeccable & Taste Skill Modifiers
+extension View {
+    @ViewBuilder
+    func symbolMorphReplace() -> some View {
+        if #available(iOS 17.0, *) {
+            self.contentTransition(.symbolEffect(.replace))
+        } else {
+            self
+        }
+    }
+
+    func minTouchTarget() -> some View {
+        self.frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+    }
+}
+
 // MARK: - Material Design 3 Expressive Spring Button Style
 struct M3ExpressiveButtonStyle: ButtonStyle {
     var scaleAmount: CGFloat = 0.95

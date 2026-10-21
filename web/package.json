@@ -22,8 +22,5 @@
   "devDependencies": {
     "@napi-rs/canvas": "0.1.100",
     "linkedom": "0.18.13"
-  },
-  "dependencies": {
-    "morphicons": "^2.0.0"
   }
 }

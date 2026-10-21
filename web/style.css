@@ -4374,3 +4374,208 @@ input:focus-visible {
   outline: 2px solid var(--accent, #d97706);
   outline-offset: 2px;
 }
+
+
+/* =============================================================================
+   AI FILM STYLIST & SMART RECIPE MATCHER (IRO STUDIO 3.0)
+   ============================================================================= */
+.ai-stylist-trigger-btn {
+  color: var(--accent) !important;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ai-stylist-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: var(--panel-elevated);
+  border-radius: var(--m3-radius-lg);
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.ai-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: aiSpin 0.8s linear infinite;
+}
+
+@keyframes aiSpin {
+  to { transform: rotate(360deg); }
+}
+
+.ai-stylist-result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.ai-advice-card {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.08) 0%, rgba(217, 119, 6, 0.04) 100%);
+  border: 1px solid rgba(234, 88, 12, 0.25);
+  border-radius: var(--m3-radius-lg);
+  padding: 14px 18px;
+}
+
+.ai-advice-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.ai-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--accent);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: var(--m3-radius-pill);
+}
+
+.film-tag {
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--panel-elevated);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  padding: 3px 10px;
+  border-radius: var(--m3-radius-pill);
+}
+
+.tone-tag {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.ai-advice-text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--fg);
+}
+
+.ai-matched-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.ai-matched-header h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ai-match-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.ai-matched-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.ai-recipe-card {
+  background: var(--panel-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--m3-radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.ai-recipe-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.ai-recipe-thumb {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  background: var(--panel);
+}
+
+.ai-recipe-thumb-fallback {
+  width: 100%;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(0, 0, 0, 0.06));
+  font-size: 28px;
+}
+
+.ai-recipe-body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 8px;
+}
+
+.ai-recipe-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--fg);
+}
+
+.ai-recipe-source {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.ai-recipe-reason {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.45;
+  flex: 1;
+}
+
+.ai-recipe-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ai-apply-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--m3-radius-pill);
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.ai-apply-btn:hover {
+  opacity: 0.9;
+}
+

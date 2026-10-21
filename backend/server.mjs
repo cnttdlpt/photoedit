@@ -326,6 +326,251 @@ function parseMultipart(buffer, boundary) {
   return result;
 }
 
+
+// =============================================================================
+// AI FILM STYLIST & SMART RECIPE MATCHER (Ollama Local AI & 421 Film Library)
+// =============================================================================
+
+let recipesCatalog = [];
+function reloadRecipesCatalog() {
+  const possiblePaths = [
+    path.join(__dirname, '../frontend/recipes.json'),
+    path.join(__dirname, '../web/recipes.json'),
+    path.join(__dirname, 'recipes.json')
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      try {
+        const raw = fs.readFileSync(p, 'utf8');
+        const data = JSON.parse(raw);
+        recipesCatalog = Array.isArray(data) ? data : (data.recipes || []);
+        console.log(`[AI Stylist] Đã tải ${recipesCatalog.length} công thức từ ${p}`);
+        return;
+      } catch (e) {
+        console.warn(`[AI Stylist] Lỗi đọc ${p}:`, e.message);
+      }
+    }
+  }
+}
+reloadRecipesCatalog();
+
+const aiStylistCache = new Map();
+const MAX_AI_CACHE = 200;
+let isOllamaRunningTask = false;
+
+const AI_SCENARIOS = [
+  {
+    keys: ['cafe', 'cà phê', 'quán', 'vintage', 'hoài cổ', '90s', 'ấm', 'nâu', 'retro', 'gỗ'],
+    film: 'Classic Chrome',
+    tone: 'Ấm áp hoài cổ & Vintage',
+    advice: 'Tone Classic Chrome hạ nhẹ độ bão hòa, kết hợp cân bằng trắng ấm tạo màu gỗ trầm ấm cúng, tái hiện chất phim vintage thập niên 90 hoàn hảo cho không gian quán cà phê.'
+  },
+  {
+    keys: ['biển', 'beach', 'hè', 'nắng vàng', 'mùa hè', 'hoàng hôn biển', 'summer', 'đại dương', 'sóng'],
+    film: 'Velvia',
+    tone: 'Rực rỡ sắc màu & Nắng hè',
+    advice: 'Giả lập Velvia kết hợp Color Chrome FX đẩy sắc xanh ngắt của nước biển và ánh nắng vàng mật ong, mang lại năng lượng tràn đầy rực rỡ của kỳ nghỉ nhiệt đới.'
+  },
+  {
+    keys: ['đà lạt', 'mưa', 'buồn', 'lạnh', 'sương', 'mờ', 'điện ảnh', 'cinematic', 'trầm'],
+    film: 'Eterna',
+    tone: 'Điện ảnh trầm lạnh (Moody Cinematic)',
+    advice: 'Giả lập điện ảnh Eterna kết hợp dải tương phản mở rộng DR400 và Pro-Mist nhẹ tạo hiệu ứng sương mờ bảng lảng, mang cảm giác u buồn và chiều sâu như thước phim chiếu rạp.'
+  },
+  {
+    keys: ['nàng thơ', 'chân dung', 'trong trẻo', 'pastel', 'da mịn', 'dịu dàng', 'bạn gái', 'ngọt ngào', 'trắng hồng'],
+    film: 'Astia',
+    tone: 'Trong trẻo tự nhiên (Pastel & Soft Skin)',
+    advice: 'Giả lập Astia làm dịu vùng sáng (Highlight -1), tái hiện sắc tố da người trắng hồng tự nhiên, mềm mại và trong trẻo như ánh sáng ban mai.'
+  },
+  {
+    keys: ['đêm', 'phố đêm', 'neon', 'cyberpunk', 'cinestill', 'ánh đèn', 'tokyo', 'sài gòn đêm', 'đèn đường'],
+    film: 'Classic Neg.',
+    tone: 'Ánh đèn Neon CineStill (Night Street)',
+    advice: 'Giả lập Classic Neg kết hợp quầng đỏ Halation và cân bằng trắng Tungsten đẩy độ tương phản giữa vùng bóng tối sâu thẳm và ánh đèn neon rực rỡ sắc màu.'
+  },
+  {
+    keys: ['hà nội', 'thu', 'nắng thu', 'cổ kính', 'phố cổ', 'nắng sớm', 'mùa thu', 'hoài niệm'],
+    film: 'Nostalgic Neg.',
+    tone: 'Hoài niệm nắng thu (Amber & Warm Glow)',
+    advice: 'Nostalgic Neg mang sắc hổ phách vàng ấm đặc trưng với vùng chuyển tông mềm mại, ghi lại trọn vẹn nét cổ kính rêu phong và ánh nắng thu len lỏi qua từng góc phố.'
+  },
+  {
+    keys: ['đen trắng', 'bw', 'b&w', 'phóng sự', 'street', 'đường phố', 'tương phản gắt', 'monochrome'],
+    film: 'Acros',
+    tone: 'Đen trắng phóng sự (Acros High Contrast)',
+    advice: 'Giả lập phim đen trắng huyền thoại Acros với hạt film mô phỏng mịn màng ở vùng sáng và rõ nét ở vùng tối, mang lại độ sắc sảo đầy biểu cảm cho ảnh đường phố.'
+  },
+  {
+    keys: ['portra', 'kodak', 'màu film', 'film look', 'analog', 'film stock'],
+    film: 'Classic Chrome',
+    tone: 'Kodak Portra Film Emulation',
+    advice: 'Mô phỏng chất phim âm bản Kodak Portra trứ danh với tông màu vàng kem mịn màng, độ tương phản dịu và khả năng tôn vinh màu da tự nhiên vượt trội.'
+  },
+  {
+    keys: ['nhật bản', 'japan', 'trong sáng', 'tối giản', 'minimalist', 'fuji'],
+    film: 'Provia',
+    tone: 'Nhật Bản trong trẻo (Clean Japanese Tone)',
+    advice: 'Giả lập Provia với cân bằng trắng thiên xanh nhẹ và tương phản tự nhiên, tạo cảm giác nhẹ nhàng, tĩnh lặng và thanh thoát đậm phong cách nhiếp ảnh Nhật Bản.'
+  }
+];
+
+function analyzeFilmStylist(prompt) {
+  const clean = (prompt || '').trim();
+  const q = clean.toLowerCase();
+  const cacheKey = q;
+
+  if (aiStylistCache.has(cacheKey)) {
+    return { ...aiStylistCache.get(cacheKey), cached: true };
+  }
+
+  const tokens = q.split(/\s+/).filter(t => t.length > 1);
+
+  let bestScenario = null;
+  let maxScenarioScore = 0;
+
+  for (const s of AI_SCENARIOS) {
+    let score = 0;
+    for (const k of s.keys) {
+      if (q.includes(k)) score += 15;
+    }
+    if (score > maxScenarioScore) {
+      maxScenarioScore = score;
+      bestScenario = s;
+    }
+  }
+
+  const targetFilm = bestScenario ? bestScenario.film : 'Classic Chrome';
+  const targetTone = bestScenario ? bestScenario.tone : 'Fujifilm Màu Phim Đa Dụng';
+  const advice = bestScenario ? bestScenario.advice : 'Công thức cân bằng sắc thái màu sắc và độ tương phản tự nhiên, hạt film mịn nhẹ nhàng phù hợp cho nhiều điều kiện ánh sáng đời thường.';
+
+  const scored = recipesCatalog.map(r => {
+    let score = 0;
+    const name = (r.name || '').toLowerCase();
+    const film = (r.film || '').toLowerCase();
+    const sourceUrl = (r.sourceUrl || '').toLowerCase();
+
+    if (film === targetFilm.toLowerCase()) score += 40;
+    else if (film.includes(targetFilm.toLowerCase())) score += 30;
+
+    for (const t of tokens) {
+      if (name.includes(t)) score += 25;
+      if (film.includes(t)) score += 15;
+      if (sourceUrl.includes(t)) score += 10;
+    }
+
+    if (bestScenario) {
+      for (const k of bestScenario.keys) {
+        if (name.includes(k)) score += 20;
+      }
+    }
+
+    if (r.sampleImageUrl) score += 15;
+
+    if (name.includes('portra') || name.includes('summer') || name.includes('gold') || name.includes('tokyo') || name.includes('cinestill') || name.includes('vintage') || name.includes('kodachrome')) {
+      score += 10;
+    }
+
+    return { recipe: r, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+
+  const top3 = scored.slice(0, 3).map(s => {
+    const r = s.recipe;
+    const matchPct = Math.min(99, Math.max(72, Math.round(s.score * 0.8 + 30)));
+    let reason = `Đạt độ tương thích ${matchPct}% với bối cảnh "${clean}".`;
+    if (r.rawSettings) {
+      const wb = r.rawSettings['White Balance'] || r.rawSettings['wb'] || '';
+      const grain = r.rawSettings['Grain Effect'] || r.rawSettings['Grain'] || '';
+      if (wb) reason += ` WB: ${wb}.`;
+      if (grain) reason += ` Grain: ${grain}.`;
+    }
+    return {
+      id: r.id,
+      name: r.name,
+      film: r.film,
+      source: r.source || 'Fujifilm Community',
+      sourceUrl: r.sourceUrl,
+      sampleImageUrl: r.sampleImageUrl,
+      rawSettings: r.rawSettings,
+      score: s.score,
+      matchReason: reason
+    };
+  });
+
+  const responseObj = {
+    ok: true,
+    prompt: clean,
+    film: targetFilm,
+    tone: targetTone,
+    advice: advice,
+    recipes: top3,
+    totalRecipesInCatalog: recipesCatalog.length,
+    engine: 'hybrid-semantic-ollama'
+  };
+
+  if (aiStylistCache.size >= MAX_AI_CACHE) {
+    const firstKey = aiStylistCache.keys().next().value;
+    aiStylistCache.delete(firstKey);
+  }
+  aiStylistCache.set(cacheKey, responseObj);
+
+  queryOllamaBackground(clean, targetFilm, targetTone).catch(() => {});
+
+  return responseObj;
+}
+
+async function queryOllamaBackground(prompt, targetFilm, targetTone) {
+  if (isOllamaRunningTask) return;
+  isOllamaRunningTask = true;
+  try {
+    const postData = JSON.stringify({
+      model: 'qwen2.5:0.5b',
+      prompt: `Bạn là chuyên gia màu phim Fujifilm. Người dùng mô tả ảnh: "${prompt}". Gợi ý 1 giả lập phim (${targetFilm}) và 1 câu nhận xét thẩm mỹ ngắn gọn bằng tiếng Việt. Trả về đúng JSON: {"film": "${targetFilm}", "tone": "${targetTone}", "advice": "..."}`,
+      stream: false,
+      options: { temperature: 0.2, num_ctx: 256, num_predict: 40, num_thread: 4 }
+    });
+
+    const req = http.request({
+      hostname: '127.0.0.1',
+      port: 11434,
+      path: '/api/generate',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) },
+      timeout: 35000
+    }, (res) => {
+      let data = '';
+      res.on('data', c => { data += c; });
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          const raw = parsed.response || '';
+          const m = raw.match(/\{[\s\S]*\}/);
+          if (m) {
+            const obj = JSON.parse(m[0]);
+            if (obj && obj.advice && obj.advice.length > 10) {
+              const cached = aiStylistCache.get(prompt.toLowerCase().trim());
+              if (cached) {
+                cached.advice = obj.advice;
+                cached.engine = 'ollama-qwen2.5:0.5b';
+              }
+            }
+          }
+        } catch (_) {}
+        isOllamaRunningTask = false;
+      });
+    });
+
+    req.on('timeout', () => { req.destroy(); isOllamaRunningTask = false; });
+    req.on('error', () => { isOllamaRunningTask = false; });
+    req.write(postData);
+    req.end();
+  } catch (_) {
+    isOllamaRunningTask = false;
+  }
+}
+
 // Main HTTP Request Handler
 const server = http.createServer(async (req, res) => {
   // CORS Preflight
@@ -1240,6 +1485,39 @@ const server = http.createServer(async (req, res) => {
     // -------------------------------------------------------------------------
     // API: GET RECIPES STATUS
     // -------------------------------------------------------------------------
+    
+    // -------------------------------------------------------------------------
+    // API: AI FILM STYLIST & SMART RECIPE MATCHER (POST & GET)
+    // -------------------------------------------------------------------------
+    if (pathname === '/api/ai/film-stylist' || action === 'ai_film_stylist') {
+      const clientIp = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+      if (!checkRateLimit(clientIp, 'ai_stylist', 60, 60 * 1000)) {
+        return sendJson(res, 429, { ok: false, error: 'Bạn đang thao tác quá nhanh. Vui lòng thử lại sau giây lát.' });
+      }
+
+      let prompt = '';
+      if (req.method === 'POST') {
+        try {
+          const raw = await readBody(req);
+          const body = JSON.parse(raw.toString() || '{}');
+          prompt = (body.prompt || body.query || body.text || '').trim();
+        } catch (_) {}
+      } else {
+        prompt = (url.searchParams.get('prompt') || url.searchParams.get('q') || '').trim();
+      }
+
+      if (!prompt) {
+        return sendJson(res, 400, { ok: false, error: 'Vui lòng cung cấp mô tả ảnh hoặc cảm xúc cần gợi ý màu.' });
+      }
+
+      if (prompt.length > 300) {
+        prompt = prompt.slice(0, 300);
+      }
+
+      const result = analyzeFilmStylist(prompt);
+      return sendJson(res, 200, result);
+    }
+
     if (pathname === '/api/recipes/status' || action === 'get_recipes_status') {
       const recipesPath = path.join(__dirname, '../frontend/recipes.json');
       let statusData = { ok: true, count: 0, retrievedOn: null, lastSync: null };

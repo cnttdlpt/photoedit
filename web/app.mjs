@@ -2047,11 +2047,78 @@ document.querySelector('#promptRecipeBtn').addEventListener('click', () => {
   promptTextInput.focus();
 });
 
+// AI Film Stylist Elements
+const aiStylistLoading = document.querySelector('#aiStylistLoading');
+const aiStylistResult = document.querySelector('#aiStylistResult');
+const aiFilmBadge = document.querySelector('#aiFilmBadge');
+const aiToneBadge = document.querySelector('#aiToneBadge');
+const aiAdviceText = document.querySelector('#aiAdviceText');
+const aiMatchedRecipesGrid = document.querySelector('#aiMatchedRecipesGrid');
+
+let currentAiMatchedRecipes = [];
+
+document.querySelector('#tabAiStylistBtn')?.addEventListener('click', () => {
+  promptModal.hidden = false;
+  promptTextInput?.focus();
+});
+
 document.querySelector('#closePromptModal').addEventListener('click', () => {
   promptModal.hidden = true;
 });
 
-function runPromptRecipe(text) {
+async function queryAiFilmStylist(promptText, autoApply = false) {
+  const query = (promptText || '').trim();
+  if (!query) return;
+
+  if (aiStylistLoading) aiStylistLoading.hidden = false;
+  if (aiStylistResult) aiStylistResult.hidden = true;
+
+  try {
+    const res = await fetch('/api/ai/film-stylist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: query })
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Lỗi gợi ý màu');
+
+    currentAiMatchedRecipes = data.recipes || [];
+    renderAiStylistResults(data);
+
+    if (autoApply && currentAiMatchedRecipes.length > 0) {
+      applyAiSelectedRecipe(currentAiMatchedRecipes[0]);
+    }
+  } catch (err) {
+    console.warn('[AI Stylist] Fallback to client NLP engine:', err.message);
+    const { settings: nextSettings, reasonVi } = promptToRecipeVi(query);
+    const fallbackRecipes = (state.fullCatalogRecipes || []).slice(0, 3).map(r => ({
+      id: r.id,
+      name: r.name,
+      film: r.film,
+      source: 'Fuji X Weekly',
+      sampleImageUrl: r.sampleImageUrl,
+      rawSettings: r.settings,
+      matchReason: `Phù hợp với tông màu ${r.film}.`
+    }));
+    currentAiMatchedRecipes = fallbackRecipes;
+    renderAiStylistResults({
+      ok: true,
+      prompt: query,
+      film: nextSettings.film || 'Classic Chrome',
+      tone: 'Cân bằng tự động IRO',
+      advice: reasonVi,
+      recipes: fallbackRecipes
+    });
+
+    if (autoApply) {
+      runLegacyPromptRecipe(query);
+    }
+  } finally {
+    if (aiStylistLoading) aiStylistLoading.hidden = true;
+  }
+}
+
+function runLegacyPromptRecipe(text) {
   const { settings: nextSettings, reasonVi } = promptToRecipeVi(text);
   const keepDiag = state.settings.diagnosticMode;
   state.settings = { ...structuredClone(nextSettings), diagnosticMode: keepDiag };
@@ -2070,18 +2137,87 @@ function runPromptRecipe(text) {
   setStatus(reasonVi);
 }
 
+function renderAiStylistResults(data) {
+  if (!aiStylistResult) return;
+  aiStylistResult.hidden = false;
+
+  if (aiFilmBadge) aiFilmBadge.textContent = data.film || 'Classic Chrome';
+  if (aiToneBadge) aiToneBadge.textContent = data.tone || 'Tự nhiên';
+  if (aiAdviceText) aiAdviceText.textContent = data.advice || '';
+
+  if (aiMatchedRecipesGrid) {
+    aiMatchedRecipesGrid.innerHTML = '';
+    const recipes = data.recipes || [];
+    recipes.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'ai-recipe-card';
+
+      const thumbHtml = item.sampleImageUrl
+        ? `<img class="ai-recipe-thumb" src="${item.sampleImageUrl}" alt="${item.name}" loading="lazy" onerror="this.outerHTML='<div class=\'ai-recipe-thumb-fallback\'>🎞️</div>'">`
+        : `<div class="ai-recipe-thumb-fallback">🎞️</div>`;
+
+      card.innerHTML = `
+        ${thumbHtml}
+        <div class="ai-recipe-body">
+          <h5 class="ai-recipe-title">${item.name}</h5>
+          <span class="ai-recipe-source">${item.source || 'Fujifilm'} · <strong>${item.film}</strong></span>
+          <p class="ai-recipe-reason">${item.matchReason || ''}</p>
+          <div class="ai-recipe-actions">
+            <button type="button" class="ai-apply-btn" title="Áp dụng công thức này vào ảnh">✨ Áp Dụng Ngay</button>
+          </div>
+        </div>
+      `;
+
+      card.querySelector('.ai-apply-btn').addEventListener('click', () => {
+        applyAiSelectedRecipe(item);
+      });
+
+      aiMatchedRecipesGrid.appendChild(card);
+    });
+  }
+}
+
+function applyAiSelectedRecipe(item) {
+  let targetRec = (state.fullCatalogRecipes || []).find(r => r.id === item.id);
+  if (!targetRec) {
+    targetRec = {
+      ...parseFujiRecipe(item, defaults),
+      id: item.id,
+      name: item.name,
+      film: item.film,
+      sampleImageUrl: item.sampleImageUrl
+    };
+  }
+
+  applyCatalogRecipe(targetRec);
+  promptModal.hidden = true;
+
+  if (!state.source) {
+    showToast(`Đã chọn công thức "${targetRec.name}"! Vui lòng chọn ảnh để áp dụng.`, 'info', '🪄');
+    document.querySelector('#photo')?.click();
+  } else {
+    showToast(`Đã áp dụng công thức "${targetRec.name}" (${targetRec.film})!`, 'success', '✨');
+  }
+}
+
 document.querySelector('#applyPromptBtn').addEventListener('click', () => {
-  runPromptRecipe(promptTextInput.value);
+  const text = promptTextInput.value;
+  runLegacyPromptRecipe(text);
+  queryAiFilmStylist(text, false);
 });
 
 promptTextInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter') runPromptRecipe(promptTextInput.value);
+  if (e.key === 'Enter') {
+    const text = promptTextInput.value;
+    runLegacyPromptRecipe(text);
+    queryAiFilmStylist(text, false);
+  }
 });
 
 document.querySelectorAll('.prompt-chip').forEach(chip => {
   chip.addEventListener('click', () => {
     promptTextInput.value = chip.dataset.prompt;
-    runPromptRecipe(chip.dataset.prompt);
+    queryAiFilmStylist(chip.dataset.prompt, false);
   });
 });
 

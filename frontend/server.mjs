@@ -27,8 +27,7 @@ const mimeTypes = {
   '.cube': 'text/plain; charset=utf-8',
   '.woff2': 'font/woff2',
   '.woff': 'font/woff',
-  '.ttf': 'font/ttf',
-  '.apk': 'application/vnd.android.package-archive'
+  '.ttf': 'font/ttf'
 };
 
 function proxyToBackend(req, res) {
@@ -119,7 +118,6 @@ const server = http.createServer((req, res) => {
     // Modern Security Headers
     const headers = {
       'Content-Type': contentType,
-      ...(ext === '.apk' ? { 'Content-Disposition': `attachment; filename="${basename}"` } : {}),
       'Access-Control-Allow-Origin': '*',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',

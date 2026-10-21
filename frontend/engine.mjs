@@ -257,8 +257,10 @@ export function rotatePixels90(input, width, height, rotation = 0) {
 export function processPixels(input, width, height, rawSettings, lut, frameSeed = 0) {
   const s = { ...defaults, ...rawSettings };
   const filmName = Object.keys(films).find(name => name.toLowerCase() === String(s.film).trim().toLowerCase());
-  const out = new Uint8ClampedArray(input.length), film = films[filmName] || films.Original;
-  const exp = 2 ** s.exposure, wb = { Auto: 0, Daylight: 3, Cloudy: 9, Tungsten: -15 }[s.wb] || 0;
+  const out = new Uint8ClampedArray(input.length);
+  const film = films[filmName] || films.Original;
+  const exp = 2 ** s.exposure;
+  const wb = { Auto: 0, Daylight: 3, Cloudy: 9, Tungsten: -15 }[s.wb] || 0;
   const hasCurve = Array.isArray(s.curvePoints) && s.curvePoints.some((p, idx) => Math.abs(p[0] - p[1]) > 1e-3 || (idx === 0 && p[0] > 0));
   const curveLut = hasCurve ? buildMonotoneCurveLut(s.curvePoints) : null;
   const caShift = Math.round(clamp(s.chromatic || 0, 0, 4));
@@ -268,14 +270,63 @@ export function processPixels(input, width, height, rawSettings, lut, frameSeed 
   const hasHsl = [...hueBands, ...satBands, ...lumBands].some(value => value !== 0);
   const hasWheels = ['shadows', 'midtones', 'highlights'].some(tone => s[`${tone}Sat`] > 0 || s[`${tone}Lum`] !== 0);
   const vignette = boundedNumber(s.vignette, -50, 50) / 100;
+  const absVignette = Math.abs(vignette);
+  const midX = (width - 1) / 2, midY = (height - 1) / 2;
+  const maxDistSq = Math.max(1, midX ** 2 + midY ** 2);
 
-  for (let i = 0; i < input.length; i += 4) {
-    const pxIndex = i >>> 2;
-    const x = pxIndex % width;
-    const y = (pxIndex / width) | 0;
+  const film0 = film[0], film1 = film[1];
+  const film2 = film[2], film3 = film[3], film4 = film[4];
+  const baseEffectiveAmount = s.amount / 100;
+  const redOffset = s.red * 2 + s.temperature * 0.15 + wb;
+  const blueOffset = s.blue * 2 - s.temperature * 0.15 - wb;
+  const highlightMult = s.highlight * 10;
+  const shadowMult = s.shadow * 10;
+  const drOffset = ((s.dr - 100) / 300) * 28;
 
+  // Precompute 3-way color grading wheel vectors
+  let shR = 0, shG = 0, shB = 0, shLight = 0, shSat = 0;
+  let midR = 0, midG = 0, midB = 0, midLight = 0, midSat = 0;
+  let hiR = 0, hiG = 0, hiB = 0, hiLight = 0, hiSat = 0;
+  if (hasWheels) {
+    const twoPi3 = (2 * Math.PI) / 3;
+    shSat = boundedNumber(s.shadowsSat, 0, 100) / 100;
+    if (shSat > 0 || s.shadowsLum !== 0) {
+      const rad = ((s.shadowsHue || 0) * Math.PI) / 180;
+      shR = Math.cos(rad); shG = Math.cos(rad - twoPi3); shB = Math.cos(rad + twoPi3);
+      shLight = (boundedNumber(s.shadowsLum, -50, 50) / 100) * 255;
+    }
+    midSat = boundedNumber(s.midtonesSat, 0, 100) / 100;
+    if (midSat > 0 || s.midtonesLum !== 0) {
+      const rad = ((s.midtonesHue || 0) * Math.PI) / 180;
+      midR = Math.cos(rad); midG = Math.cos(rad - twoPi3); midB = Math.cos(rad + twoPi3);
+      midLight = (boundedNumber(s.midtonesLum, -50, 50) / 100) * 255;
+    }
+    hiSat = boundedNumber(s.highlightsSat, 0, 100) / 100;
+    if (hiSat > 0 || s.highlightsLum !== 0) {
+      const rad = ((s.highlightsHue || 0) * Math.PI) / 180;
+      hiR = Math.cos(rad); hiG = Math.cos(rad - twoPi3); hiB = Math.cos(rad + twoPi3);
+      hiLight = (boundedNumber(s.highlightsLum, -50, 50) / 100) * 255;
+    }
+  }
+
+  // Precompute dehaze constants
+  const dh = s.dehaze !== 0 ? s.dehaze / 100 : 0;
+  const dhMist = -dh * 0.55;
+
+  // Precompute bleach bypass
+  const bb = s.bleachBypass > 0 ? s.bleachBypass / 100 : 0;
+  const bbDesat1 = 1 - 0.55 * bb, bbDesat2 = 0.55 * bb;
+  const bbSilver1 = 1 - 0.65 * bb, bbSilver2 = 0.65 * bb;
+
+  // Precompute light leak
+  const breath = s.lightLeak > 0 ? 1 + Math.sin(frameSeed * 0.26) * 0.06 : 1;
+  const lightLeakScale = (s.lightLeak / 100) * breath;
+
+  let x = 0, y = 0;
+  const len = input.length;
+
+  for (let i = 0; i < len; i += 4) {
     let sampleX = x, sampleY = y;
-    // Swirly Bokeh Ống kính Cổ Helios 44-2 58mm f/2 ở rìa ảnh
     if (s.swirlyBokeh > 0 && width > 4 && height > 4) {
       const dx = x - cx, dy = y - cy;
       const rNorm = Math.hypot(dx, dy) / maxRad;
@@ -296,186 +347,211 @@ export function processPixels(input, width, height, rawSettings, lut, frameSeed 
       bIn = input[(sampleY * width + bx) * 4 + 2];
     }
 
-    let a = [rIn, gIn, bIn];
+    let a0 = rIn, a1 = gIn, a2 = bIn;
     const skinW = s.skinProtect > 0 ? detectSkinWeight(rIn, gIn, bIn) * (s.skinProtect / 100) : 0;
 
-    // Dehaze (Khử mù sương dựa trên Dark Channel Prior)
-    if (s.dehaze !== 0) {
-      const dh = s.dehaze / 100;
-      const darkChannel = Math.min(a[0], a[1], a[2]) / 255;
+    if (dh !== 0) {
+      const darkChannel = Math.min(a0, a1, a2) / 255;
       if (dh > 0) {
         const trans = Math.max(0.22, 1 - dh * 0.72 * darkChannel);
         const atm = 235;
-        a[0] = (a[0] - atm * (1 - trans)) / trans;
-        a[1] = (a[1] - atm * (1 - trans)) / trans;
-        a[2] = (a[2] - atm * (1 - trans)) / trans;
+        const invTrans = 1 / trans;
+        const atmSub = atm * (1 - trans);
+        a0 = (a0 - atmSub) * invTrans;
+        a1 = (a1 - atmSub) * invTrans;
+        a2 = (a2 - atmSub) * invTrans;
       } else {
-        const mist = -dh * 0.55;
-        a[0] = a[0] * (1 - mist) + 230 * mist;
-        a[1] = a[1] * (1 - mist) + 235 * mist;
-        a[2] = a[2] * (1 - mist) + 242 * mist;
+        a0 = a0 * (1 - dhMist) + 230 * dhMist;
+        a1 = a1 * (1 - dhMist) + 235 * dhMist;
+        a2 = a2 * (1 - dhMist) + 242 * dhMist;
       }
     }
 
-    a[0] += s.red * 2 + s.temperature * .15 + wb;
-    a[2] += s.blue * 2 - s.temperature * .15 - wb;
-    const l = a[0] * .2126 + a[1] * .7152 + a[2] * .0722;
-    const effectiveAmount = (s.amount / 100) * (1 - skinW * 0.45);
+    a0 += redOffset;
+    a2 += blueOffset;
+    const l = a0 * 0.2126 + a1 * 0.7152 + a2 * 0.0722;
+    const effectiveAmount = baseEffectiveAmount * (1 - skinW * 0.45);
 
-    let v = a.map((c, k) => {
-      let filmc = ((l + (c - l) * film[0]) - 128) * film[1] + 128 + film[k + 2];
-      let value = c + (filmc - c) * effectiveAmount;
-      value *= exp;
-      const lum = clamp(value / 255, 0, 1);
-      value += s.highlight * 10 * lum ** 2 - s.shadow * 10 * (1 - lum) ** 2;
-      value -= ((s.dr - 100) / 300) * 28 * lum ** 3;
-      if (curveLut) value = curveLut[Math.round(clamp(value, 0, 255))];
-      return value;
-    });
+    // Channel 0 (R)
+    let filmc0 = ((l + (a0 - l) * film0) - 128) * film1 + 128 + film2;
+    let v0 = (a0 + (filmc0 - a0) * effectiveAmount) * exp;
+    let lum0 = clamp(v0 / 255, 0, 1);
+    v0 += highlightMult * lum0 ** 2 - shadowMult * (1 - lum0) ** 2 - drOffset * lum0 ** 3;
+    if (curveLut) v0 = curveLut[Math.round(clamp(v0, 0, 255))];
 
-    const lum = v[0] * .2126 + v[1] * .7152 + v[2] * .0722;
-    v = v.map(c => lum + (c - lum) * (1 + s.color * .09 * (1 - skinW * 0.5)));
+    // Channel 1 (G)
+    let filmc1 = ((l + (a1 - l) * film0) - 128) * film1 + 128 + film3;
+    let v1 = (a1 + (filmc1 - a1) * effectiveAmount) * exp;
+    let lum1 = clamp(v1 / 255, 0, 1);
+    v1 += highlightMult * lum1 ** 2 - shadowMult * (1 - lum1) ** 2 - drOffset * lum1 ** 3;
+    if (curveLut) v1 = curveLut[Math.round(clamp(v1, 0, 255))];
 
-    if (s.chrome > 0 && film[0] > 0) {
-      const maxC = Math.max(v[0], v[1], v[2]), minC = Math.min(v[0], v[1], v[2]);
+    // Channel 2 (B)
+    let filmc2 = ((l + (a2 - l) * film0) - 128) * film1 + 128 + film4;
+    let v2 = (a2 + (filmc2 - a2) * effectiveAmount) * exp;
+    let lum2 = clamp(v2 / 255, 0, 1);
+    v2 += highlightMult * lum2 ** 2 - shadowMult * (1 - lum2) ** 2 - drOffset * lum2 ** 3;
+    if (curveLut) v2 = curveLut[Math.round(clamp(v2, 0, 255))];
+
+    // Color boost
+    const lum = v0 * 0.2126 + v1 * 0.7152 + v2 * 0.0722;
+    const colorFac = 1 + s.color * 0.09 * (1 - skinW * 0.5);
+    v0 = lum + (v0 - lum) * colorFac;
+    v1 = lum + (v1 - lum) * colorFac;
+    v2 = lum + (v2 - lum) * colorFac;
+
+    if (s.chrome > 0 && film0 > 0) {
+      const maxC = Math.max(v0, v1, v2), minC = Math.min(v0, v1, v2);
       const sat = maxC > 1 ? (maxC - minC) / maxC : 0;
       if (sat > 0.45) {
         const factor = 1 - (sat - 0.45) * 0.14 * s.chrome;
-        v[0] *= factor; v[1] *= factor; v[2] *= factor;
+        v0 *= factor; v1 *= factor; v2 *= factor;
       }
     }
 
-    if (s.chromeBlue > 0 && film[0] > 0) {
-      const blueDom = Math.max(0, (v[2] - Math.max(v[0], v[1] * 0.85)) / 255);
+    if (s.chromeBlue > 0 && film0 > 0) {
+      const blueDom = Math.max(0, (v2 - Math.max(v0, v1 * 0.85)) / 255);
       if (blueDom > 0.08) {
         const depth = 1 - blueDom * 0.16 * s.chromeBlue;
-        v[0] *= depth; v[1] *= depth;
-        v[2] = clamp(v[2] * (1 + blueDom * 0.06 * s.chromeBlue));
+        v0 *= depth; v1 *= depth;
+        v2 = clamp(v2 * (1 + blueDom * 0.06 * s.chromeBlue));
       }
     }
 
-    if (s.bleachBypass > 0) {
-      const bb = s.bleachBypass / 100;
-      const curLum = clamp((v[0] * .2126 + v[1] * .7152 + v[2] * .0722) / 255, 0, 1);
-      const silver = curLum < 0.5
-        ? 2 * curLum * curLum * 255
-        : (1 - 2 * (1 - curLum) * (1 - curLum)) * 255;
-      for (let k = 0; k < 3; k++) {
-        const desat = v[k] * (1 - 0.55 * bb) + (curLum * 255) * (0.55 * bb);
-        v[k] = desat * (1 - 0.65 * bb) + silver * (0.65 * bb);
-      }
+    if (bb > 0) {
+      const curLum = clamp((v0 * 0.2126 + v1 * 0.7152 + v2 * 0.0722) / 255, 0, 1);
+      const silver = (curLum < 0.5
+        ? 2 * curLum * curLum
+        : 1 - 2 * (1 - curLum) * (1 - curLum)) * 255;
+      const desatR = v0 * bbDesat1 + (curLum * 255) * bbDesat2;
+      const desatG = v1 * bbDesat1 + (curLum * 255) * bbDesat2;
+      const desatB = v2 * bbDesat1 + (curLum * 255) * bbDesat2;
+      v0 = desatR * bbSilver1 + silver * bbSilver2;
+      v1 = desatG * bbSilver1 + silver * bbSilver2;
+      v2 = desatB * bbSilver1 + silver * bbSilver2;
     }
 
-    if (hasHsl) v = mixHsl(v, hueBands, satBands, lumBands);
+    if (hasHsl) {
+      const arr = mixHsl([v0, v1, v2], hueBands, satBands, lumBands);
+      v0 = arr[0]; v1 = arr[1]; v2 = arr[2];
+    }
 
-    // 3-Way Color Grading Wheels (Shadows · Midtones · Highlights luminance-weighted)
     if (hasWheels) {
-      const curL = clamp((v[0] * .2126 + v[1] * .7152 + v[2] * .0722) / 255, 0, 1);
-      const wSh = Math.pow(1 - curL, 2);
-      const wHi = Math.pow(curL, 2);
+      const curL = clamp((v0 * 0.2126 + v1 * 0.7152 + v2 * 0.0722) / 255, 0, 1);
+      const wSh = (1 - curL) ** 2;
+      const wHi = curL ** 2;
       const wMid = 4 * curL * (1 - curL);
 
-      const applyWheel = (hueDeg, satPct, lumPct, weight) => {
-        if (weight <= 0) return;
-        const rad = ((hueDeg || 0) * Math.PI) / 180;
-        const rShift = Math.cos(rad);
-        const gShift = Math.cos(rad - (2 * Math.PI / 3));
-        const bShift = Math.cos(rad + (2 * Math.PI / 3));
-        const mag = (boundedNumber(satPct, 0, 100) / 100) * weight * 60;
-        const light = boundedNumber(lumPct, -50, 50) / 100 * weight * 255;
-        v[0] = clamp(v[0] + rShift * mag + light, 0, 255);
-        v[1] = clamp(v[1] + gShift * mag + light, 0, 255);
-        v[2] = clamp(v[2] + bShift * mag + light, 0, 255);
-      };
-
-      applyWheel(s.shadowsHue, s.shadowsSat, s.shadowsLum, wSh);
-      applyWheel(s.midtonesHue, s.midtonesSat, s.midtonesLum, wMid);
-      applyWheel(s.highlightsHue, s.highlightsSat, s.highlightsLum, wHi);
-    }
-
-    // Hóa chất Giấy Ảnh Phòng Tối Cổ Điển (Historic Darkroom Print Processes)
-    if (s.darkroomProcess && s.darkroomProcess !== 'None') {
-      const pLum = clamp((v[0] * .2126 + v[1] * .7152 + v[2] * .0722) / 255, 0, 1);
-      if (s.darkroomProcess === 'SplitGrade') {
-        // Rửa ảnh Đen Trắng 2 bộ lọc: Selenium lạnh ở vùng tối + Sepia kem ấm ở vùng sáng
-        const shR = 215, shG = 222, shB = 238;
-        const hiR = 252, hiG = 242, hiB = 218;
-        const toneR = shR * (1 - pLum) + hiR * pLum;
-        const toneG = shG * (1 - pLum) + hiG * pLum;
-        const toneB = shB * (1 - pLum) + hiB * pLum;
-        v[0] = pLum * toneR;
-        v[1] = pLum * toneG;
-        v[2] = pLum * toneB;
-      } else if (s.darkroomProcess === 'Cyanotype') {
-        // Bản in Xanh Phổ 1842 (Prussian Blue Cyanotype)
-        v[0] = Math.pow(pLum, 1.35) * 238 + (1 - pLum) * 12;
-        v[1] = Math.pow(pLum, 1.12) * 244 + (1 - pLum) * 58;
-        v[2] = Math.pow(pLum, 0.85) * 248 + (1 - pLum) * 118;
-      } else if (s.darkroomProcess === 'Platinum') {
-        // Bản in Bạch Kim - Palladium cổ điển
-        const curveP = pLum * 0.92 + 0.04;
-        v[0] = curveP * 248;
-        v[1] = curveP * 240;
-        v[2] = curveP * 226;
-      } else if (s.darkroomProcess === 'Selenium') {
-        const silver = clamp((pLum - 0.5) * 1.12 + 0.5, 0, 1);
-        v[0] = silver * 245;
-        v[1] = silver * 242;
-        v[2] = silver * 255;
+      if (wSh > 0 && (shSat > 0 || s.shadowsLum !== 0)) {
+        const mag = shSat * wSh * 60;
+        const light = shLight * wSh;
+        v0 = clamp(v0 + shR * mag + light, 0, 255);
+        v1 = clamp(v1 + shG * mag + light, 0, 255);
+        v2 = clamp(v2 + shB * mag + light, 0, 255);
+      }
+      if (wMid > 0 && (midSat > 0 || s.midtonesLum !== 0)) {
+        const mag = midSat * wMid * 60;
+        const light = midLight * wMid;
+        v0 = clamp(v0 + midR * mag + light, 0, 255);
+        v1 = clamp(v1 + midG * mag + light, 0, 255);
+        v2 = clamp(v2 + midB * mag + light, 0, 255);
+      }
+      if (wHi > 0 && (hiSat > 0 || s.highlightsLum !== 0)) {
+        const mag = hiSat * wHi * 60;
+        const light = hiLight * wHi;
+        v0 = clamp(v0 + hiR * mag + light, 0, 255);
+        v1 = clamp(v1 + hiG * mag + light, 0, 255);
+        v2 = clamp(v2 + hiB * mag + light, 0, 255);
       }
     }
 
-    // 3D Depth Atmospheric Fog (Sương mù theo chiều sâu hậu cảnh)
+    if (s.darkroomProcess && s.darkroomProcess !== 'None') {
+      const pLum = clamp((v0 * 0.2126 + v1 * 0.7152 + v2 * 0.0722) / 255, 0, 1);
+      if (s.darkroomProcess === 'SplitGrade') {
+        const shR = 215, shG = 222, shB = 238;
+        const hiR = 252, hiG = 242, hiB = 218;
+        v0 = pLum * (shR * (1 - pLum) + hiR * pLum);
+        v1 = pLum * (shG * (1 - pLum) + hiG * pLum);
+        v2 = pLum * (shB * (1 - pLum) + hiB * pLum);
+      } else if (s.darkroomProcess === 'Cyanotype') {
+        v0 = Math.pow(pLum, 1.35) * 238 + (1 - pLum) * 12;
+        v1 = Math.pow(pLum, 1.12) * 244 + (1 - pLum) * 58;
+        v2 = Math.pow(pLum, 0.85) * 248 + (1 - pLum) * 118;
+      } else if (s.darkroomProcess === 'Platinum') {
+        const curveP = pLum * 0.92 + 0.04;
+        v0 = curveP * 248;
+        v1 = curveP * 240;
+        v2 = curveP * 226;
+      } else if (s.darkroomProcess === 'Selenium') {
+        const silver = clamp((pLum - 0.5) * 1.12 + 0.5, 0, 1);
+        v0 = silver * 245;
+        v1 = silver * 242;
+        v2 = silver * 255;
+      }
+    }
+
     if (s.depthFog > 0) {
       const ny = y * invH;
       const distWeight = Math.max(0, 1 - ny * 0.85) * (1 - clamp(lum / 255, 0, 1) * 0.45);
       const fog = distWeight * (s.depthFog / 100) * 0.65;
-      v[0] = v[0] * (1 - fog) + 225 * fog;
-      v[1] = v[1] * (1 - fog) + 232 * fog;
-      v[2] = v[2] * (1 - fog) + 240 * fog;
+      v0 = v0 * (1 - fog) + 225 * fog;
+      v1 = v1 * (1 - fog) + 232 * fog;
+      v2 = v2 * (1 - fog) + 240 * fog;
     }
 
     if (lut) {
-      const mapped = sampleLut(lut, ...v);
+      const mapped = sampleLut(lut, v0, v1, v2);
       const lutWeight = (s.lutAmount / 100) * (1 - skinW * 0.45);
-      v = v.map((c, k) => c + (mapped[k] - c) * lutWeight);
+      v0 = v0 + (mapped[0] - v0) * lutWeight;
+      v1 = v1 + (mapped[1] - v1) * lutWeight;
+      v2 = v2 + (mapped[2] - v2) * lutWeight;
     }
 
     if (s.lightLeak > 0) {
       const nx = x * invW, ny = y * invH;
-      const breath = 1 + Math.sin(frameSeed * 0.26) * 0.06;
       const leakLeft = Math.max(0, 1 - nx * 3.2) * (0.6 + 0.4 * Math.sin(ny * 4.5));
       const leakCorner = Math.max(0, 1 - Math.hypot(1 - nx, ny * 0.8) * 2.1);
-      const leak = (leakLeft + leakCorner * 0.75) * (s.lightLeak / 100) * breath;
+      const leak = (leakLeft + leakCorner * 0.75) * lightLeakScale;
       if (leak > 0.01) {
-        v[0] = 255 - (255 - clamp(v[0])) * Math.max(0, 1 - leak * 0.95);
-        v[1] = 255 - (255 - clamp(v[1])) * Math.max(0, 1 - leak * 0.48);
-        v[2] = 255 - (255 - clamp(v[2])) * Math.max(0, 1 - leak * 0.12);
+        v0 = 255 - (255 - clamp(v0)) * Math.max(0, 1 - leak * 0.95);
+        v1 = 255 - (255 - clamp(v1)) * Math.max(0, 1 - leak * 0.48);
+        v2 = 255 - (255 - clamp(v2)) * Math.max(0, 1 - leak * 0.12);
       }
     }
 
     if (vignette !== 0) {
-      const midX = (width - 1) / 2, midY = (height - 1) / 2;
-      const distance = ((x - midX) ** 2 + (y - midY) ** 2) / Math.max(1, midX ** 2 + midY ** 2);
-      const amount = Math.abs(vignette) * distance ** 2;
-      v = v.map(value => vignette > 0 ? value * (1 - amount) : value + (255 - value) * amount);
+      const dx = x - midX, dy = y - midY;
+      const distance = (dx * dx + dy * dy) / maxDistSq;
+      const amount = absVignette * (distance * distance);
+      if (vignette > 0) {
+        const factor = 1 - amount;
+        v0 *= factor; v1 *= factor; v2 *= factor;
+      } else {
+        v0 += (255 - v0) * amount;
+        v1 += (255 - v1) * amount;
+        v2 += (255 - v2) * amount;
+      }
     }
 
-    // Organic Dual-Band Film Grain (hỗ trợ frameSeed cho Living Film 24fps)
     let n = 0;
     if (s.grain > 0) {
       const seedOffset = Math.imul(frameSeed + 1, 747796405);
-      const fine = (((Math.imul(i + 11 + seedOffset, 1597334677) >>> 0) % 1024) / 1023 - .5);
+      const fine = (((Math.imul(i + 11 + seedOffset, 1597334677) >>> 0) % 1024) / 1023 - 0.5);
       const coarse = s.grainSize > 1 ? hashNoise(x >>> 1, y >>> 1, frameSeed) : fine;
       const normL = clamp(lum / 255, 0, 1);
       const midtoneMask = 0.35 + 0.65 * (4 * normL * (1 - normL));
       n = (fine * 0.65 + coarse * 0.35) * s.grain * midtoneMask;
     }
 
-    for (let k = 0; k < 3; k++) out[i + k] = clamp(v[k] + n);
+    out[i]     = clamp(v0 + n);
+    out[i + 1] = clamp(v1 + n);
+    out[i + 2] = clamp(v2 + n);
     out[i + 3] = input[i + 3];
-  }
 
+    x++;
+    if (x === width) { x = 0; y++; }
+  }
+
   // Black Pro-Mist Optical Diffusion & Halation
   if ((s.proMist > 0 || s.halation > 0) && width > 2 && height > 2) {
     const src = out.slice();

@@ -585,7 +585,7 @@ if (tickRulerCanvas) {
     if (state.settings[key] !== fixed) {
       state.settings[key] = fixed;
       syncInputsFromSettings();
-      render();
+      requestInteractiveRender();
     }
   });
 
@@ -594,6 +594,7 @@ if (tickRulerCanvas) {
     rulerDragging = false;
     drawTickRuler();
     commitHistory(`Chỉnh ${activeRulerSpec[1]}`);
+    render(false, false, false);
   };
   tickRulerCanvas.addEventListener('pointerup', endRulerDrag);
   tickRulerCanvas.addEventListener('pointercancel', endRulerDrag);
@@ -607,7 +608,7 @@ if (tickRulerCanvas) {
     const next = Math.max(min, Math.min(max, Number((cur + dir * step).toFixed(2))));
     state.settings[key] = next;
     syncInputsFromSettings();
-    render();
+    requestInteractiveRender();
   }, { passive: false });
 
   tickRulerCanvas.addEventListener('dblclick', () => {
@@ -791,8 +792,8 @@ frameStyleSelect.addEventListener('change', e => {
   commitHistory('Đổi khung ảnh');
   render();
 });
-frameTitleInput.addEventListener('input', () => render());
-frameExifInput.addEventListener('input', () => render());
+frameTitleInput.addEventListener('input', () => requestInteractiveRender());
+frameExifInput.addEventListener('input', () => requestInteractiveRender());
 frameTitleInput.addEventListener('change', () => commitHistory('Đổi tiêu đề khung'));
 frameExifInput.addEventListener('change', () => commitHistory('Đổi thông tin khung'));
 
@@ -2156,7 +2157,7 @@ document.querySelectorAll('[data-sample]').forEach(btn => {
   btn.addEventListener('click', () => generateSampleImage(btn.dataset.sample));
 });
 
-function createDownsampledImageData(srcData, maxDim = 1200) {
+function createDownsampledImageData(srcData, maxDim = 640) {
   if (!srcData) return null;
   const w0 = srcData.width;
   const h0 = srcData.height;
@@ -2181,7 +2182,7 @@ function createDownsampledImageData(srcData, maxDim = 1200) {
 function loadSourceImageData(imageData, label, rawFile = null) {
   state.source = imageData;
   // Tạo bản preview nén nhẹ để tương tác slider siêu tốc 60fps
-  state.previewSource = createDownsampledImageData(imageData, 1200);
+  state.previewSource = createDownsampledImageData(imageData, 640);
 
   state.stageZoom = 1.0;
   state.stagePanX = 0;
@@ -2666,6 +2667,20 @@ async function syncToServerNow(actionDesc = 'Chỉnh sửa thông số') {
   }
 }
 
+let interactiveOffscreenCanvas = null;
+let interactiveOffscreenCtx = null;
+function getSharedInteractiveCanvas(w, h) {
+  if (!interactiveOffscreenCanvas && typeof document !== 'undefined') {
+    interactiveOffscreenCanvas = document.createElement('canvas');
+    interactiveOffscreenCtx = interactiveOffscreenCanvas.getContext('2d');
+  }
+  if (interactiveOffscreenCanvas && (interactiveOffscreenCanvas.width !== w || interactiveOffscreenCanvas.height !== h)) {
+    interactiveOffscreenCanvas.width = w;
+    interactiveOffscreenCanvas.height = h;
+  }
+  return { canvas: interactiveOffscreenCanvas, ctx: interactiveOffscreenCtx };
+}
+
 function render(isLivingFrame = false, forExport = false, isInteractive = false) {
   if (!state.source) return;
   if (state.quadViewActive && !isLivingFrame && !forExport) {
@@ -2697,16 +2712,22 @@ function render(isLivingFrame = false, forExport = false, isInteractive = false)
     canvas.width = framedCanvas.width;
     canvas.height = framedCanvas.height;
     ctx.drawImage(framedCanvas, 0, 0);
+  } else if (isInteractive && activeSrc !== state.source && canvas.width > 0 && canvas.height > 0) {
+    const off = getSharedInteractiveCanvas(activeSrc.width, activeSrc.height);
+    off.ctx.putImageData(new ImageData(out, activeSrc.width, activeSrc.height), 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'medium';
+    ctx.drawImage(off.canvas, 0, 0, canvas.width, canvas.height);
   } else {
     canvas.width = activeSrc.width;
     canvas.height = activeSrc.height;
     ctx.putImageData(new ImageData(out, activeSrc.width, activeSrc.height), 0, 0);
   }
 
-  beforeCanvas.width = activeSrc.width;
-  beforeCanvas.height = activeSrc.height;
-  beforeCtx.putImageData(activeSrc, 0, 0);
   if (!isLivingFrame && !isInteractive) {
+    beforeCanvas.width = activeSrc.width;
+    beforeCanvas.height = activeSrc.height;
+    beforeCtx.putImageData(activeSrc, 0, 0);
     drawHistogram(out);
     syncRulerHeader();
     drawTickRuler();

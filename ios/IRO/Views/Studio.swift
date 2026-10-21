@@ -2,32 +2,26 @@ import SwiftUI
 import UIKit
 
 enum Studio {
-    // Minimal Studio & Material Design 3 Expressive Palette (Matches Android StudioStyle.java)
-    static let background = Color(red: 246/255, green: 247/255, blue: 249/255)       // #F6F7F9
-    static let surface = Color(red: 239/255, green: 241/255, blue: 245/255)          // #EFF1F5
-    static let surfaceContainer = Color(red: 230/255, green: 233/255, blue: 239/255) // #E6E9EF
-    static let m3SurfaceLow = Color(red: 243/255, green: 244/255, blue: 248/255)     // #F3F4F8
-    static let m3SurfaceHigh = Color(red: 220/255, green: 223/255, blue: 231/255)    // #DCDFE7
-    static let line = Color(red: 225/255, green: 228/255, blue: 234/255)             // #E1E4EA
-    static let ink = Color(red: 24/255, green: 26/255, blue: 31/255)                 // #181A1F
-    static let muted = Color(red: 110/255, green: 115/255, blue: 125/255)            // #6E737D
-
-    // Material Design 3 Expressive Tonal Accents
-    static let m3Amber = Color(red: 224/255, green: 122/255, blue: 59/255)           // #E07A3B
-    static let m3AmberContainer = Color(red: 255/255, green: 219/255, blue: 202/255) // #FFDBCA
-
-    // Primary Studio Accent — Charcoal Black
-    static let accent = ink
-    static let accentContainer = Color(red: 234/255, green: 236/255, blue: 239/255)  // #EAECEF
+    // Semantic surfaces follow the device appearance and accessibility contrast.
+    static let background = Color(uiColor: .systemGroupedBackground)
+    static let surface = Color(uiColor: .secondarySystemGroupedBackground)
+    static let surfaceContainer = Color(uiColor: .tertiarySystemGroupedBackground)
+    static let m3SurfaceLow = surface
+    static let m3SurfaceHigh = surfaceContainer
+    static let line = Color(uiColor: .separator)
+    static let ink = Color.primary
+    static let muted = Color.secondary
+    static let m3Amber = Color(uiColor: .systemGreen)
+    static let m3AmberContainer = Color(uiColor: .tertiarySystemFill)
+    static let accent = Color(uiColor: .systemGreen)
+    static let accentContainer = surfaceContainer
     static let onAccentContainer = ink
     static let darkPill = ink
-
-    // Legacy alias compatibility mapped to Minimal Studio Ink
-    static let warmAmber = ink
-    static let warmAmberLight = Color(red: 234/255, green: 236/255, blue: 239/255)   // #EAECEF
-    static let warmAmberGlow = Color.black.opacity(0.08)
-    static let porcelain = Color(red: 246/255, green: 247/255, blue: 249/255)        // #F6F7F9
-    static let cardBorder = Color(red: 225/255, green: 228/255, blue: 234/255)       // #E1E4EA
+    static let warmAmber = accent
+    static let warmAmberLight = surfaceContainer
+    static let warmAmberGlow = Color.clear
+    static let porcelain = background
+    static let cardBorder = line
 
     // Functional RGB Channel Colors (Histograms & Tone Curves)
     static let googleBlue = Color(red: 66/255, green: 133/255, blue: 244/255)        // #4285F4
@@ -57,10 +51,10 @@ enum Haptics {
 }
 
 enum EditorToolTab: String, CaseIterable, Identifiable {
-    case adjust = "Tinh chỉnh"
     case filters = "Màu phim"
+    case adjust = "Tinh chỉnh"
     case frame = "Khung ảnh"
-    case lightcraft = "LightCraft"
+    case lightcraft = "Nâng cao"
 
     var id: String { rawValue }
 
@@ -94,37 +88,19 @@ extension View {
 
 // MARK: - Material Design 3 Expressive Spring Button Style
 struct M3ExpressiveButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var scaleAmount: CGFloat = 0.95
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? scaleAmount : 1.0)
-            .animation(Studio.m3Spring, value: configuration.isPressed)
+            .scaleEffect(!reduceMotion && configuration.isPressed ? scaleAmount : 1.0)
+            .animation(reduceMotion ? nil : Studio.m3Spring, value: configuration.isPressed)
     }
 }
 
 // MARK: - Material Design 3 Ambient Tonal Studio Background
 struct AntigravityBackground: View {
-    var body: some View {
-        ZStack {
-            Studio.porcelain
-
-            RadialGradient(
-                colors: [Studio.m3Amber.opacity(0.045), Color.clear],
-                center: .topTrailing,
-                startRadius: 20,
-                endRadius: 420
-            )
-
-            RadialGradient(
-                colors: [Studio.googleBlue.opacity(0.035), Color.clear],
-                center: .bottomLeading,
-                startRadius: 20,
-                endRadius: 460
-            )
-        }
-        .ignoresSafeArea()
-    }
+    var body: some View { Studio.background.ignoresSafeArea() }
 }
 
 // MARK: - Minimal Studio View Modifiers
@@ -134,7 +110,7 @@ extension View {
         self
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(Color.white)
+                    .fill(Studio.surface)
             )
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
@@ -149,7 +125,7 @@ extension View {
         self
             .background(
                 Capsule()
-                    .fill(Color.white)
+                    .fill(Studio.surface)
             )
             .clipShape(Capsule())
             .overlay(
@@ -162,10 +138,10 @@ extension View {
     /// Clean Minimal Studio Circular Button
     func liquidGlassCircle(size: CGFloat = 36) -> some View {
         self
-            .frame(width: size, height: size)
+            .frame(width: max(44, size), height: max(44, size))
             .background(
                 Circle()
-                    .fill(Color.white)
+                    .fill(Studio.surface)
             )
             .overlay(
                 Circle()
@@ -227,10 +203,12 @@ struct EmptyPhoto: View {
                             .frame(maxWidth: .infinity)
                         }
                     } else {
-                        albumsHeaderRow
-                        albumsGrid
                         heroPrimaryCard
                         filmSimulationChipStrip
+                        DisclosureGroup("Thư viện & công cụ") {
+                            albumsHeaderRow
+                            albumsGrid
+                        }
                     }
                 }
                 .padding(.vertical, 10)
@@ -250,7 +228,7 @@ struct EmptyPhoto: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Studio.muted)
 
-                    Text("Tìm kiếm 392 màu phim, giả lập...")
+                    Text("Tìm kiếm công thức màu phim…")
                         .font(.system(size: 13, weight: .regular))
                         .foregroundStyle(Studio.muted)
                         .lineLimit(1)
@@ -261,7 +239,7 @@ struct EmptyPhoto: View {
                 .padding(.vertical, 10)
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.white)
+                        .fill(Studio.surface)
                         .overlay(
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .strokeBorder(Studio.line, lineWidth: 1.0)
@@ -286,7 +264,7 @@ struct EmptyPhoto: View {
                 Button("Mở ảnh từ Tệp", systemImage: "folder") { onImportFile() }
                 Button("Dùng thử ảnh mẫu Studio", systemImage: "sparkles") { onLoadSample(nil) }
                 Divider()
-                Button("Kho 392 công thức màu", systemImage: "camera.filters") { onOpenRecipes() }
+                Button("Kho Công thức màu màu", systemImage: "camera.filters") { onOpenRecipes() }
                 Button("Quản lý LUT", systemImage: "square.stack.3d.up") { onOpenLuts() }
                 Button("Kho LUT trực tuyến", systemImage: "globe") { onOpenOnline() }
                 Divider()
@@ -338,7 +316,7 @@ struct EmptyPhoto: View {
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
             AlbumCard(
                 title: "Fuji Chrome",
-                subtitle: "392 công thức",
+                subtitle: "Công thức màu",
                 icon: "camera.filters",
                 action: onOpenRecipes
             )
@@ -453,7 +431,7 @@ struct EmptyPhoto: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color.white)
+                .fill(Studio.surface)
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .strokeBorder(Studio.line, lineWidth: 1.0)
@@ -478,7 +456,7 @@ struct EmptyPhoto: View {
                             .padding(.vertical, 7)
                             .background(
                                 Capsule()
-                                    .fill(Color.white)
+                                    .fill(Studio.surface)
                                     .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
                             )
                     }
@@ -531,7 +509,7 @@ private struct AlbumCard: View {
             .frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color.white)
+                    .fill(Studio.surface)
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .strokeBorder(Studio.line, lineWidth: 1.0)

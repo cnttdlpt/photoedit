@@ -324,6 +324,18 @@ function showScreen(screenId, pushHistory = true) {
 document.querySelector('#editorBackBtn')?.addEventListener('click', () => {
   showScreen('landing');
 });
+document.querySelector('#brandIdentity')?.addEventListener('click', () => {
+  showScreen('landing');
+  if (typeof window !== 'undefined') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+});
+document.querySelector('#brandIdentity')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    showScreen('landing');
+  }
+});
 document.querySelector('#resumeEditorBtn')?.addEventListener('click', () => {
   showScreen('editor');
 });
@@ -338,14 +350,26 @@ function getSafeHash() {
 }
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('popstate', (e) => {
-    const targetScreen = (e.state && e.state.screen) || (getSafeHash() === '#/editor' ? 'editor' : 'landing');
+    const targetScreen = (e.state && e.state.screen) || (getSafeHash().startsWith('#/editor') ? 'editor' : 'landing');
     showScreen(targetScreen, false);
+    if (getSafeHash().includes('tab=film')) {
+      selectDeckTab('tabFilm');
+    }
   });
+  if (getSafeHash().startsWith('#/editor')) {
+    showScreen('editor', false);
+    if (getSafeHash().includes('tab=film')) {
+      selectDeckTab('tabFilm');
+    }
+  }
 }
 
 function selectDeckTab(tabId) {
   document.querySelectorAll('.deck-tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.deckTab === tabId);
+    const selected = btn.dataset.deckTab === tabId;
+    btn.classList.toggle('active', selected);
+    btn.setAttribute('aria-selected', String(selected));
+    btn.tabIndex = selected ? 0 : -1;
   });
   document.querySelectorAll('.deck-pane').forEach(pane => {
     const isTarget = pane.id === tabId;
@@ -372,11 +396,17 @@ document.querySelectorAll('.deck-tab-btn').forEach(btn => {
 });
 
 function updateStageInfoPill() {
+  const pill = document.querySelector('#stageInfoPill');
+  if (!state.source) {
+    if (pill) pill.hidden = true;
+    return;
+  }
+  if (pill) pill.hidden = false;
   const dimEl = document.querySelector('#stageDimensionText');
   const filmEl = document.querySelector('#stageFilmText');
   const frameEl = document.querySelector('#stageFrameText');
   if (canvas && dimEl) {
-    dimEl.textContent = `${canvas.width} × ${canvas.height}`;
+    dimEl.textContent = state.isDemo ? 'Ảnh mẫu minh họa' : `${state.source.width} × ${state.source.height}`;
   }
   if (filmEl) {
     filmEl.textContent = state.activeRecipeName || 'Gốc';
@@ -585,7 +615,7 @@ if (tickRulerCanvas) {
     if (state.settings[key] !== fixed) {
       state.settings[key] = fixed;
       syncInputsFromSettings();
-      requestInteractiveRender();
+      render();
     }
   });
 
@@ -594,7 +624,6 @@ if (tickRulerCanvas) {
     rulerDragging = false;
     drawTickRuler();
     commitHistory(`Chỉnh ${activeRulerSpec[1]}`);
-    render(false, false, false);
   };
   tickRulerCanvas.addEventListener('pointerup', endRulerDrag);
   tickRulerCanvas.addEventListener('pointercancel', endRulerDrag);
@@ -608,7 +637,7 @@ if (tickRulerCanvas) {
     const next = Math.max(min, Math.min(max, Number((cur + dir * step).toFixed(2))));
     state.settings[key] = next;
     syncInputsFromSettings();
-    requestInteractiveRender();
+    render();
   }, { passive: false });
 
   tickRulerCanvas.addEventListener('dblclick', () => {
@@ -751,32 +780,159 @@ stageContainer.addEventListener('touchend', e => {
 // =========================================================================
 // KHỞI TẠO RIBBON PRESET & NẠP 392 CÔNG THỨC TỪ RECIPES.JSON
 // =========================================================================
-const presetRibbon = document.querySelector('#presetRibbon');
-for (const preset of CURATED_PRESETS) {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'preset-pill';
-  btn.innerHTML = `<span class="p-name">${preset.name}</span><span class="p-sub">${preset.subtitle}</span>`;
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.preset-pill').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const currentDiag = state.settings.diagnosticMode;
-    const currentDate = state.settings.dateStamp;
-    state.settings = {
-      ...structuredClone(defaults),
-      ...structuredClone(preset.settings),
-      diagnosticMode: currentDiag,
-      dateStamp: currentDate
-    };
-    state.activeRecipeName = preset.name;
-    state.curvePoints = structuredClone(preset.settings.curvePoints || [[0, 0], [1, 1]]);
-    syncInputsFromSettings();
-    drawCurveEditor();
-    commitHistory(`Preset: ${preset.name}`);
-    render();
-  });
-  presetRibbon.append(btn);
+// --- Quản lý toàn bộ 392 Bộ lọc & Giả lập Film trong Buồng tối ---
+let currentTabFilmFilter = 'Tất cả';
+
+function buildFilmSimPills() {
+  const container = document.querySelector('#filmSimPillsRow');
+  if (!container) return;
+  const filmSims = [
+    'Original', 'Provia', 'Velvia', 'Astia', 'Classic Chrome',
+    'PRO Neg. Hi', 'PRO Neg. Std', 'Classic Neg.', 'Nostalgic Neg.',
+    'ETERNA', 'ETERNA Bleach Bypass', 'Acros', 'Monochrome', 'Sepia'
+  ];
+  container.innerHTML = '';
+  for (const sim of filmSims) {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = `film-sim-pill ${state.settings.film === sim ? 'active' : ''}`;
+    pill.textContent = sim;
+    pill.addEventListener('click', () => {
+      updateFilmSimPillsActive();
+  const filmSelect = document.querySelector('#film');
+      if (filmSelect) {
+        filmSelect.value = sim;
+        filmSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    container.append(pill);
+  }
 }
+
+function updateFilmSimPillsActive() {
+  const container = document.querySelector('#filmSimPillsRow');
+  if (!container) return;
+  container.querySelectorAll('.film-sim-pill').forEach(p => {
+    p.classList.toggle('active', p.textContent === state.settings.film);
+  });
+}
+
+function buildTabFilmChips() {
+  const chipsContainer = document.querySelector('#tabFilmChipsRow');
+  if (!chipsContainer) return;
+  const categories = [
+    'Tất cả', 'Yêu thích', 'Classic Chrome', 'Classic Neg', 'Portra / Kodachrome',
+    'Velvia', 'Astia', 'Eterna', 'Acros', 'Nostalgic Neg', 'Bleach Bypass'
+  ];
+  chipsContainer.innerHTML = '';
+  for (const cat of categories) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `tab-film-chip ${cat === currentTabFilmFilter ? 'active' : ''}`;
+    chip.textContent = cat;
+    chip.addEventListener('click', () => {
+      currentTabFilmFilter = cat;
+      chipsContainer.querySelectorAll('.tab-film-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      renderTabFilmRecipes();
+    });
+    chipsContainer.append(chip);
+  }
+}
+
+function renderTabFilmRecipes() {
+  const ribbon = document.querySelector('#presetRibbon');
+  if (!ribbon) return;
+  const q = (document.querySelector('#tabFilmSearchInput')?.value || '').trim().toLowerCase();
+  const countBadge = document.querySelector('#tabFilmCountBadge');
+
+  let list = [];
+  if (state.fullCatalogRecipes && state.fullCatalogRecipes.length > 0) {
+    list = state.fullCatalogRecipes.filter(r => {
+      const matchFav = currentTabFilmFilter === 'Yêu thích' ? state.favoriteRecipeIds.has(r.id) : true;
+      let matchCat = true;
+      if (currentTabFilmFilter !== 'Tất cả' && currentTabFilmFilter !== 'Yêu thích') {
+        if (currentTabFilmFilter === 'Portra / Kodachrome') {
+          matchCat = r.name.toLowerCase().includes('portra') || r.name.toLowerCase().includes('kodachrome');
+        } else {
+          matchCat = r.film.toLowerCase().includes(currentTabFilmFilter.toLowerCase()) ||
+                     r.name.toLowerCase().includes(currentTabFilmFilter.toLowerCase()) ||
+                     (r.settings && r.settings.film && r.settings.film.toLowerCase().includes(currentTabFilmFilter.toLowerCase()));
+        }
+      }
+      const matchQuery = !q ||
+        r.name.toLowerCase().includes(q) ||
+        r.film.toLowerCase().includes(q) ||
+        r.wb.toLowerCase().includes(q);
+
+      return matchFav && matchCat && matchQuery;
+    });
+  } else {
+    list = CURATED_PRESETS.map((p, idx) => ({
+      id: `curated-${idx}`,
+      name: p.name,
+      film: p.subtitle,
+      dr: p.settings.dr || 100,
+      wb: 'Auto',
+      settings: p.settings,
+      isCurated: true
+    }));
+  }
+
+  if (countBadge) {
+    countBadge.textContent = list.length;
+  }
+
+  ribbon.innerHTML = '';
+
+  if (list.length === 0) {
+    ribbon.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 24px 12px; color: var(--muted); font-size: 13px;">Không tìm thấy bộ lọc phù hợp với "${escapeHTML(q)}".</div>`;
+    return;
+  }
+
+  for (const rec of list) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'preset-pill';
+    btn.setAttribute('aria-pressed', String(state.activeRecipeName === rec.name));
+    btn.dataset.recipeName = rec.name;
+    if (state.activeRecipeName === rec.name) {
+      btn.classList.add('active');
+    }
+    const subText = rec.isCurated ? rec.film : `${rec.film} · DR${rec.dr}`;
+    btn.innerHTML = `<span class="p-name">${escapeHTML(rec.name)}</span><span class="p-sub">${escapeHTML(subText)}</span>`;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#presetRibbon .preset-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (rec.isCurated) {
+        const currentDiag = state.settings.diagnosticMode;
+        const currentDate = state.settings.dateStamp;
+        state.settings = {
+          ...structuredClone(defaults),
+          ...structuredClone(rec.settings),
+          diagnosticMode: currentDiag,
+          dateStamp: currentDate
+        };
+        state.activeRecipeName = rec.name;
+        state.curvePoints = structuredClone(rec.settings.curvePoints || [[0, 0], [1, 1]]);
+        syncInputsFromSettings();
+        drawCurveEditor();
+        commitHistory(`Preset: ${rec.name}`);
+        render();
+        setStatus(`🎞️ Đã áp dụng preset "${rec.name}".`);
+      } else {
+        applyCatalogRecipe(rec);
+      }
+    });
+    ribbon.append(btn);
+  }
+}
+
+// Khởi tạo hiển thị ban đầu
+buildFilmSimPills();
+buildTabFilmChips();
+renderTabFilmRecipes();
+document.querySelector('#tabFilmSearchInput')?.addEventListener('input', () => renderTabFilmRecipes());
 
 // Khởi tạo 30 mẫu Khung ảnh Triển lãm (PhotoFrame.java Parity)
 for (const frame of PHOTO_FRAMES) {
@@ -792,15 +948,15 @@ frameStyleSelect.addEventListener('change', e => {
   commitHistory('Đổi khung ảnh');
   render();
 });
-frameTitleInput.addEventListener('input', () => requestInteractiveRender());
-frameExifInput.addEventListener('input', () => requestInteractiveRender());
+frameTitleInput.addEventListener('input', () => render());
+frameExifInput.addEventListener('input', () => render());
 frameTitleInput.addEventListener('change', () => commitHistory('Đổi tiêu đề khung'));
 frameExifInput.addEventListener('change', () => commitHistory('Đổi thông tin khung'));
 
 // Tải kho 392 công thức từ recipes.json
 async function load392Catalog() {
   try {
-    const res = await fetch('./recipes.json');
+    const res = await fetch(`./recipes.json?v=${Date.now().toString().slice(0, 7)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const catalog = await res.json();
     const rawList = Array.isArray(catalog) ? catalog : catalog.recipes;
@@ -811,13 +967,17 @@ async function load392Catalog() {
         ...parsed,
         id: String(record.id || record.sourceUrl || `recipe-${index}`),
         wb: String(parsed.settings.wb || 'Auto'),
-        dr: parsed.settings.dr || 100
+        dr: parsed.settings.dr || 100,
+        isNew: Boolean(record.isNew),
+        addedDate: record.addedDate || null
       };
     });
     buildFilmFilterChips();
     if (!recipeLibraryModal.hidden) renderRecipeLibraryGrid();
     if (!cmdPaletteModal.hidden) renderCmdPaletteResults();
     renderLandingRecipeGrid();
+    buildTabFilmChips();
+    renderTabFilmRecipes();
   } catch (error) {
     setStatus(`Không tải được kho công thức: ${error.message}. Bạn vẫn có thể dùng preset và chỉnh tay.`, true);
   }
@@ -906,7 +1066,7 @@ function renderRecipeLibraryGrid() {
     card.className = 'recipe-lib-card' + (isCurrent ? ' active' : '');
     card.innerHTML = `
       <div class="r-head">
-        <span class="r-title">${escapeHTML(rec.name)}</span>
+        <span class="r-title">${escapeHTML(rec.name)}${rec.isNew ? ' <span style="background:#059669;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;vertical-align:middle;">MỚI</span>' : ''}</span>
         <button type="button" class="fav-star-btn ${isFav ? 'is-fav' : ''}" title="Đánh dấu Yêu thích">${isFav ? '★' : '☆'}</button>
       </div>
       <span class="r-film">🎞️ ${escapeHTML(rec.film)}</span>
@@ -978,11 +1138,13 @@ function renderLandingRecipeGrid() {
       </div>
     `;
     card.addEventListener('click', () => {
-      if (!state.source) {
-        generateSampleImage('portrait');
-      }
       applyCatalogRecipe(rec);
-      showScreen('editor');
+      if (!state.source) {
+        showToast(`Đã chọn công thức "${rec.name}". Vui lòng chọn ảnh để áp dụng!`, 'info', '📷');
+        document.querySelector('#photo')?.click();
+      } else {
+        showScreen('editor');
+      }
     });
     grid.append(card);
   }
@@ -1010,11 +1172,13 @@ document.querySelectorAll('.frame-preview-pill').forEach(pill => {
       frameStyleSelect.dispatchEvent(new Event('change', { bubbles: true }));
     }
     if (!state.source) {
-      generateSampleImage('portrait');
+      showToast('Đã chọn khung. Vui lòng mở ảnh từ máy để áp dụng!', 'info', '🖼️');
+      document.querySelector('#photo')?.click();
+    } else {
+      render();
+      selectDeckTab('tabFrames');
+      showScreen('editor');
     }
-    render();
-    selectDeckTab('tabFrames');
-    showScreen('editor');
   });
 });
 
@@ -1026,11 +1190,13 @@ document.querySelector('#heroPromptBtn')?.addEventListener('click', () => {
   promptTextInput?.focus();
 });
 document.querySelector('#heroRandomBtn')?.addEventListener('click', () => {
-  if (!state.source) {
-    generateSampleImage('portrait');
-  }
   applySurpriseRandomRecipe();
-  showScreen('editor');
+  if (!state.source) {
+    showToast(`Đã chọn ngẫu nhiên "${state.activeRecipeName}". Vui lòng mở ảnh để trải nghiệm!`, 'info', '🎲');
+    document.querySelector('#photo')?.click();
+  } else {
+    showScreen('editor');
+  }
 });
 
 function openRecipeLibraryModal() {
@@ -1041,7 +1207,7 @@ function openRecipeLibraryModal() {
 
 document.querySelector('#recipeLibraryBtn').addEventListener('click', openRecipeLibraryModal);
 document.querySelector('#segRecipeLibBtn')?.addEventListener('click', openRecipeLibraryModal);
-document.querySelector('#activeRecipeQuickPill')?.addEventListener('click', openRecipeLibraryModal);
+document.querySelector('#activeRecipeQuickPill')?.addEventListener('click', () => { showScreen('editor'); selectDeckTab('tabFilm'); });
 document.querySelector('#openFullCatalogInline').addEventListener('click', openRecipeLibraryModal);
 document.querySelector('#closeRecipeLibrary').addEventListener('click', () => { recipeLibraryModal.hidden = true; });
 recipeSearchInput.addEventListener('input', () => renderRecipeLibraryGrid());
@@ -1378,6 +1544,11 @@ document.querySelector('#redoBtn').addEventListener('click', () => {
 // ĐỒNG BỘ THANH TRƯỢT & SELECT
 // =========================================================================
 function syncInputsFromSettings() {
+  document.querySelectorAll('#presetRibbon .preset-pill').forEach(button => {
+    const selected = button.dataset.recipeName === state.activeRecipeName;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
   for (const [key] of allSliderSpecs) {
     const input = document.querySelector(`#in-${key}`);
     const out = document.querySelector(`#out-${key}`);
@@ -1889,8 +2060,10 @@ function runPromptRecipe(text) {
   syncInputsFromSettings();
   drawCurveEditor();
   promptModal.hidden = true;
-  if (!state.source) generateSampleImage('street');
-  else {
+  if (!state.source) {
+    showToast('Đã tạo công thức AI! Vui lòng chọn ảnh để áp dụng.', 'info', '🪄');
+    document.querySelector('#photo')?.click();
+  } else {
     commitHistory(`AI Tả cảnh: ${text.slice(0, 24)}`);
     render();
   }
@@ -2040,7 +2213,7 @@ window.addEventListener('keydown', e => {
 
   if (e.code === 'Space' && state.source && !e.repeat) {
     e.preventDefault();
-    ctx.putImageData(state.source, 0, 0);
+    ctx.drawImage(beforeCanvas, 0, 0);
   } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
     e.preventDefault();
     document.querySelector('#undoBtn').click();
@@ -2153,11 +2326,24 @@ function generateSampleImage(type = 'portrait') {
   loadSourceImageData(c.getImageData(0, 0, w, h), `Ảnh mẫu Studio (${type})`);
 }
 
+if (typeof window !== 'undefined') {
+  window.generateSampleImage = generateSampleImage;
+}
+
 document.querySelectorAll('[data-sample]').forEach(btn => {
   btn.addEventListener('click', () => generateSampleImage(btn.dataset.sample));
 });
 
-function createDownsampledImageData(srcData, maxDim = 1280) {
+document.querySelector('#emptyOpenBtn')?.addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.querySelector('#photo')?.click();
+});
+document.querySelector('#empty')?.addEventListener('click', (e) => {
+  if (e.target && e.target.closest('#emptyOpenBtn')) return;
+  document.querySelector('#photo')?.click();
+});
+
+function createDownsampledImageData(srcData, maxDim = 1200) {
   if (!srcData) return null;
   const w0 = srcData.width;
   const h0 = srcData.height;
@@ -2175,16 +2361,15 @@ function createDownsampledImageData(srcData, maxDim = 1280) {
   c2.width = w;
   c2.height = h;
   const ctx2 = c2.getContext('2d');
-  ctx2.imageSmoothingEnabled = true;
-  ctx2.imageSmoothingQuality = 'high';
   ctx2.drawImage(c1, 0, 0, w, h);
   return ctx2.getImageData(0, 0, w, h);
 }
 
 function loadSourceImageData(imageData, label, rawFile = null) {
   state.source = imageData;
+  state.isDemo = label.startsWith('Ảnh mẫu Studio');
   // Tạo bản preview nén nhẹ để tương tác slider siêu tốc 60fps
-  state.previewSource = createDownsampledImageData(imageData, 1280);
+  state.previewSource = createDownsampledImageData(imageData, 960);
 
   state.stageZoom = 1.0;
   state.stagePanX = 0;
@@ -2195,15 +2380,14 @@ function loadSourceImageData(imageData, label, rawFile = null) {
   empty.style.display = 'none';
   canvasWrapper.hidden = false;
   canvasWrapper.style.display = 'inline-block';
-  if (typeof window !== 'undefined' && window.location && getSafeHash() === '#/') {
-    showScreen('landing', false);
-  } else {
-    showScreen('editor', false);
-  }
+  showScreen('editor');
+  selectDeckTab('tabFilm');
   updateStageInfoPill();
+  const quickPeekBadge = document.querySelector('#quickPeekBadge');
+  if (quickPeekBadge) quickPeekBadge.hidden = false;
 
   const enableIds = [
-    '#export', '#compareBtn', '#rotate90', '#aiAuto',
+    '#export', '#exportRecipeCard', '#compareBtn', '#rotate90', '#aiAuto',
     '#contactSheetBtn', '#quadViewBtn', '#dateStampBtn',
     '#shareCode', '#exportCube', '#matchRefBtn', '#livingFilmBtn', '#lightCraftBtn'
   ];
@@ -2329,13 +2513,31 @@ async function readImageFile(file) {
   throw new Error('Trình duyệt không thể giải mã định dạng ảnh này. Hãy thử chọn ảnh JPG, PNG hoặc WebP.');
 }
 
+let imageLoadVersion = 0;
 async function handleImageFile(file) {
   if (!file) return;
+  const version = ++imageLoadVersion;
+  let loading = document.querySelector('#studioLoading');
+  if (!loading) {
+    loading = document.createElement('div');
+    loading.id = 'studioLoading';
+    loading.className = 'studio-loading';
+    loading.setAttribute('role', 'status');
+    loading.innerHTML = '<span>Đang mở ảnh…</span><button type="button">Hủy</button>';
+    loading.querySelector('button').addEventListener('click', () => {
+      imageLoadVersion++;
+      loading.hidden = true;
+      setStatus('Đã hủy mở ảnh.');
+    });
+    document.body.append(loading);
+  }
+  loading.hidden = false;
   const fileName = file.name || 'Ảnh tải lên';
   setStatus(`Đang nạp tệp ${fileName}...`);
   try {
     const img = await readImageFile(file);
-    const maxDim = 4096; // Giữ nguyên độ phân giải gốc cao nhất tới chuẩn 4K Ultra HD sắc nét
+    if (version !== imageLoadVersion) { img.close?.(); return; }
+    const maxDim = 2560; // Hỗ trợ độ phân giải lên tới 2.5K sắc nét
     const w0 = img.naturalWidth || img.width;
     const h0 = img.naturalHeight || img.height;
     if (!w0 || !h0) throw new Error('Không đọc được kích thước ảnh');
@@ -2348,17 +2550,18 @@ async function handleImageFile(file) {
     tempCanvas.width = w;
     tempCanvas.height = h;
     const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-    tempCtx.imageSmoothingEnabled = true;
-    tempCtx.imageSmoothingQuality = 'high';
     tempCtx.drawImage(img, 0, 0, w, h);
     if (typeof img.close === 'function') img.close();
 
     const imgData = tempCtx.getImageData(0, 0, w, h);
     loadSourceImageData(imgData, fileName, file);
   } catch (err) {
+    if (version !== imageLoadVersion) return;
     console.error('Lỗi khi mở ảnh:', err);
     alert('Không thể mở tệp ảnh: ' + (err.message || 'Định dạng không được hỗ trợ'));
     setStatus('Không đọc được ảnh: ' + err.message, true);
+  } finally {
+    if (version === imageLoadVersion) loading.hidden = true;
   }
 }
 
@@ -2671,20 +2874,8 @@ async function syncToServerNow(actionDesc = 'Chỉnh sửa thông số') {
   }
 }
 
-let interactiveOffscreenCanvas = null;
-let interactiveOffscreenCtx = null;
-function getSharedInteractiveCanvas(w, h) {
-  if (!interactiveOffscreenCanvas && typeof document !== 'undefined') {
-    interactiveOffscreenCanvas = document.createElement('canvas');
-    interactiveOffscreenCtx = interactiveOffscreenCanvas.getContext('2d');
-  }
-  if (interactiveOffscreenCanvas && (interactiveOffscreenCanvas.width !== w || interactiveOffscreenCanvas.height !== h)) {
-    interactiveOffscreenCanvas.width = w;
-    interactiveOffscreenCanvas.height = h;
-  }
-  return { canvas: interactiveOffscreenCanvas, ctx: interactiveOffscreenCtx };
-}
-
+var renderSource, renderLut;
+var previewCache = new Map();
 function render(isLivingFrame = false, forExport = false, isInteractive = false) {
   if (!state.source) return;
   if (state.quadViewActive && !isLivingFrame && !forExport) {
@@ -2693,9 +2884,17 @@ function render(isLivingFrame = false, forExport = false, isInteractive = false)
   }
 
   // Tăng tốc siêu mượt 60fps khi kéo slider: sử dụng bản preview nén nhẹ previewSource
-  const activeSrc = (isInteractive && state.previewSource && !forExport && !isLivingFrame) ? state.previewSource : state.source;
+  if (renderSource !== state.source) {
+    renderSource = state.source;
+    state.previewSource = createDownsampledImageData(state.source, 960);
+    previewCache.clear();
+  }
+  if (renderLut !== state.lut) { renderLut = state.lut; previewCache.clear(); }
+  const activeSrc = forExport ? state.source : (state.previewSource || state.source);
 
-  const out = processPixels(
+  const cacheKey = !forExport && !state.livingFilmActive ? JSON.stringify(state.settings) : null;
+  let out = cacheKey ? previewCache.get(cacheKey) : null;
+  if (!out) out = processPixels(
     activeSrc.data,
     activeSrc.width,
     activeSrc.height,
@@ -2704,6 +2903,10 @@ function render(isLivingFrame = false, forExport = false, isInteractive = false)
     state.livingFilmActive ? state.livingFilmFrame : 0
   );
 
+  if (cacheKey && !previewCache.has(cacheKey)) {
+    if (previewCache.size >= 4) previewCache.delete(previewCache.keys().next().value);
+    previewCache.set(cacheKey, out);
+  }
   if (state.frameStyle > 0 && (forExport || !state.comparingSplit)) {
     const sourceCanvas = document.createElement('canvas');
     sourceCanvas.width = activeSrc.width;
@@ -2716,22 +2919,16 @@ function render(isLivingFrame = false, forExport = false, isInteractive = false)
     canvas.width = framedCanvas.width;
     canvas.height = framedCanvas.height;
     ctx.drawImage(framedCanvas, 0, 0);
-  } else if (isInteractive && activeSrc !== state.source && canvas.width > 0 && canvas.height > 0) {
-    const off = getSharedInteractiveCanvas(activeSrc.width, activeSrc.height);
-    off.ctx.putImageData(new ImageData(out, activeSrc.width, activeSrc.height), 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(off.canvas, 0, 0, canvas.width, canvas.height);
   } else {
     canvas.width = activeSrc.width;
     canvas.height = activeSrc.height;
     ctx.putImageData(new ImageData(out, activeSrc.width, activeSrc.height), 0, 0);
   }
 
+  beforeCanvas.width = activeSrc.width;
+  beforeCanvas.height = activeSrc.height;
+  beforeCtx.putImageData(activeSrc, 0, 0);
   if (!isLivingFrame && !isInteractive) {
-    beforeCanvas.width = activeSrc.width;
-    beforeCanvas.height = activeSrc.height;
-    beforeCtx.putImageData(activeSrc, 0, 0);
     drawHistogram(out);
     syncRulerHeader();
     drawTickRuler();
@@ -2757,7 +2954,8 @@ function requestInteractiveRender() {
 }
 
 function setStatus(msg, isError = false) {
-  status.textContent = msg;
+  status.setAttribute('role', isError ? 'alert' : 'status');
+  status.textContent = msg.replace(/[\p{Extended_Pictographic}\uFE0F]/gu, '').trim();
   status.classList.toggle('error', isError);
 }
 
@@ -2775,7 +2973,7 @@ function showToast(message, type = 'info', icon = '✨') {
 
   const toast = document.createElement('div');
   toast.className = `iro-toast iro-toast-${type}`;
-  toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-text">${message}</span>`;
+  toast.innerHTML = `<span class="toast-icon">${escapeHTML(icon)}</span><span class="toast-text">${escapeHTML(message)}</span>`;
   toastContainer.appendChild(toast);
 
   requestAnimationFrame(() => toast.classList.add('show'));
@@ -2865,11 +3063,11 @@ const registerErrorMsg = document.getElementById('registerErrorMsg');
 function lockAppToAuth() {
   document.body.classList.remove('auth-locked');
   if (authModal) {
-    authModal.hidden = true;
+    authModal.hidden = false;
     authModal.classList.remove('mandatory-gate');
   }
   if (closeAuthModal) {
-    closeAuthModal.style.display = '';
+    closeAuthModal.style.display = 'inline-flex';
   }
 }
 
@@ -2878,6 +3076,9 @@ function unlockAppFromAuth() {
   if (authModal) {
     authModal.hidden = true;
     authModal.classList.remove('mandatory-gate');
+  }
+  if (closeAuthModal) {
+    closeAuthModal.style.display = 'inline-flex';
   }
 }
 
@@ -2891,17 +3092,7 @@ function openAuthModal(mode = 'login') {
   }
 }
 
-const fillAdminDemoBtn = document.getElementById('fillAdminDemoBtn');
-if (fillAdminDemoBtn) {
-  fillAdminDemoBtn.addEventListener('click', () => {
-    authTabLogin?.click();
-    const accountInput = document.getElementById('loginAccountInput');
-    const pwdInput = document.getElementById('loginPasswordInput');
-    if (accountInput) accountInput.value = 'admin';
-    if (pwdInput) pwdInput.value = 'admin123@';
-    showToast('Đã điền tài khoản Quản trị: admin / admin123@', 'info', '🔑');
-  });
-}
+// Demo button removed for security
 
 if (authTriggerBtn) {
   authTriggerBtn.addEventListener('click', (e) => {
@@ -3000,9 +3191,6 @@ loginForm?.addEventListener('submit', async (e) => {
       localStorage.setItem('iro_token', data.token);
       updateUserAccountUI();
       unlockAppFromAuth();
-      if (!state.source) {
-        generateSampleImage('portrait');
-      }
       loginForm.reset();
       showToast(`Chào mừng ${data.user.full_name || data.user.username}!`, 'success', '👋');
       setStatus(`👤 Đã đăng nhập: ${data.user.full_name || data.user.username} (${data.user.role.toUpperCase()})`);
@@ -3045,9 +3233,6 @@ registerForm?.addEventListener('submit', async (e) => {
       localStorage.setItem('iro_token', data.token);
       updateUserAccountUI();
       unlockAppFromAuth();
-      if (!state.source) {
-        generateSampleImage('portrait');
-      }
       registerForm.reset();
       showToast('Đăng ký tài khoản thành công!', 'success', '🎉');
       setStatus(`🎉 Chào mừng thành viên mới: ${data.user.full_name || data.user.username}!`);
@@ -3108,7 +3293,7 @@ function updateUserAccountUI() {
     }
     const avatarLetter = (displayName[0] || 'U').toUpperCase();
     if (dropUserAvatar) dropUserAvatar.textContent = avatarLetter;
-    if (userAvatarIcon) userAvatarIcon.textContent = u.role === 'admin' ? '👑' : '👤';
+    if (userAvatarIcon) userAvatarIcon.setAttribute('aria-hidden', 'true');
 
     if (adminUsersMenuBtn) {
       adminUsersMenuBtn.hidden = u.role !== 'admin';
@@ -3121,7 +3306,7 @@ function updateUserAccountUI() {
       dropUserRole.className = 'badge-role';
     }
     if (dropUserAvatar) dropUserAvatar.textContent = '👤';
-    if (userAvatarIcon) userAvatarIcon.textContent = '👤';
+    if (userAvatarIcon) userAvatarIcon.setAttribute('aria-hidden', 'true');
     if (adminUsersMenuBtn) adminUsersMenuBtn.hidden = true;
   }
 }
@@ -3134,7 +3319,9 @@ async function checkCurrentUser() {
     return;
   }
   if (!state.authToken) {
+    state.currentUser = null;
     updateUserAccountUI();
+    unlockAppFromAuth();
     return;
   }
   try {
@@ -3155,10 +3342,12 @@ async function checkCurrentUser() {
         }
       } catch (_) {}
       updateUserAccountUI();
+      lockAppToAuth();
     }
   } catch (err) {
     console.debug('Failed to verify token:', err);
     updateUserAccountUI();
+    lockAppToAuth();
   }
 }
 
@@ -3208,10 +3397,10 @@ async function loadAdminUsers() {
       allCachedUsers = data.users;
       renderAdminUsersTable();
     } else {
-      adminUsersTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px;">${data.error || 'Không thể tải danh sách'}</td></tr>`;
+      adminUsersTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px;">${escapeHTML(data.error || 'Không thể tải danh sách')}</td></tr>`;
     }
   } catch (err) {
-    adminUsersTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px;">Lỗi: ${err.message}</td></tr>`;
+    adminUsersTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:24px;">Lỗi: ${escapeHTML(err.message)}</td></tr>`;
   }
 }
 
@@ -3233,37 +3422,47 @@ function renderAdminUsersTable(filter = '') {
     const isAdmin = u.role === 'admin';
     const isBanned = u.status === 'banned';
     const isMe = state.currentUser && state.currentUser.id === u.id;
+    const safeId = Number(u.id);
+    const safeUsername = escapeHTML(u.username || '');
+    const safeFullName = escapeHTML(u.full_name || u.username || '');
+    const safeEmail = escapeHTML(u.email || '');
+    const safeRole = escapeHTML(u.role || 'user');
+    const safeAvatar = escapeHTML((u.username && u.username[0] || 'U').toUpperCase());
+    const safeCreatedAt = escapeHTML((u.created_at || '').slice(0, 10));
+    const sessionCount = Number(u.session_count || 0);
+    const encUsername = encodeURIComponent(u.username || '');
+
     return `
       <tr>
-        <td style="font-family:monospace;font-size:12px;color:var(--text-sub);">${u.id}</td>
+        <td style="font-family:monospace;font-size:12px;color:var(--text-sub);">${safeId}</td>
         <td>
           <div style="display:flex;align-items:center;gap:8px;">
-            <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-high);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;">${(u.username[0] || 'U').toUpperCase()}</div>
+            <div style="width:28px;height:28px;border-radius:50%;background:var(--surface-high);display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;">${safeAvatar}</div>
             <div>
-              <strong>${u.full_name || u.username}</strong>
-              <div style="font-size:11px;color:var(--text-sub);">@${u.username}</div>
+              <strong>${safeFullName}</strong>
+              <div style="font-size:11px;color:var(--text-sub);">@${safeUsername}</div>
             </div>
           </div>
         </td>
-        <td style="font-size:12px;">${u.email}</td>
+        <td style="font-size:12px;">${safeEmail}</td>
         <td>
-          <span class="badge-role ${isAdmin ? 'admin' : 'user'}">${u.role.toUpperCase()}</span>
+          <span class="badge-role ${isAdmin ? 'admin' : 'user'}">${safeRole.toUpperCase()}</span>
         </td>
         <td>
           <span class="badge-status ${isBanned ? 'banned' : 'active'}">${isBanned ? 'BỊ KHÓA' : 'HOẠT ĐỘNG'}</span>
         </td>
-        <td style="font-family:monospace;font-size:12px;text-align:center;">${u.session_count || 0}</td>
-        <td style="font-size:11px;color:var(--text-sub);">${(u.created_at || '').slice(0, 10)}</td>
+        <td style="font-family:monospace;font-size:12px;text-align:center;">${sessionCount}</td>
+        <td style="font-size:11px;color:var(--text-sub);">${safeCreatedAt}</td>
         <td>
           <div class="admin-actions-cell">
             ${!isMe ? `
-              <button type="button" class="btn-table-action" onclick="window.iroToggleRole(${u.id}, '${isAdmin ? 'user' : 'admin'}')" title="Đổi quyền Admin/User">
+              <button type="button" class="btn-table-action" onclick="window.iroToggleRole(${safeId}, '${isAdmin ? 'user' : 'admin'}')" title="Đổi quyền Admin/User">
                 ${isAdmin ? 'Hạ User' : 'Nâng Admin'}
               </button>
-              <button type="button" class="btn-table-action ${isBanned ? 'btn-unban' : 'btn-ban'}" onclick="window.iroToggleStatus(${u.id}, '${isBanned ? 'active' : 'banned'}')" title="Khóa/Mở khóa">
+              <button type="button" class="btn-table-action ${isBanned ? 'btn-unban' : 'btn-ban'}" onclick="window.iroToggleStatus(${safeId}, '${isBanned ? 'active' : 'banned'}')" title="Khóa/Mở khóa">
                 ${isBanned ? 'Mở khóa' : 'Khóa'}
               </button>
-              <button type="button" class="btn-table-action btn-del" onclick="window.iroDeleteUser(${u.id}, '${u.username}')" title="Xóa tài khoản">
+              <button type="button" class="btn-table-action btn-del" onclick="window.iroDeleteUser(${safeId}, '${encUsername}')" title="Xóa tài khoản">
                 🗑️
               </button>
             ` : '<span style="font-size:11px;color:var(--accent);font-weight:600;">(Chính bạn)</span>'}
@@ -3275,7 +3474,9 @@ function renderAdminUsersTable(filter = '') {
 }
 
 window.iroToggleRole = async (userId, newRole) => {
-  if (!confirm(`Bạn có chắc muốn chuyển tài khoản #${userId} sang vai trò "${newRole.toUpperCase()}"?`)) return;
+  const safeId = Number(userId);
+  const targetRole = newRole === 'admin' ? 'admin' : 'user';
+  if (!confirm(`Bạn có chắc muốn chuyển tài khoản #${safeId} sang vai trò "${targetRole.toUpperCase()}"?`)) return;
   try {
     const res = await fetch('api.php?action=admin_update_user', {
       method: 'POST',
@@ -3283,7 +3484,7 @@ window.iroToggleRole = async (userId, newRole) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.authToken}`
       },
-      body: JSON.stringify({ userId, role: newRole })
+      body: JSON.stringify({ userId: safeId, role: targetRole })
     });
     const d = await res.json();
     if (d.ok) {
@@ -3298,8 +3499,10 @@ window.iroToggleRole = async (userId, newRole) => {
 };
 
 window.iroToggleStatus = async (userId, newStatus) => {
-  const isBan = newStatus === 'banned';
-  if (!confirm(`Bạn có chắc muốn ${isBan ? 'KHÓA' : 'MỞ KHÓA'} tài khoản #${userId}?`)) return;
+  const safeId = Number(userId);
+  const targetStatus = newStatus === 'banned' ? 'banned' : 'active';
+  const isBan = targetStatus === 'banned';
+  if (!confirm(`Bạn có chắc muốn ${isBan ? 'KHÓA' : 'MỞ KHÓA'} tài khoản #${safeId}?`)) return;
   try {
     const res = await fetch('api.php?action=admin_update_user', {
       method: 'POST',
@@ -3307,7 +3510,7 @@ window.iroToggleStatus = async (userId, newStatus) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${state.authToken}`
       },
-      body: JSON.stringify({ userId, status: newStatus })
+      body: JSON.stringify({ userId: safeId, status: targetStatus })
     });
     const d = await res.json();
     if (d.ok) {
@@ -3321,8 +3524,11 @@ window.iroToggleStatus = async (userId, newStatus) => {
   }
 };
 
-window.iroDeleteUser = async (userId, username) => {
-  if (!confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA vĩnh viễn tài khoản "${username}" (ID: ${userId})? Thao tác này không thể hoàn tác!`)) return;
+window.iroDeleteUser = async (userId, usernameEnc) => {
+  const safeId = Number(userId);
+  let username = String(usernameEnc || '');
+  try { username = decodeURIComponent(username); } catch (_) {}
+  if (!confirm(`⚠️ CẢNH BÁO: Bạn có chắc chắn muốn XÓA vĩnh viễn tài khoản "${username}" (ID: ${safeId})? Thao tác này không thể hoàn tác!`)) return;
   try {
     const res = await fetch('api.php?action=admin_delete_user', {
       method: 'POST',
@@ -3364,6 +3570,8 @@ if (closeMyPhotosModal) {
   });
 }
 
+let cachedMySessions = {};
+
 async function loadMyPhotos() {
   if (!myPhotosGrid) return;
   myPhotosGrid.innerHTML = '<p class="empty-hint">Đang tải lịch sử ảnh...</p>';
@@ -3377,39 +3585,103 @@ async function loadMyPhotos() {
         myPhotosGrid.innerHTML = '<p class="empty-hint">Bạn chưa có bức ảnh nào được chỉnh sửa trên máy chủ.</p>';
         return;
       }
+      cachedMySessions = {};
       myPhotosGrid.innerHTML = data.sessions.map(s => {
+        cachedMySessions[s.session_id] = s;
         const thumb = s.preview_url || s.original_url || '';
+        const safeThumb = escapeHTML(thumb);
+        const safeFilename = escapeHTML(s.filename || 'photo.jpg');
+        const safeSid = escapeHTML(s.session_id);
+        const safeRecipe = escapeHTML(s.recipe_name || 'Tự chỉnh');
+        const safeDate = escapeHTML((s.updated_at || s.created_at || '').slice(0, 10));
+
         return `
           <div class="my-photo-card">
             <div class="photo-thumb-wrap">
-              ${thumb ? `<img src="${thumb}" alt="${s.filename}" loading="lazy" />` : '<div class="no-thumb">🖼️</div>'}
+              ${thumb ? `<img src="${safeThumb}" alt="${safeFilename}" loading="lazy" />` : '<div class="no-thumb">🖼️</div>'}
             </div>
             <div class="photo-info">
-              <div class="photo-title" title="${s.filename}">${s.filename}</div>
+              <div class="photo-title" title="${safeFilename}">${safeFilename}</div>
               <div class="photo-meta">
-                <span>${s.recipe_name || 'Tự chỉnh'}</span>
+                <span>${safeRecipe}</span>
                 <span>·</span>
-                <span>${(s.updated_at || s.created_at || '').slice(0, 10)}</span>
+                <span>${safeDate}</span>
               </div>
               <div class="photo-actions">
                 ${s.original_url ? `
-                  <button type="button" class="btn-load-photo" onclick="window.iroLoadCloudPhoto('${s.original_url}', '${encodeURIComponent(s.filename)}', ${JSON.stringify(s.settings_json || '{}').replace(/"/g, '&quot;')})">
+                  <button type="button" class="btn-load-photo" onclick="window.iroLoadCloudPhotoById('${safeSid}')">
                     Mở ảnh này
                   </button>
                 ` : ''}
-                ${thumb ? `<a href="${thumb}" target="_blank" download="${s.filename}" class="btn-download-thumb" title="Tải về">⬇️</a>` : ''}
+                ${thumb ? `<a href="${safeThumb}" target="_blank" download="${safeFilename}" class="btn-download-thumb" title="Tải về">⬇️</a>` : ''}
+                <button type="button" class="btn-download-thumb" onclick="window.iroDeleteCloudPhotoById('${safeSid}')" title="Xóa ảnh này" style="color:var(--danger,#ef4444); border-color:rgba(239,68,68,0.3);">🗑️</button>
               </div>
             </div>
           </div>
         `;
       }).join('');
     } else {
-      myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">${data.error || 'Không thể tải ảnh'}</p>`;
+      myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">${escapeHTML(data.error || 'Không thể tải ảnh')}</p>`;
     }
   } catch (err) {
-    myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">Lỗi: ${err.message}</p>`;
+    myPhotosGrid.innerHTML = `<p class="empty-hint" style="color:var(--danger)">Lỗi: ${escapeHTML(err.message)}</p>`;
   }
 }
+
+window.iroDeleteCloudPhotoById = async (sessionId) => {
+  const s = cachedMySessions[sessionId];
+  const filename = s ? s.filename : 'ảnh này';
+  if (!confirm(`Bạn có chắc chắn muốn xóa ảnh "${filename}" khỏi tài khoản của bạn?\n\nẢnh sẽ bị xóa vĩnh viễn khỏi máy chủ.`)) return;
+  try {
+    const res = await fetch('api.php?action=delete_my_photo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.authToken}`
+      },
+      body: JSON.stringify({ sessionId })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(`Đã xóa ảnh "${filename}" thành công!`, 'success', '🗑️');
+      loadMyPhotos();
+    } else {
+      alert(data.error || 'Không thể xóa ảnh');
+    }
+  } catch (err) {
+    alert('Lỗi kết nối: ' + err.message);
+  }
+};
+
+window.iroLoadCloudPhotoById = async (sessionId) => {
+  const s = cachedMySessions[sessionId];
+  if (!s || !s.original_url) return;
+  return window.iroLoadCloudPhoto(s.original_url, encodeURIComponent(s.filename || 'photo.jpg'), s.settings_json);
+};
+
+window.iroDeleteCloudPhoto = async (sessionId, filenameEnc) => {
+  const filename = decodeURIComponent(filenameEnc);
+  if (!confirm(`Bạn có chắc chắn muốn xóa ảnh "${filename}" khỏi tài khoản của bạn?\n\nẢnh sẽ bị xóa vĩnh viễn khỏi máy chủ.`)) return;
+  try {
+    const res = await fetch('api.php?action=delete_my_photo', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.authToken}`
+      },
+      body: JSON.stringify({ sessionId })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(`Đã xóa ảnh "${filename}" thành công!`, 'success', '🗑️');
+      loadMyPhotos();
+    } else {
+      alert(data.error || 'Không thể xóa ảnh');
+    }
+  } catch (err) {
+    alert('Lỗi kết nối: ' + err.message);
+  }
+};
 
 window.iroLoadCloudPhoto = async (url, filenameEnc, settingsJsonStr) => {
   try {
@@ -3448,9 +3720,458 @@ window.iroLoadCloudPhoto = async (url, filenameEnc, settingsJsonStr) => {
   }
 };
 
-// Khởi tạo trạng thái ban đầu, tự động nạp ảnh mẫu studio và nạp thước đo M3
+// Khởi tạo trạng thái ban đầu, nạp thước đo M3 (không nạp ảnh mẫu mặc định)
 drawCurveEditor();
-generateSampleImage('portrait');
 initM3RulerDock();
 checkCurrentUser();
 
+
+// =========================================================================
+// 🌟 CREATIVE ENGINE 3.0: WEB AUDIO SYNTHESIZER, RECIPE CARD & SHORTCUTS
+// =========================================================================
+
+// --- 1. Web Audio Camera Mechanical Shutter & Haptic Dial Engine ---
+let audioCtx = null;
+let soundEnabled = true;
+
+function getAudioContext() {
+  if (!audioCtx && typeof window !== 'undefined') {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+function playShutterSound() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    const bufferSize = Math.floor(ctx.sampleRate * 0.07);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+    const whiteNoise = ctx.createBufferSource();
+    whiteNoise.buffer = noiseBuffer;
+
+    const noiseFilter = ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.setValueAtTime(1400, now);
+    noiseFilter.Q.setValueAtTime(1.8, now);
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.25, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+    whiteNoise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    whiteNoise.start(now);
+
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(460, now + 0.022);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.065);
+
+    oscGain.gain.setValueAtTime(0.35, now + 0.022);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now + 0.022);
+    osc.stop(now + 0.08);
+  } catch (e) {}
+}
+
+function playDialClick() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1800, now);
+    osc.frequency.exponentialRampToValueAtTime(600, now + 0.015);
+
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.02);
+  } catch (e) {}
+}
+
+const soundToggleBtn = document.querySelector('#soundToggleBtn');
+const soundStatusText = document.querySelector('#soundStatusText');
+soundToggleBtn?.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  if (soundStatusText) soundStatusText.textContent = soundEnabled ? 'Bật' : 'Tắt';
+  showToast(soundEnabled ? '🔊 Đã bật âm thanh buồng tối Leica / Fuji' : '🔇 Đã tắt âm thanh', 'info', soundEnabled ? '🔊' : '🔇');
+  if (soundEnabled) playShutterSound();
+});
+
+// Trigger dial click on sliders
+document.querySelectorAll('input[type="range"]').forEach(range => {
+  range.addEventListener('input', () => playDialClick());
+});
+
+// --- 2. Quick Peek Before / After (Hold Space or Button) ---
+let isPeekingBefore = false;
+
+function setPeekingBefore(peek) {
+  if (!state.source || isPeekingBefore === peek) return;
+  isPeekingBefore = peek;
+  const beforeCanvas = document.querySelector('#beforeCanvas');
+  const mainCanvas = document.querySelector('#canvas');
+  const peekBadge = document.querySelector('#quickPeekBadge');
+
+  if (peek) {
+    if (beforeCanvas && mainCanvas) {
+      const original = state.previewSource || state.source;
+      beforeCanvas.width = original.width;
+      beforeCanvas.height = original.height;
+      const bCtx = beforeCanvas.getContext('2d');
+      bCtx.putImageData(original, 0, 0);
+      beforeCanvas.hidden = false;
+      mainCanvas.style.opacity = '0';
+      if (peekBadge) {
+        peekBadge.textContent = '👁️ ĐANG XEM ẢNH GỐC (THẢ ĐỂ VỀ MÀU FUJI)';
+        peekBadge.classList.add('active');
+      }
+    }
+  } else {
+    if (beforeCanvas && mainCanvas) {
+      beforeCanvas.hidden = true;
+      mainCanvas.style.opacity = '1';
+      if (peekBadge) {
+        peekBadge.textContent = '👁️ Giữ xem ảnh gốc (Space)';
+        peekBadge.classList.remove('active');
+      }
+    }
+  }
+}
+
+const quickPeekBadge = document.querySelector('#quickPeekBadge');
+quickPeekBadge?.addEventListener('mousedown', () => setPeekingBefore(true));
+quickPeekBadge?.addEventListener('mouseup', () => setPeekingBefore(false));
+quickPeekBadge?.addEventListener('mouseleave', () => setPeekingBefore(false));
+quickPeekBadge?.addEventListener('touchstart', (e) => { e.preventDefault(); setPeekingBefore(true); });
+quickPeekBadge?.addEventListener('touchend', (e) => { e.preventDefault(); setPeekingBefore(false); });
+
+// --- 3. Instant Fujifilm Recipe Share Card Generator ---
+function generateRecipeCardCanvas() {
+  if (!state.source) return null;
+  render(false, true);
+
+  const cardW = 1200;
+  const cardH = 1680;
+  const cardCanvas = document.createElement('canvas');
+  cardCanvas.width = cardW;
+  cardCanvas.height = cardH;
+  const ctx = cardCanvas.getContext('2d');
+
+  const isDark = !document.body.classList.contains('theme-porcelain');
+  const bg = isDark ? '#141416' : '#faf9f6';
+  const cardPanelBg = isDark ? '#1e1f24' : '#ffffff';
+  const textColor = isDark ? '#f3f4f6' : '#1f2937';
+  const textMuted = isDark ? '#9ca3af' : '#6b7280';
+  const accentColor = '#1a73e8';
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, cardW, cardH);
+
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(32, 32, cardW - 64, cardH - 64);
+
+  ctx.fillStyle = accentColor;
+  ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('✦ IRO FUJIFILM COLOR LAB · RECIPE DNA', 64, 76);
+
+  ctx.fillStyle = textColor;
+  ctx.font = '800 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  const recipeTitle = (state.activeRecipeName || state.settings.film || 'CLASSIC CHROME').toUpperCase();
+  ctx.fillText(recipeTitle, 64, 120);
+
+  ctx.fillStyle = textMuted;
+  ctx.font = '500 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillText('FUJIFILM X-TRANS V · OPTICAL DARKROOM 3.0 RECIPE', 64, 146);
+
+  ctx.fillStyle = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  ctx.beginPath();
+  ctx.roundRect(cardW - 240, 68, 176, 42, 21);
+  ctx.fill();
+  ctx.fillStyle = textColor;
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(state.settings.film || 'Classic Chrome', cardW - 152, 94);
+  ctx.textAlign = 'left';
+
+  const photoBoxX = 64;
+  const photoBoxY = 176;
+  const photoBoxW = 1072;
+  const photoBoxH = 920;
+
+  ctx.fillStyle = isDark ? '#0d0d0f' : '#f0f0f2';
+  ctx.beginPath();
+  ctx.roundRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 16);
+  ctx.fill();
+
+  const aspectCanvas = canvas.width / canvas.height;
+  let targetW, targetH, targetX, targetY;
+  if (aspectCanvas > photoBoxW / photoBoxH) {
+    targetW = photoBoxW;
+    targetH = photoBoxW / aspectCanvas;
+    targetX = photoBoxX;
+    targetY = photoBoxY + (photoBoxH - targetH) / 2;
+  } else {
+    targetH = photoBoxH;
+    targetW = photoBoxH * aspectCanvas;
+    targetX = photoBoxX + (photoBoxW - targetW) / 2;
+    targetY = photoBoxY;
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(photoBoxX, photoBoxY, photoBoxW, photoBoxH, 16);
+  ctx.clip();
+  ctx.drawImage(canvas, targetX, targetY, targetW, targetH);
+  ctx.restore();
+
+  const paramsY = 1130;
+  const s = state.settings;
+  const wbText = s.wb === 'Kelvin' || s.temperature ? `${s.temperature || 5500}K` : (s.wb || 'Auto');
+  const wbShift = `R:${s.red > 0 ? '+' : ''}${s.red || 0} B:${s.blue > 0 ? '+' : ''}${s.blue || 0}`;
+
+  const specCards = [
+    { label: 'FILM SIMULATION', val: s.film || 'Classic Chrome' },
+    { label: 'DYNAMIC RANGE', val: `DR${s.dr || 100}` },
+    { label: 'GRAIN EFFECT', val: s.grain > 0 ? `${s.grain > 50 ? 'Strong' : 'Weak'}, ${s.grainSize > 1 ? 'Large' : 'Small'}` : 'Off' },
+    { label: 'WHITE BALANCE', val: `${wbText} (${wbShift})` },
+    { label: 'HIGHLIGHT / SHADOW', val: `${s.highlight > 0 ? '+' : ''}${s.highlight} / ${s.shadow > 0 ? '+' : ''}${s.shadow}` },
+    { label: 'COLOR / SHARPNESS', val: `${s.color > 0 ? '+' : ''}${s.color} / ${s.sharpness > 0 ? '+' : ''}${s.sharpness}` },
+    { label: 'NOISE REDUCTION', val: `${s.nr > 0 ? '+' : ''}${s.nr}` },
+    { label: 'CLARITY & OPTICAL', val: s.clarity !== 0 ? `Clarity ${s.clarity > 0 ? '+' : ''}${s.clarity}` : (s.proMist > 0 ? `Pro-Mist ${s.proMist}%` : 'Standard') }
+  ];
+
+  const colW = (1072 - 36) / 4;
+  const rowH = 78;
+
+  specCards.forEach((c, idx) => {
+    const col = idx % 4;
+    const row = Math.floor(idx / 4);
+    const x = 64 + col * (colW + 12);
+    const y = paramsY + row * (rowH + 12);
+
+    ctx.fillStyle = cardPanelBg;
+    ctx.beginPath();
+    ctx.roundRect(x, y, colW, rowH, 12);
+    ctx.fill();
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = textMuted;
+    ctx.font = '600 11px monospace';
+    ctx.fillText(c.label, x + 16, y + 26);
+
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(c.val, x + 16, y + 54);
+  });
+
+  const footerY = 1350;
+  ctx.strokeStyle = borderColor;
+  ctx.beginPath();
+  ctx.moveTo(64, footerY);
+  ctx.lineTo(cardW - 64, footerY);
+  ctx.stroke();
+
+  const barcodeX = 64;
+  const barcodeY = footerY + 22;
+  const barPattern = [2, 1, 3, 1, 1, 4, 2, 1, 2, 3, 1, 1, 3, 2, 1, 4, 1, 2, 3, 1, 2, 1, 4, 2, 1, 3, 1, 2];
+  let currX = barcodeX;
+  ctx.fillStyle = isDark ? '#ffffff' : '#000000';
+  barPattern.forEach((w, i) => {
+    if (i % 2 === 0) {
+      ctx.fillRect(currX, barcodeY, w * 2, 32);
+    }
+    currX += w * 2 + 2;
+  });
+
+  ctx.fillStyle = textMuted;
+  ctx.font = '12px monospace';
+  ctx.fillText(`SN: IRO-XTRANS-V-${Date.now().toString(36).toUpperCase()}`, currX + 16, barcodeY + 20);
+
+  ctx.textAlign = 'right';
+  ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillStyle = textColor;
+  ctx.fillText('npccc.io.vn · IRO Studio 3.0', cardW - 64, barcodeY + 14);
+  ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillStyle = textMuted;
+  ctx.fillText('Agentic Fujifilm X-Trans V Color Laboratory', cardW - 64, barcodeY + 30);
+  ctx.textAlign = 'left';
+
+  return cardCanvas;
+}
+
+document.querySelector('#exportRecipeCard')?.addEventListener('click', () => {
+  if (!state.source) return;
+  const cardCanvas = generateRecipeCardCanvas();
+  if (!cardCanvas) return;
+
+  playShutterSound();
+  cardCanvas.toBlob(blob => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    const title = (state.activeRecipeName || state.settings.film || 'fuji-recipe').toLowerCase().replace(/\s+/g, '-');
+    a.download = `recipe-card-${title}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('📇 Đã xuất Thẻ Công Thức Fujifilm Recipe Card thành công!', 'success', '📇');
+  }, 'image/png');
+});
+
+// --- 4. Keyboard Shortcuts Modal & Global Key Listener ---
+const shortcutsModal = document.querySelector('#shortcutsModal');
+const closeShortcutsModal = document.querySelector('#closeShortcutsModal');
+const shortcutsBtn = document.querySelector('#shortcutsBtn');
+
+shortcutsBtn?.addEventListener('click', () => {
+  if (shortcutsModal) shortcutsModal.hidden = false;
+});
+closeShortcutsModal?.addEventListener('click', () => {
+  if (shortcutsModal) shortcutsModal.hidden = true;
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.target && (e.target.matches('input, textarea, select') || e.target.isContentEditable)) return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    setPeekingBefore(true);
+    return;
+  }
+
+  if (e.key === '?' || (e.key === '/' && (e.ctrlKey || e.metaKey))) {
+    e.preventDefault();
+    if (shortcutsModal) shortcutsModal.hidden = !shortcutsModal.hidden;
+    return;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    e.preventDefault();
+    document.querySelector('#export')?.click();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 'c' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.querySelector('#compareBtn')?.click();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 'r' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.querySelector('#rotate90')?.click();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 'o' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.querySelector('#photo')?.click();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    openRecipeLibraryModal();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.querySelector('#themeToggleBtn')?.click();
+    return;
+  }
+
+  if (e.key.toLowerCase() === 'q' && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    document.querySelector('#quadViewBtn')?.click();
+    return;
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space') {
+    setPeekingBefore(false);
+  }
+});
+
+window.iroSyncRecipesNow = async () => {
+  if (!confirm('Bạn có muốn kích hoạt trình đồng bộ để quét và cập nhật các công thức màu phim mới từ Fuji X Weekly ngay bây giờ?')) return;
+  showToast('Đang quét và đồng bộ công thức màu mới...', 'info', '⏳');
+  try {
+    const res = await fetch('api.php?action=admin_sync_recipes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.authToken}`
+      }
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(data.message || 'Đã đồng bộ công thức thành công!', 'success', '✨');
+      await load392Catalog();
+      if (typeof renderRecipeLibraryGrid === 'function' && !recipeLibraryModal.hidden) {
+        renderRecipeLibraryGrid();
+      }
+    } else {
+      alert(data.error || 'Đồng bộ thất bại');
+    }
+  } catch (err) {
+    alert('Lỗi kết nối: ' + err.message);
+  }
+};
+
+// One labelled parameter picker replaces the two duplicate icon strips.
+const parameterGroup = document.createElement('div');
+parameterGroup.className = 'param-select';
+parameterGroup.innerHTML = '<label for="studioParameter">Thông số cần chỉnh</label><select id="studioParameter"></select>';
+const parameterSelect = parameterGroup.querySelector('select');
+for (const [key, label] of allSliderSpecs) {
+  const option = document.createElement('option'); option.value = key; option.textContent = label;
+  parameterSelect.append(option);
+}
+parameterSelect.value = activeRulerSpec[0];
+parameterSelect.addEventListener('change', () => {
+  activeRulerSpec = allSliderSpecs.find(spec => spec[0] === parameterSelect.value) || allSliderSpecs[0];
+  syncRulerHeader(); drawTickRuler();
+});
+document.querySelector('.ruler-card-box').prepend(parameterGroup);
+document.querySelector('.deck-tab-bar').addEventListener('keydown', event => {
+  if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+  const tabs = [...document.querySelectorAll('[data-deck-tab]')];
+  let index = tabs.indexOf(event.target); if (index < 0) return;
+  event.preventDefault();
+  index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  selectDeckTab(tabs[index].dataset.deckTab); tabs[index].focus();
+});
+selectDeckTab('tabFilm');

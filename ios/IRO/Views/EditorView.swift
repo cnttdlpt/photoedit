@@ -228,7 +228,7 @@ struct EditorView: View {
     @EnvironmentObject private var editor: EditorModel
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var sheet: EditorSheet?
-    @State private var selectedTab: EditorToolTab = .adjust
+    @State private var selectedTab: EditorToolTab = .filters
     @State private var selectedAdjust: AdjustParam = .exposure
     @State private var lightCraftSubTab: LightCraftSubTab = .curve
     @State private var curveChannel: ToneCurveChannel = .parametric
@@ -372,11 +372,11 @@ struct EditorView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
 
-            modeSwitcherPill
-                .padding(.horizontal, 16)
-
             stage
                 .padding(.horizontal, 14)
+
+            modeSwitcherPill
+                .padding(.horizontal, 16)
 
             cleanBottomControls
                 .disabled(editor.busy)
@@ -701,7 +701,7 @@ struct EditorView: View {
                             Group {
                                 if isSelected {
                                     Capsule()
-                                        .fill(Color.white)
+                                        .fill(Studio.surface)
                                         .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 1)
                                 } else {
                                     Color.clear
@@ -1157,92 +1157,53 @@ struct EditorView: View {
 
     // MARK: - 2. Filters Section (Film Look Carousel)
     private var filtersSection: some View {
-        VStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
-                HStack(spacing: 5) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Studio.ink)
-                    Text(editor.recipe?.name ?? "Nguyên bản")
-                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
-                        .foregroundStyle(Studio.ink)
-                        .lineLimit(1)
-                }
-
+                Text("Công thức màu").font(.headline)
                 Spacer()
-
-                Button { sheet = .recipes } label: {
-                    HStack(spacing: 3) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 10, weight: .bold))
-                        Text("Kho 392 màu")
-                            .font(.system(size: 11.5, weight: .bold, design: .rounded))
-                    }
-                    .foregroundStyle(Studio.ink)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(
-                        Capsule()
-                            .fill(Studio.surface)
-                            .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
-                    )
-                }
-                .buttonStyle(.plain)
+                Button("Gốc") { Task { await editor.originalLook() } }
+                    .frame(minWidth: 44, minHeight: 44)
+                Menu {
+                    Button("Quản lý công thức") { sheet = .recipes }
+                    Button("LUT của tôi") { sheet = .luts }
+                    Button("Kho LUT trực tuyến") { sheet = .online }
+                } label: {
+                    Image(systemName: "ellipsis").frame(width: 44, height: 44)
+                }.accessibilityLabel("Thư viện màu")
             }
-            .padding(.horizontal, 4)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    // "Gốc" (Original Look)
-                    Button {
-                        Haptics.selection()
-                        Task { await editor.originalLook() }
-                    } label: {
-                        VStack(spacing: 5) {
-                            ZStack {
-                                Circle()
-                                    .fill(editor.recipe == nil ? Studio.ink : Color.white)
-                                    .frame(width: 48, height: 48)
-                                    .overlay(
-                                        Circle().strokeBorder(editor.recipe == nil ? Color.clear : Studio.line, lineWidth: 1.0)
-                                    )
-
-                                Image(systemName: "circle.lefthalf.filled")
-                                    .font(.system(size: 17))
-                                    .foregroundStyle(editor.recipe == nil ? Color.white : Studio.ink)
-                            }
-
-                            Text("Gốc")
-                                .font(.system(size: 11, weight: editor.recipe == nil ? .bold : .medium, design: .rounded))
-                                .foregroundStyle(editor.recipe == nil ? Studio.ink : Studio.muted)
-                                .lineLimit(1)
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    // Curated Recipes (Live Thumbnails)
-                    ForEach(editor.recipes.prefix(30)) { recipe in
-                        let isSelected = editor.recipe?.id == recipe.id
+            TextField("Tìm tên màu hoặc film", text: $inlineFilterQuery)
+                .textFieldStyle(.roundedBorder)
+                .font(.body)
+                .accessibilityLabel("Tìm công thức màu")
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 8)], spacing: 8) {
+                    ForEach(wideFilteredRecipes) { recipe in
                         Button {
                             Haptics.selection()
                             Task { await editor.apply(recipe) }
                         } label: {
-                            VStack(spacing: 5) {
-                                FilterThumbView(recipe: recipe, isSelected: isSelected)
-
-                                Text(recipe.name)
-                                    .font(.system(size: 11, weight: isSelected ? .bold : .medium, design: .rounded))
-                                    .foregroundStyle(isSelected ? Studio.ink : Studio.muted)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(recipe.name).font(.subheadline.weight(.semibold))
+                                    .lineLimit(2)
+                                Text(recipe.film).font(.caption).foregroundStyle(Studio.muted)
                                     .lineLimit(1)
-                                    .minimumScaleFactor(0.75)
-                                    .frame(width: 58)
                             }
+                            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                            .padding(10)
+                            .background(editor.recipe?.id == recipe.id ? Studio.surfaceContainer : Studio.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(editor.recipe?.id == recipe.id ? Studio.accent : Studio.line, lineWidth: 1))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityAddTraits(editor.recipe?.id == recipe.id ? [.isSelected] : [])
                     }
                 }
-                .padding(.horizontal, 2)
+                if wideFilteredRecipes.isEmpty {
+                    Text("Không tìm thấy màu. Thử tên film khác.")
+                        .font(.subheadline).foregroundStyle(Studio.muted).padding()
+                }
             }
+            .frame(maxHeight: 210)
         }
     }
 
@@ -1381,7 +1342,7 @@ struct EditorView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(Studio.muted)
-                TextField("Tìm trong 392 màu film…", text: $inlineFilterQuery)
+                TextField("Tìm tên màu hoặc film…", text: $inlineFilterQuery)
                     .font(.system(size: 12, design: .rounded))
                     .textFieldStyle(.plain)
                 if !inlineFilterQuery.isEmpty {
@@ -1400,7 +1361,7 @@ struct EditorView: View {
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.white)
+                    .fill(Studio.surface)
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Studio.line, lineWidth: 1))
             )
 

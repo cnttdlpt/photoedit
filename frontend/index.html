@@ -773,8 +773,11 @@
   <!-- HỘP THOẠI ĐĂNG KÝ / ĐĂNG NHẬP (AUTH MODAL) -->
   <div id="authModal" class="contact-sheet-modal auth-dialog-modal" hidden>
     <div class="auth-gate-wrapper">
-      <div class="auth-gate-brand">
+      <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
         <div class="auth-brand-badge">✦ IRO FILM STUDIO 3.0</div>
+        <button id="closeAuthModal" type="button" class="btn text" style="color:var(--muted); font-size:14px; font-weight:600; padding:6px 12px; border:1px solid var(--line); border-radius:8px; cursor:pointer;" title="Đóng cửa sổ">✕ Đóng</button>
+      </div>
+      <div class="auth-gate-brand">
         <h2>Đăng nhập để vào Phòng tối</h2>
         <p class="auth-gate-sub">Vui lòng đăng nhập hoặc tạo tài khoản để chỉnh sửa ảnh, quản lý công thức và đồng bộ lên máy chủ.</p>
       </div>
@@ -830,8 +833,7 @@
         <p class="auth-hint">Đã có tài khoản? <a href="#" id="switchToLoginLink">Đăng nhập ngay</a></p>
       </form>
 
-      <button id="closeAuthModal" type="button" style="display:none;">✕ Đóng</button>
-    </div>
+          </div>
   </div>
 
   <!-- HỘP THOẠI QUẢN TRỊ VIÊN QUẢN LÝ NGƯỜI DÙNG (ADMIN MODAL) -->
@@ -920,6 +922,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.mjs?v=20261017-m3deck"></script>
+  <script type="module" src="app.mjs?v=20261021-369522"></script>
 </body>
 </html>

@@ -328,11 +328,11 @@ document.querySelector('#resumeEditorBtn')?.addEventListener('click', () => {
   showScreen('editor');
 });
 function getSafeHash() {
-  if (typeof window !== 'undefined' && window.location && typeof window.getSafeHash() === 'string') {
-    return window.getSafeHash();
+  if (typeof window !== 'undefined' && window.location && typeof window.location.hash === 'string') {
+    return window.location.hash;
   }
-  if (typeof location !== 'undefined' && typeof getSafeHash() === 'string') {
-    return getSafeHash();
+  if (typeof location !== 'undefined' && typeof location.hash === 'string') {
+    return location.hash;
   }
   return '';
 }
@@ -842,6 +842,10 @@ function applyCatalogRecipe(rec) {
 }
 
 function applySurpriseRandomRecipe() {
+  if (!state.source) {
+    generateSampleImage('portrait');
+  }
+  showScreen('editor');
   if (!state.fullCatalogRecipes.length) {
     setStatus('Đang tải kho 392 công thức, vui lòng thử lại sau giây lát...');
     return;
@@ -2014,9 +2018,6 @@ window.addEventListener('keydown', e => {
     return;
   }
   if (e.key === 'Escape') {
-    if (document.body.classList.contains('auth-locked')) {
-      return;
-    }
     recipeLibraryModal.hidden = true;
     lightCraftModal.hidden = true;
     contactSheetModal.hidden = true;
@@ -2191,7 +2192,7 @@ function loadSourceImageData(imageData, label, rawFile = null) {
   empty.style.display = 'none';
   canvasWrapper.hidden = false;
   canvasWrapper.style.display = 'inline-block';
-  if (typeof window !== 'undefined' && window.location && window.getSafeHash() === '#/') {
+  if (typeof window !== 'undefined' && window.location && getSafeHash() === '#/') {
     showScreen('landing', false);
   } else {
     showScreen('editor', false);
@@ -2422,7 +2423,7 @@ function setDragOverlayVisible(visible) {
 window.addEventListener('dragenter', e => {
   e.preventDefault();
   e.stopPropagation();
-  if (document.body.classList.contains('auth-locked')) return;
+  // auth check omitted for guest drag & drop
   dragCounter++;
   if (e.dataTransfer) {
     e.dataTransfer.dropEffect = 'copy';
@@ -2433,7 +2434,7 @@ window.addEventListener('dragenter', e => {
 window.addEventListener('dragover', e => {
   e.preventDefault();
   e.stopPropagation();
-  if (document.body.classList.contains('auth-locked')) return;
+  // auth check omitted for guest drag & drop
   if (e.dataTransfer) {
     e.dataTransfer.dropEffect = 'copy';
   }
@@ -2454,10 +2455,7 @@ window.addEventListener('drop', async e => {
   e.stopPropagation();
   dragCounter = 0;
   setDragOverlayVisible(false);
-  if (document.body.classList.contains('auth-locked')) {
-    showToast('Vui lòng đăng nhập trước khi tải ảnh vào buồng tối!', 'warning', '🔒');
-    return;
-  }
+  // auth check omitted for guest drop
 
   // 1. Lấy tệp từ files
   let file = e.dataTransfer?.files?.[0];
@@ -2911,7 +2909,7 @@ document.addEventListener('click', (e) => {
 
 if (closeAuthModal) {
   closeAuthModal.addEventListener('click', () => {
-    if (document.body.classList.contains('auth-locked')) return;
+    // auth check omitted for guest drag & drop
     if (authModal) authModal.hidden = true;
   });
 }
@@ -3060,7 +3058,7 @@ if (logoutMenuBtn) {
     localStorage.removeItem('iro_token');
     updateUserAccountUI();
     if (userAccountDropdown) userAccountDropdown.hidden = true;
-    lockAppToAuth();
+    unlockAppFromAuth();
     showToast('Đã đăng xuất tài khoản.', 'info', '👋');
     setStatus('Đã đăng xuất tài khoản.');
   });

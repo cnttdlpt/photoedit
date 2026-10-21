@@ -1492,7 +1492,8 @@ public class MainActivity extends Activity {
         filterLutStatusBadge = text("＋ LUT", 11, StudioStyle.INK);
         filterLutStatusBadge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         filterLutStatusBadge.setPadding(dp(9), dp(4), dp(9), dp(4));
-        filterLutStatusBadge.setBackground(StudioStyle.shape(Color.WHITE, StudioStyle.LINE, dp(14)));
+        filterLutStatusBadge.setBackground(StudioStyle.shape(StudioStyle.SURFACE, StudioStyle.LINE, dp(14)));
+        filterLutStatusBadge.setMinHeight(dp(48));
         filterLutStatusBadge.setOnClickListener(v -> showLutOptions());
         LinearLayout.LayoutParams lutBadgeParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -1505,6 +1506,7 @@ public class MainActivity extends Activity {
         openLibraryPill.setPadding(dp(10), dp(4), dp(10), dp(4));
         openLibraryPill.setBackground(StudioStyle.shape(StudioStyle.WARM_AMBER_LIGHT, StudioStyle.LINE, dp(14)));
         openLibraryPill.setOnClickListener(v -> showLibrary());
+        openLibraryPill.setMinHeight(dp(48));
         topRow.addView(openLibraryPill);
 
         section.addView(topRow);
@@ -1512,7 +1514,8 @@ public class MainActivity extends Activity {
         // Hàng chuyển đổi chế độ xem thu nhỏ: Ảnh mẫu FujiXWeekly vs Áp lên ảnh đang mở
         filterPreviewModeRow = row();
         filterPreviewModeRow.setPadding(dp(2), 0, dp(2), dp(6));
-        section.addView(filterPreviewModeRow);
+        // Inline recipes are text entries; thumbnail modes belong to the full library.
+        filterPreviewModeRow.setVisibility(View.GONE);
 
         EditText search = new EditText(this);
         search.setSingleLine(true);

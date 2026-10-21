@@ -366,7 +366,10 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 
 function selectDeckTab(tabId) {
   document.querySelectorAll('.deck-tab-btn').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.deckTab === tabId);
+    const selected = btn.dataset.deckTab === tabId;
+    btn.classList.toggle('active', selected);
+    btn.setAttribute('aria-selected', String(selected));
+    btn.tabIndex = selected ? 0 : -1;
   });
   document.querySelectorAll('.deck-pane').forEach(pane => {
     const isTarget = pane.id === tabId;
@@ -403,7 +406,7 @@ function updateStageInfoPill() {
   const filmEl = document.querySelector('#stageFilmText');
   const frameEl = document.querySelector('#stageFrameText');
   if (canvas && dimEl) {
-    dimEl.textContent = `${canvas.width} × ${canvas.height}`;
+    dimEl.textContent = state.isDemo ? 'Ảnh mẫu minh họa' : `${state.source.width} × ${state.source.height}`;
   }
   if (filmEl) {
     filmEl.textContent = state.activeRecipeName || 'Gốc';
@@ -818,7 +821,7 @@ function buildTabFilmChips() {
   const chipsContainer = document.querySelector('#tabFilmChipsRow');
   if (!chipsContainer) return;
   const categories = [
-    'Tất cả', '⭐ Yêu thích', 'Classic Chrome', 'Classic Neg', 'Portra / Kodachrome',
+    'Tất cả', 'Yêu thích', 'Classic Chrome', 'Classic Neg', 'Portra / Kodachrome',
     'Velvia', 'Astia', 'Eterna', 'Acros', 'Nostalgic Neg', 'Bleach Bypass'
   ];
   chipsContainer.innerHTML = '';
@@ -846,9 +849,9 @@ function renderTabFilmRecipes() {
   let list = [];
   if (state.fullCatalogRecipes && state.fullCatalogRecipes.length > 0) {
     list = state.fullCatalogRecipes.filter(r => {
-      const matchFav = currentTabFilmFilter === '⭐ Yêu thích' ? state.favoriteRecipeIds.has(r.id) : true;
+      const matchFav = currentTabFilmFilter === 'Yêu thích' ? state.favoriteRecipeIds.has(r.id) : true;
       let matchCat = true;
-      if (currentTabFilmFilter !== 'Tất cả' && currentTabFilmFilter !== '⭐ Yêu thích') {
+      if (currentTabFilmFilter !== 'Tất cả' && currentTabFilmFilter !== 'Yêu thích') {
         if (currentTabFilmFilter === 'Portra / Kodachrome') {
           matchCat = r.name.toLowerCase().includes('portra') || r.name.toLowerCase().includes('kodachrome');
         } else {
@@ -891,6 +894,8 @@ function renderTabFilmRecipes() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'preset-pill';
+    btn.setAttribute('aria-pressed', String(state.activeRecipeName === rec.name));
+    btn.dataset.recipeName = rec.name;
     if (state.activeRecipeName === rec.name) {
       btn.classList.add('active');
     }
@@ -1202,7 +1207,7 @@ function openRecipeLibraryModal() {
 
 document.querySelector('#recipeLibraryBtn').addEventListener('click', openRecipeLibraryModal);
 document.querySelector('#segRecipeLibBtn')?.addEventListener('click', openRecipeLibraryModal);
-document.querySelector('#activeRecipeQuickPill')?.addEventListener('click', openRecipeLibraryModal);
+document.querySelector('#activeRecipeQuickPill')?.addEventListener('click', () => { showScreen('editor'); selectDeckTab('tabFilm'); });
 document.querySelector('#openFullCatalogInline').addEventListener('click', openRecipeLibraryModal);
 document.querySelector('#closeRecipeLibrary').addEventListener('click', () => { recipeLibraryModal.hidden = true; });
 recipeSearchInput.addEventListener('input', () => renderRecipeLibraryGrid());
@@ -1539,6 +1544,11 @@ document.querySelector('#redoBtn').addEventListener('click', () => {
 // ĐỒNG BỘ THANH TRƯỢT & SELECT
 // =========================================================================
 function syncInputsFromSettings() {
+  document.querySelectorAll('#presetRibbon .preset-pill').forEach(button => {
+    const selected = button.dataset.recipeName === state.activeRecipeName;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
   for (const [key] of allSliderSpecs) {
     const input = document.querySelector(`#in-${key}`);
     const out = document.querySelector(`#out-${key}`);
@@ -2203,7 +2213,7 @@ window.addEventListener('keydown', e => {
 
   if (e.code === 'Space' && state.source && !e.repeat) {
     e.preventDefault();
-    ctx.putImageData(state.source, 0, 0);
+    ctx.drawImage(beforeCanvas, 0, 0);
   } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
     e.preventDefault();
     document.querySelector('#undoBtn').click();
@@ -2357,8 +2367,9 @@ function createDownsampledImageData(srcData, maxDim = 1200) {
 
 function loadSourceImageData(imageData, label, rawFile = null) {
   state.source = imageData;
+  state.isDemo = label.startsWith('Ảnh mẫu Studio');
   // Tạo bản preview nén nhẹ để tương tác slider siêu tốc 60fps
-  state.previewSource = createDownsampledImageData(imageData, 1200);
+  state.previewSource = createDownsampledImageData(imageData, 960);
 
   state.stageZoom = 1.0;
   state.stagePanX = 0;
@@ -2369,11 +2380,8 @@ function loadSourceImageData(imageData, label, rawFile = null) {
   empty.style.display = 'none';
   canvasWrapper.hidden = false;
   canvasWrapper.style.display = 'inline-block';
-  if (typeof window !== 'undefined' && window.location && getSafeHash() === '#/') {
-    showScreen('landing', false);
-  } else {
-    showScreen('editor', false);
-  }
+  showScreen('editor');
+  selectDeckTab('tabFilm');
   updateStageInfoPill();
   const quickPeekBadge = document.querySelector('#quickPeekBadge');
   if (quickPeekBadge) quickPeekBadge.hidden = false;
@@ -2505,12 +2513,30 @@ async function readImageFile(file) {
   throw new Error('Trình duyệt không thể giải mã định dạng ảnh này. Hãy thử chọn ảnh JPG, PNG hoặc WebP.');
 }
 
+let imageLoadVersion = 0;
 async function handleImageFile(file) {
   if (!file) return;
+  const version = ++imageLoadVersion;
+  let loading = document.querySelector('#studioLoading');
+  if (!loading) {
+    loading = document.createElement('div');
+    loading.id = 'studioLoading';
+    loading.className = 'studio-loading';
+    loading.setAttribute('role', 'status');
+    loading.innerHTML = '<span>Đang mở ảnh…</span><button type="button">Hủy</button>';
+    loading.querySelector('button').addEventListener('click', () => {
+      imageLoadVersion++;
+      loading.hidden = true;
+      setStatus('Đã hủy mở ảnh.');
+    });
+    document.body.append(loading);
+  }
+  loading.hidden = false;
   const fileName = file.name || 'Ảnh tải lên';
   setStatus(`Đang nạp tệp ${fileName}...`);
   try {
     const img = await readImageFile(file);
+    if (version !== imageLoadVersion) { img.close?.(); return; }
     const maxDim = 2560; // Hỗ trợ độ phân giải lên tới 2.5K sắc nét
     const w0 = img.naturalWidth || img.width;
     const h0 = img.naturalHeight || img.height;
@@ -2530,9 +2556,12 @@ async function handleImageFile(file) {
     const imgData = tempCtx.getImageData(0, 0, w, h);
     loadSourceImageData(imgData, fileName, file);
   } catch (err) {
+    if (version !== imageLoadVersion) return;
     console.error('Lỗi khi mở ảnh:', err);
     alert('Không thể mở tệp ảnh: ' + (err.message || 'Định dạng không được hỗ trợ'));
     setStatus('Không đọc được ảnh: ' + err.message, true);
+  } finally {
+    if (version === imageLoadVersion) loading.hidden = true;
   }
 }
 
@@ -2845,6 +2874,8 @@ async function syncToServerNow(actionDesc = 'Chỉnh sửa thông số') {
   }
 }
 
+var renderSource, renderLut;
+var previewCache = new Map();
 function render(isLivingFrame = false, forExport = false, isInteractive = false) {
   if (!state.source) return;
   if (state.quadViewActive && !isLivingFrame && !forExport) {
@@ -2853,9 +2884,17 @@ function render(isLivingFrame = false, forExport = false, isInteractive = false)
   }
 
   // Tăng tốc siêu mượt 60fps khi kéo slider: sử dụng bản preview nén nhẹ previewSource
-  const activeSrc = (isInteractive && state.previewSource && !forExport && !isLivingFrame) ? state.previewSource : state.source;
+  if (renderSource !== state.source) {
+    renderSource = state.source;
+    state.previewSource = createDownsampledImageData(state.source, 960);
+    previewCache.clear();
+  }
+  if (renderLut !== state.lut) { renderLut = state.lut; previewCache.clear(); }
+  const activeSrc = forExport ? state.source : (state.previewSource || state.source);
 
-  const out = processPixels(
+  const cacheKey = !forExport && !state.livingFilmActive ? JSON.stringify(state.settings) : null;
+  let out = cacheKey ? previewCache.get(cacheKey) : null;
+  if (!out) out = processPixels(
     activeSrc.data,
     activeSrc.width,
     activeSrc.height,
@@ -2864,6 +2903,10 @@ function render(isLivingFrame = false, forExport = false, isInteractive = false)
     state.livingFilmActive ? state.livingFilmFrame : 0
   );
 
+  if (cacheKey && !previewCache.has(cacheKey)) {
+    if (previewCache.size >= 4) previewCache.delete(previewCache.keys().next().value);
+    previewCache.set(cacheKey, out);
+  }
   if (state.frameStyle > 0 && (forExport || !state.comparingSplit)) {
     const sourceCanvas = document.createElement('canvas');
     sourceCanvas.width = activeSrc.width;
@@ -2911,7 +2954,8 @@ function requestInteractiveRender() {
 }
 
 function setStatus(msg, isError = false) {
-  status.textContent = msg;
+  status.setAttribute('role', isError ? 'alert' : 'status');
+  status.textContent = msg.replace(/[\p{Extended_Pictographic}\uFE0F]/gu, '').trim();
   status.classList.toggle('error', isError);
 }
 
@@ -3249,7 +3293,7 @@ function updateUserAccountUI() {
     }
     const avatarLetter = (displayName[0] || 'U').toUpperCase();
     if (dropUserAvatar) dropUserAvatar.textContent = avatarLetter;
-    if (userAvatarIcon) userAvatarIcon.textContent = u.role === 'admin' ? '👑' : '👤';
+    if (userAvatarIcon) userAvatarIcon.setAttribute('aria-hidden', 'true');
 
     if (adminUsersMenuBtn) {
       adminUsersMenuBtn.hidden = u.role !== 'admin';
@@ -3262,7 +3306,7 @@ function updateUserAccountUI() {
       dropUserRole.className = 'badge-role';
     }
     if (dropUserAvatar) dropUserAvatar.textContent = '👤';
-    if (userAvatarIcon) userAvatarIcon.textContent = '👤';
+    if (userAvatarIcon) userAvatarIcon.setAttribute('aria-hidden', 'true');
     if (adminUsersMenuBtn) adminUsersMenuBtn.hidden = true;
   }
 }
@@ -3797,10 +3841,11 @@ function setPeekingBefore(peek) {
 
   if (peek) {
     if (beforeCanvas && mainCanvas) {
-      beforeCanvas.width = state.source.width;
-      beforeCanvas.height = state.source.height;
+      const original = state.previewSource || state.source;
+      beforeCanvas.width = original.width;
+      beforeCanvas.height = original.height;
       const bCtx = beforeCanvas.getContext('2d');
-      bCtx.putImageData(state.source, 0, 0);
+      bCtx.putImageData(original, 0, 0);
       beforeCanvas.hidden = false;
       mainCanvas.style.opacity = '0';
       if (peekBadge) {
@@ -4105,3 +4150,28 @@ window.iroSyncRecipesNow = async () => {
     alert('Lỗi kết nối: ' + err.message);
   }
 };
+
+// One labelled parameter picker replaces the two duplicate icon strips.
+const parameterGroup = document.createElement('div');
+parameterGroup.className = 'param-select';
+parameterGroup.innerHTML = '<label for="studioParameter">Thông số cần chỉnh</label><select id="studioParameter"></select>';
+const parameterSelect = parameterGroup.querySelector('select');
+for (const [key, label] of allSliderSpecs) {
+  const option = document.createElement('option'); option.value = key; option.textContent = label;
+  parameterSelect.append(option);
+}
+parameterSelect.value = activeRulerSpec[0];
+parameterSelect.addEventListener('change', () => {
+  activeRulerSpec = allSliderSpecs.find(spec => spec[0] === parameterSelect.value) || allSliderSpecs[0];
+  syncRulerHeader(); drawTickRuler();
+});
+document.querySelector('.ruler-card-box').prepend(parameterGroup);
+document.querySelector('.deck-tab-bar').addEventListener('keydown', event => {
+  if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+  const tabs = [...document.querySelectorAll('[data-deck-tab]')];
+  let index = tabs.indexOf(event.target); if (index < 0) return;
+  event.preventDefault();
+  index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  selectDeckTab(tabs[index].dataset.deckTab); tabs[index].focus();
+});
+selectDeckTab('tabFilm');

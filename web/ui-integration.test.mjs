@@ -234,3 +234,23 @@ for (const [name, value, blocked] of [['malformed favorites', '{broken', false],
     } finally { app.cleanup(); }
   });
 }
+
+test('inline catalog applies A B A without stacking and opens imported sample in editor', async () => {
+  const app = await boot();
+  try {
+    assert.ok(app.element('#screenEditor').classList.contains('active'));
+    const buttons = [...app.document.querySelectorAll('#presetRibbon .preset-pill')];
+    assert.ok(buttons.length >= catalog.recipes.length);
+    buttons[0].click();
+    const first = app.pixels();
+    buttons[1].click();
+    assert.notEqual(app.pixels(), first);
+    buttons[0].click();
+    assert.equal(app.pixels(), first, 'Each recipe renders from source, never the prior filter output');
+    app.input('#tabFilmSearchInput', 'no-such-recipe-28734');
+    assert.equal(app.document.querySelectorAll('#presetRibbon .preset-pill').length, 0);
+    app.input('#tabFilmSearchInput', '');
+    assert.ok(app.document.querySelectorAll('#presetRibbon .preset-pill').length >= catalog.recipes.length);
+    assert.equal(app.element('#recipeLibraryModal').hidden, true);
+  } finally { app.cleanup(); }
+});

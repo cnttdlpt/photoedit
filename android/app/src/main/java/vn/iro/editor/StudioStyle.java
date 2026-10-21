@@ -56,28 +56,28 @@ public final class StudioStyle {
     }
 
     /** Nền chính ứng dụng (thích ứng theo Sáng/Tối). */
-    public static int BG = 0xff0d0f14;
-    public static int PORCELAIN = 0xff0d0f14;
+    public static int BG = 0xff171918;
+    public static int PORCELAIN = 0xff171918;
 
     /** Bề mặt Surface Container chính (Thẻ Hero, Bảng điều khiển). */
-    public static int SURFACE = 0xff161922;
+    public static int SURFACE = 0xff202321;
 
     /** Bề mặt Surface Container cấp 2 (Thẻ Bento con, hộp tìm kiếm, chip). */
-    public static int SURFACE_CONTAINER = 0xff1e222e;
-    public static int SURFACE_CONTAINER_HIGH = 0xff272c3b;
+    public static int SURFACE_CONTAINER = 0xff2b2f2c;
+    public static int SURFACE_CONTAINER_HIGH = 0xff363d37;
 
     /** Đường viền mảnh siêu tinh tế chuẩn M3 Outline. */
     public static int LINE = 0x26ffffff;
 
     /** Màu chữ & biểu tượng chính (Sáng rõ trên nền tối / Đậm mực trên nền sáng). */
-    public static int INK = 0xfff0f2f7;
+    public static int INK = 0xfff1f3ef;
 
     /** Màu chữ & biểu tượng phụ (Muted Slate / Charcoal Muted). */
-    public static int MUTED = 0xff9ba2af;
+    public static int MUTED = 0xffb1b9b2;
 
     /** Điểm nhấn Cam Hổ Phách ấm chuyên nghiệp cho nhiếp ảnh (#F59E0B Warm Amber). */
-    public static int WARM_AMBER = 0xfff59e0b;
-    public static int ACCENT = 0xfff59e0b;
+    public static int WARM_AMBER = 0xff497365;
+    public static int ACCENT = 0xff497365;
 
     /** Nền trạng thái đang chọn / Tonal Container nhạt. */
     public static int WARM_AMBER_LIGHT = 0xff2e220a;
@@ -96,7 +96,7 @@ public final class StudioStyle {
     public static final int YELLOW_TONAL = 0xfffbf2e6;
 
     // --- Hệ thống Token M3 Tonal Surface ---
-    public static final int M3_PRIMARY = 0xfff59e0b;
+    public static final int M3_PRIMARY = 0xff497365;
     public static final int M3_ON_PRIMARY = 0xffffffff;
     public static final int M3_PRIMARY_CONTAINER = 0xffffdbca;
     public static final int M3_ON_PRIMARY_CONTAINER = 0xff341100;
@@ -104,12 +104,12 @@ public final class StudioStyle {
     public static final int M3_OUTLINE_VARIANT = 0xffdcdfe6;
     public static final int M3_SURFACE_CONTAINER_LOW = 0xff15181e;
 
-    public static final int M3_DARK_BG = 0xff0d0f14;
-    public static final int M3_DARK_SURFACE = 0xff161922;
+    public static final int M3_DARK_BG = 0xff171918;
+    public static final int M3_DARK_SURFACE = 0xff202321;
     public static final int M3_DARK_SURFACE_CONTAINER_LOW = 0xff191d27;
-    public static final int M3_DARK_SURFACE_CONTAINER = 0xff1e222e;
-    public static final int M3_DARK_SURFACE_CONTAINER_HIGH = 0xff272c3b;
-    public static final int M3_DARK_PRIMARY = 0xfff59e0b;
+    public static final int M3_DARK_SURFACE_CONTAINER = 0xff2b2f2c;
+    public static final int M3_DARK_SURFACE_CONTAINER_HIGH = 0xff363d37;
+    public static final int M3_DARK_PRIMARY = 0xff497365;
 
     /**
      * Cập nhật toàn bộ bảng màu giao diện tức thì theo chế độ Tối (Darkroom Studio)
@@ -118,31 +118,31 @@ public final class StudioStyle {
     public static void applyTheme(boolean dark) {
         darkTheme = dark;
         if (dark) {
-            BG = 0xff0d0f14;
-            PORCELAIN = 0xff0d0f14;
-            SURFACE = 0xff161922;
-            SURFACE_CONTAINER = 0xff1e222e;
-            SURFACE_CONTAINER_HIGH = 0xff272c3b;
+            BG = 0xff171918;
+            PORCELAIN = 0xff171918;
+            SURFACE = 0xff202321;
+            SURFACE_CONTAINER = 0xff2b2f2c;
+            SURFACE_CONTAINER_HIGH = 0xff363d37;
             LINE = 0x26ffffff;
-            INK = 0xfff0f2f7;
-            MUTED = 0xff9ba2af;
-            WARM_AMBER = 0xfff59e0b;
-            ACCENT = 0xfff59e0b;
+            INK = 0xfff1f3ef;
+            MUTED = 0xffb1b9b2;
+            WARM_AMBER = 0xff497365;
+            ACCENT = 0xff497365;
             WARM_AMBER_LIGHT = 0xff2e220a;
             DARK_PILL = 0xff252a36;
         } else {
-            BG = 0xfff6f7f9;
-            PORCELAIN = 0xfff6f7f9;
+            BG = 0xfff4f4f2;
+            PORCELAIN = 0xfff4f4f2;
             SURFACE = 0xffffffff;
-            SURFACE_CONTAINER = 0xffeff1f5;
+            SURFACE_CONTAINER = 0xfff0f1ee;
             SURFACE_CONTAINER_HIGH = 0xffe6e9ef;
-            LINE = 0xffe1e4ea;
-            INK = 0xff181a1f;
+            LINE = 0xffd8ddd8;
+            INK = 0xff202322;
             MUTED = 0xff6e737d;
             WARM_AMBER = 0xffe07a3b;
             ACCENT = 0xffe07a3b;
             WARM_AMBER_LIGHT = 0xffffdbca;
-            DARK_PILL = 0xff181a1f;
+            DARK_PILL = 0xff202322;
         }
     }
 
@@ -332,26 +332,7 @@ public final class StudioStyle {
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-            int w = getWidth();
-            int h = getHeight();
             canvas.drawColor(BG);
-            if (w <= 0 || h <= 0) return;
-
-            // Quầng sáng Cam Hổ Phách bình minh ấm áp ở góc trên phải
-            int amberGlow = darkTheme ? 0x1f59e0b : 0x12f59e0b;
-            RadialGradient amberGrad = new RadialGradient(
-                    w * 0.88f, h * 0.10f, Math.max(w, h) * 0.52f,
-                    amberGlow, Color.TRANSPARENT, Shader.TileMode.CLAMP);
-            glowPaint.setShader(amberGrad);
-            canvas.drawRect(0, 0, w, h, glowPaint);
-
-            // Quầng sáng Bầu trời bạc hà mát mẻ ở góc dưới trái
-            int mintGlow = darkTheme ? 0x1638bdf8 : 0x0c38bdf8;
-            RadialGradient mintGrad = new RadialGradient(
-                    w * 0.12f, h * 0.90f, Math.max(w, h) * 0.48f,
-                    mintGlow, Color.TRANSPARENT, Shader.TileMode.CLAMP);
-            glowPaint.setShader(mintGrad);
-            canvas.drawRect(0, 0, w, h, glowPaint);
         }
     }
 

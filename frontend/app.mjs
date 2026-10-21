@@ -1064,16 +1064,30 @@ function renderRecipeLibraryGrid() {
     const isCurrent = state.activeRecipeName === rec.name;
     const card = document.createElement('div');
     card.className = 'recipe-lib-card' + (isCurrent ? ' active' : '');
+    const imgUrl = rec.sampleImageUrl || (rec.sampleImages && rec.sampleImages[0]);
+    const thumbHtml = imgUrl
+      ? `<div class="r-thumb-wrap">
+          <img class="r-thumb" src="${imgUrl}" alt="${escapeHTML(rec.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.innerHTML='<div class=\'r-thumb-fallback\'>🎞️ ${escapeHTML(rec.film)}</div><button type=\'button\' class=\'fav-star-btn ${isFav ? 'is-fav' : ''}\' title=\'Đánh dấu Yêu thích\'>${isFav ? '★' : '☆'}</button>'">
+          <button type="button" class="fav-star-btn ${isFav ? 'is-fav' : ''}" title="Đánh dấu Yêu thích">${isFav ? '★' : '☆'}</button>
+          ${rec.isNew ? '<span class="r-badge-new">MỚI</span>' : ''}
+        </div>`
+      : `<div class="r-thumb-wrap fallback">
+          <div class="r-thumb-fallback">🎞️ ${escapeHTML(rec.film)}</div>
+          <button type="button" class="fav-star-btn ${isFav ? 'is-fav' : ''}" title="Đánh dấu Yêu thích">${isFav ? '★' : '☆'}</button>
+        </div>`;
+
     card.innerHTML = `
-      <div class="r-head">
-        <span class="r-title">${escapeHTML(rec.name)}${rec.isNew ? ' <span style="background:#059669;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;vertical-align:middle;">MỚI</span>' : ''}</span>
-        <button type="button" class="fav-star-btn ${isFav ? 'is-fav' : ''}" title="Đánh dấu Yêu thích">${isFav ? '★' : '☆'}</button>
-      </div>
-      <span class="r-film">🎞️ ${escapeHTML(rec.film)}</span>
-      <div class="r-meta">
-        <span>DR${rec.dr}</span>
-        <span>H:${rec.settings.highlight > 0 ? '+' : ''}${rec.settings.highlight} S:${rec.settings.shadow > 0 ? '+' : ''}${rec.settings.shadow}</span>
-        <span>WB: ${escapeHTML(rec.wb)}</span>
+      ${thumbHtml}
+      <div class="r-content">
+        <div class="r-head">
+          <span class="r-title">${escapeHTML(rec.name)}</span>
+        </div>
+        <span class="r-film">🎞️ ${escapeHTML(rec.film)}</span>
+        <div class="r-meta">
+          <span>DR${rec.dr}</span>
+          <span>H:${rec.settings.highlight > 0 ? '+' : ''}${rec.settings.highlight} S:${rec.settings.shadow > 0 ? '+' : ''}${rec.settings.shadow}</span>
+          <span>WB: ${escapeHTML(rec.wb)}</span>
+        </div>
       </div>
     `;
     const starBtn = card.querySelector('.fav-star-btn');
@@ -1126,15 +1140,22 @@ function renderLandingRecipeGrid() {
     const isCurrent = state.activeRecipeName === rec.name;
     const card = document.createElement('div');
     card.className = 'landing-recipe-card' + (isCurrent ? ' active' : '');
+    const imgUrl = rec.sampleImageUrl || (rec.sampleImages && rec.sampleImages[0]);
+    const thumbHtml = imgUrl
+      ? `<div class="l-thumb-wrap"><img class="l-thumb" src="${imgUrl}" alt="${escapeHTML(rec.name)}" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentElement.style.display='none'"></div>`
+      : '';
     card.innerHTML = `
-      <div class="l-card-head">
-        <span class="l-card-title">${escapeHTML(rec.name)}</span>
-        <span class="l-card-sensor">${escapeHTML(rec.sensor || 'X-Trans')}</span>
-      </div>
-      <div class="l-card-film">🎞️ ${escapeHTML(rec.film)}</div>
-      <div class="l-card-meta">
-        <span>DR${rec.dr}</span>
-        <span>WB ${escapeHTML(rec.wb)}</span>
+      ${thumbHtml}
+      <div class="l-card-body">
+        <div class="l-card-head">
+          <span class="l-card-title">${escapeHTML(rec.name)}</span>
+          <span class="l-card-sensor">${escapeHTML(rec.sensor || 'X-Trans')}</span>
+        </div>
+        <div class="l-card-film">🎞️ ${escapeHTML(rec.film)}</div>
+        <div class="l-card-meta">
+          <span>DR${rec.dr}</span>
+          <span>WB ${escapeHTML(rec.wb)}</span>
+        </div>
       </div>
     `;
     card.addEventListener('click', () => {

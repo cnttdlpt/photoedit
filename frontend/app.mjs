@@ -2334,7 +2334,7 @@ document.querySelector('#empty')?.addEventListener('click', (e) => {
   document.querySelector('#photo')?.click();
 });
 
-function createDownsampledImageData(srcData, maxDim = 640) {
+function createDownsampledImageData(srcData, maxDim = 1280) {
   if (!srcData) return null;
   const w0 = srcData.width;
   const h0 = srcData.height;
@@ -2352,6 +2352,8 @@ function createDownsampledImageData(srcData, maxDim = 640) {
   c2.width = w;
   c2.height = h;
   const ctx2 = c2.getContext('2d');
+  ctx2.imageSmoothingEnabled = true;
+  ctx2.imageSmoothingQuality = 'high';
   ctx2.drawImage(c1, 0, 0, w, h);
   return ctx2.getImageData(0, 0, w, h);
 }
@@ -2359,7 +2361,7 @@ function createDownsampledImageData(srcData, maxDim = 640) {
 function loadSourceImageData(imageData, label, rawFile = null) {
   state.source = imageData;
   // Tạo bản preview nén nhẹ để tương tác slider siêu tốc 60fps
-  state.previewSource = createDownsampledImageData(imageData, 640);
+  state.previewSource = createDownsampledImageData(imageData, 1280);
 
   state.stageZoom = 1.0;
   state.stagePanX = 0;
@@ -2512,7 +2514,7 @@ async function handleImageFile(file) {
   setStatus(`Đang nạp tệp ${fileName}...`);
   try {
     const img = await readImageFile(file);
-    const maxDim = 2560; // Hỗ trợ độ phân giải lên tới 2.5K sắc nét
+    const maxDim = 4096; // Giữ nguyên độ phân giải gốc cao nhất tới chuẩn 4K Ultra HD sắc nét
     const w0 = img.naturalWidth || img.width;
     const h0 = img.naturalHeight || img.height;
     if (!w0 || !h0) throw new Error('Không đọc được kích thước ảnh');
@@ -2525,6 +2527,8 @@ async function handleImageFile(file) {
     tempCanvas.width = w;
     tempCanvas.height = h;
     const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+    tempCtx.imageSmoothingEnabled = true;
+    tempCtx.imageSmoothingQuality = 'high';
     tempCtx.drawImage(img, 0, 0, w, h);
     if (typeof img.close === 'function') img.close();
 
@@ -2895,7 +2899,7 @@ function render(isLivingFrame = false, forExport = false, isInteractive = false)
     const off = getSharedInteractiveCanvas(activeSrc.width, activeSrc.height);
     off.ctx.putImageData(new ImageData(out, activeSrc.width, activeSrc.height), 0, 0);
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'medium';
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(off.canvas, 0, 0, canvas.width, canvas.height);
   } else {
     canvas.width = activeSrc.width;

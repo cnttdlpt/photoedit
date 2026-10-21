@@ -385,27 +385,58 @@ const server = http.createServer(async (req, res) => {
         return res.end(JSON.stringify({ ok: false, error: 'Unprocessable entity: Corrupted image file' }));
       }
 
-      // Convert using ImageMagick if available or pure fallback
-      const tmpIn = path.join(DATA_DIR, `conv_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`);
-      const tmpOut = path.join(DATA_DIR, `conv_${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
+      // Convert using ImageMagick if available
+      const tmpPrefix = `conv_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const tmpIn = path.join(DATA_DIR, `${tmpPrefix}.${ext}`);
+      const tmpOut = path.join(DATA_DIR, `${tmpPrefix}.jpg`);
       try {
         await fs.promises.writeFile(tmpIn, photo.data);
         const { execSync } = await import('node:child_process');
         let converted = false;
-        try {
-          execSync(`convert "${tmpIn}[0]" -auto-orient -quality 92 "${tmpOut}"`, { stdio: 'ignore', timeout: 15000 });
-          converted = fs.existsSync(tmpOut) && fs.statSync(tmpOut).size > 0;
-        } catch (_) {
+
+        // Ưu tiên magick / convert giữ nguyên độ phân giải gốc cao nhất (quality 95)
+        const cmds = [
+          `magick "${tmpIn}" -auto-orient -quality 95 "${tmpOut}"`,
+          `convert "${tmpIn}" -auto-orient -quality 95 "${tmpOut}"`,
+          `magick "${tmpIn}[0]" -auto-orient -quality 95 "${tmpOut}"`,
+          `convert "${tmpIn}[0]" -auto-orient -quality 95 "${tmpOut}"`
+        ];
+
+        for (const cmd of cmds) {
           try {
-            execSync(`magick "${tmpIn}[0]" -auto-orient -quality 92 "${tmpOut}"`, { stdio: 'ignore', timeout: 15000 });
-            converted = fs.existsSync(tmpOut) && fs.statSync(tmpOut).size > 0;
+            execSync(cmd, { stdio: 'ignore', timeout: 25000 });
+            if (fs.existsSync(tmpOut) && fs.statSync(tmpOut).size > 0) {
+              converted = true;
+              break;
+            }
+          } catch (_) {}
+
+          // Kiểm tra nếu ImageMagick tách thành nhiều frame/layer (-0.jpg, -1.jpg), chọn file có dung lượng lớn nhất (ảnh gốc, bỏ qua thumbnail)
+          try {
+            const files = await fs.promises.readdir(DATA_DIR);
+            const matches = files.filter(f => f.startsWith(tmpPrefix) && f.endsWith('.jpg') && f !== path.basename(tmpOut));
+            if (matches.length > 0) {
+              let largestFile = null;
+              let largestSize = 0;
+              for (const m of matches) {
+                const sz = fs.statSync(path.join(DATA_DIR, m)).size;
+                if (sz > largestSize) {
+                  largestSize = sz;
+                  largestFile = m;
+                }
+              }
+              if (largestFile && largestSize > 0) {
+                await fs.promises.copyFile(path.join(DATA_DIR, largestFile), tmpOut);
+                converted = true;
+                break;
+              }
+            }
           } catch (_) {}
         }
 
-        if (!converted) {
-          // Minimal fallback 32x24 JPEG generator if external convert tool is absent
-          const sampleJpg = Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAAYACABAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=', 'base64');
-          await fs.promises.writeFile(tmpOut, sampleJpg);
+        if (!converted || !fs.existsSync(tmpOut) || fs.statSync(tmpOut).size === 0) {
+          res.writeHead(422, { 'Content-Type': 'application/json; charset=utf-8' });
+          return res.end(JSON.stringify({ ok: false, error: 'Không thể chuyển đổi định dạng tệp ảnh này sang JPEG.' }));
         }
 
         const outData = await fs.promises.readFile(tmpOut);
@@ -419,8 +450,14 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
         return res.end(JSON.stringify({ ok: false, error: 'Conversion failed: ' + err.message }));
       } finally {
-        try { if (fs.existsSync(tmpIn)) await fs.promises.unlink(tmpIn); } catch (_) {}
-        try { if (fs.existsSync(tmpOut)) await fs.promises.unlink(tmpOut); } catch (_) {}
+        try {
+          const files = await fs.promises.readdir(DATA_DIR);
+          for (const f of files) {
+            if (f.startsWith(tmpPrefix)) {
+              try { await fs.promises.unlink(path.join(DATA_DIR, f)); } catch (_) {}
+            }
+          }
+        } catch (_) {}
       }
     }
 

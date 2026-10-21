@@ -257,9 +257,13 @@ if ($action === 'convert_image') {
     }
     $tmpSrc = $uploadedFile['tmp_name'];
     $tmpDst = tempnam(sys_get_temp_dir(), 'iro_conv_') . '.jpg';
-    $cmd = 'convert ' . escapeshellarg($tmpSrc . '[0]') . ' -auto-orient -quality 92 ' . escapeshellarg($tmpDst);
+    $cmd = 'magick ' . escapeshellarg($tmpSrc) . ' -auto-orient -quality 95 ' . escapeshellarg($tmpDst) . ' 2>&1 || convert ' . escapeshellarg($tmpSrc) . ' -auto-orient -quality 95 ' . escapeshellarg($tmpDst);
     exec($cmd, $cmdOut, $retVal);
-    if ($retVal === 0 && file_exists($tmpDst) && filesize($tmpDst) > 0) {
+    if (!file_exists($tmpDst) || filesize($tmpDst) === 0) {
+        $cmd2 = 'magick ' . escapeshellarg($tmpSrc . '[0]') . ' -auto-orient -quality 95 ' . escapeshellarg($tmpDst) . ' 2>&1 || convert ' . escapeshellarg($tmpSrc . '[0]') . ' -auto-orient -quality 95 ' . escapeshellarg($tmpDst);
+        exec($cmd2, $cmdOut2, $retVal2);
+    }
+    if (file_exists($tmpDst) && filesize($tmpDst) > 0) {
         header('Content-Type: image/jpeg');
         header('Content-Length: ' . filesize($tmpDst));
         readfile($tmpDst);

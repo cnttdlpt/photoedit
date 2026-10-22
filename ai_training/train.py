@@ -123,9 +123,10 @@ class GPUResidentDataset:
         est_gb = (size * bytes_per_sample) / (1024 ** 3)
         print(f"⚡ Khởi tạo {size:,} mẫu quang học trực tiếp trên {device} VRAM (Dự kiến: ~{est_gb:.2f} GB)...")
 
-        self.images = torch.empty((size, 3, img_size, img_size), dtype=dtype, device=device)
-        self.params = torch.empty((size, 10), dtype=torch.float32, device=device)
-        self.films = torch.empty((size,), dtype=torch.long, device=device)
+        # Sử dụng torch.zeros để ép CUDA driver map và giữ chỗ toàn bộ trang VRAM vật lý ngay lập tức
+        self.images = torch.zeros((size, 3, img_size, img_size), dtype=dtype, device=device)
+        self.params = torch.zeros((size, 10), dtype=torch.float32, device=device)
+        self.films = torch.zeros((size,), dtype=torch.long, device=device)
 
         self._synthesize_on_vram()
 

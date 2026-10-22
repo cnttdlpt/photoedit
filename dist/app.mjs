@@ -1831,17 +1831,154 @@ function drawHistogram(pixels) {
 // CÁC TÍNH NĂNG ĐỘT PHÁ IRO STUDIO 3.0
 // =========================================================================
 
-// 1. AI Auto-Tone & Scene Co-Pilot
-document.querySelector('#aiAuto').addEventListener('click', () => {
+// =========================================================================
+// ONNX RUNTIME WEB & AI NEURAL ENHANCE ENGINE
+// =========================================================================
+const AI_FILM_CLASSES = [
+  'Classic Chrome',
+  'Velvia',
+  'ASTIA',
+  'Classic Neg.',
+  'PROVIA',
+  'ETERNA',
+  'ACROS',
+  'Nostalgic Neg.'
+];
+
+let onnxSession = null;
+let onnxLoadAttempted = false;
+
+async function getOrInitONNXSession() {
+  if (onnxSession) return onnxSession;
+  if (onnxLoadAttempted) return null;
+  onnxLoadAttempted = true;
+  if (typeof ort === 'undefined') {
+    return null;
+  }
+  try {
+    ort.env.wasm.numThreads = 1;
+    onnxSession = await ort.InferenceSession.create('models/iro_ai_enhancer.onnx', {
+      executionProviders: ['webgl', 'wasm']
+    });
+    console.log('✅ IRO AI Neural Model (ONNX Runtime Web) initialized successfully.');
+    return onnxSession;
+  } catch (err) {
+    console.info('ℹ️ Model models/iro_ai_enhancer.onnx not loaded, using intelligent Heuristic Auto-Balance.', err.message);
+    return null;
+  }
+}
+
+async function runAIEnhance() {
   if (!state.source) return;
+
+  const aiBtn = document.querySelector('#aiAuto');
+  const origBtnText = aiBtn?.querySelector('.btn-text')?.textContent;
+  if (aiBtn && origBtnText) {
+    aiBtn.querySelector('.btn-text').textContent = 'AI...';
+  }
+
+  try {
+    const session = await getOrInitONNXSession();
+    if (session) {
+      const offscreen = document.createElement('canvas');
+      offscreen.width = 224;
+      offscreen.height = 224;
+      const offCtx = offscreen.getContext('2d');
+      const tmpCanvas = document.createElement('canvas');
+      tmpCanvas.width = state.source.width;
+      tmpCanvas.height = state.source.height;
+      tmpCanvas.getContext('2d').putImageData(state.source, 0, 0);
+      offCtx.drawImage(tmpCanvas, 0, 0, 224, 224);
+      
+      const imgData = offCtx.getImageData(0, 0, 224, 224);
+      const { data } = imgData;
+
+      const floatData = new Float32Array(1 * 3 * 224 * 224);
+      const mean = [0.485, 0.456, 0.406];
+      const std = [0.229, 0.224, 0.225];
+      const planeSize = 224 * 224;
+
+      for (let i = 0; i < planeSize; i++) {
+        const r = data[i * 4] / 255.0;
+        const g = data[i * 4 + 1] / 255.0;
+        const b = data[i * 4 + 2] / 255.0;
+
+        floatData[i] = (r - mean[0]) / std[0];
+        floatData[planeSize + i] = (g - mean[1]) / std[1];
+        floatData[planeSize * 2 + i] = (b - mean[2]) / std[2];
+      }
+
+      const inputTensor = new ort.Tensor('float32', floatData, [1, 3, 224, 224]);
+      const results = await session.run({ input: inputTensor });
+
+      const sliders = results.sliders ? results.sliders.data : (results[Object.keys(results)[0]]?.data);
+      const filmLogits = results.film_logits ? results.film_logits.data : (results[Object.keys(results)[1]]?.data);
+
+      let bestFilm = state.settings.film;
+      if (filmLogits && filmLogits.length >= 8) {
+        let maxLogit = -Infinity;
+        let bestIdx = 0;
+        for (let j = 0; j < 8; j++) {
+          if (filmLogits[j] > maxLogit) {
+            maxLogit = filmLogits[j];
+            bestIdx = j;
+          }
+        }
+        bestFilm = AI_FILM_CLASSES[bestIdx] || 'Classic Chrome';
+      }
+
+      if (sliders && sliders.length >= 10) {
+        const pExp = sliders[0];
+        const pCont = sliders[1];
+        const pHigh = sliders[2];
+        const pShad = sliders[3];
+        const pTemp = sliders[6];
+        const pTint = sliders[7];
+        const pSat = sliders[8];
+        const pClar = sliders[9];
+
+        state.settings.exposure = Math.round(pExp * 2.0 * 100) / 100;
+        state.settings.highlight = Math.round(pHigh * 4);
+        state.settings.shadow = Math.round(pShad * 4);
+        state.settings.temperature = Math.round(pTemp * 25);
+        state.settings.color = Math.round(pSat * 4);
+        state.settings.clarity = Math.max(0, Math.round(pClar * 30));
+        state.settings.red = Math.round(pTint * 4);
+        state.settings.blue = Math.round(-pTint * 4);
+        if (state.settings.film === 'Original') {
+          state.settings.film = bestFilm;
+        }
+
+        syncInputsFromSettings();
+        commitHistory(`AI Neural Enhancer (${bestFilm})`);
+        render();
+        setStatus(`✨ AI MobileNetV3: Đã tối ưu (EV ${state.settings.exposure >= 0 ? '+' : ''}${state.settings.exposure.toFixed(2)}, HL: ${state.settings.highlight}, SH: ${state.settings.shadow}, Film: ${bestFilm}).`);
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('ONNX inference error, falling back to heuristic auto-balance:', err);
+  } finally {
+    if (aiBtn && origBtnText) {
+      aiBtn.querySelector('.btn-text').textContent = origBtnText;
+    }
+  }
+
+  // Fallback Heuristic Auto-Balance
   const { settings: nextSettings, reasonVi } = autoBalanceSettings(state.source.data, state.settings);
   state.settings = nextSettings;
   state.curvePoints = structuredClone(nextSettings.curvePoints || [[0, 0], [1, 1]]);
   syncInputsFromSettings();
   drawCurveEditor();
-  commitHistory('AI Auto-Tone');
+  commitHistory('AI Auto-Balance');
   render();
-  setStatus(reasonVi);
+  setStatus(`✨ ${reasonVi}`);
+}
+
+// 1. AI Auto-Tone & Scene Co-Pilot
+document.querySelector('#aiAuto')?.addEventListener('click', runAIEnhance);
+document.querySelector('#aiAutoDropdown')?.addEventListener('click', () => {
+  document.querySelector('#aiAuto')?.click();
 });
 
 // 2. Xoay ảnh 90°
@@ -2389,7 +2526,7 @@ function loadSourceImageData(imageData, label, rawFile = null) {
   if (quickPeekBadge) quickPeekBadge.hidden = false;
 
   const enableIds = [
-    '#export', '#exportRecipeCard', '#compareBtn', '#rotate90', '#aiAuto',
+    '#export', '#exportRecipeCard', '#compareBtn', '#rotate90', '#aiAuto', '#aiAutoDropdown',
     '#contactSheetBtn', '#quadViewBtn', '#dateStampBtn',
     '#shareCode', '#exportCube', '#matchRefBtn', '#livingFilmBtn', '#lightCraftBtn'
   ];

@@ -385,154 +385,326 @@ struct EditorView: View {
         }
     }
 
-    // MARK: - Wide 3-Zone Studio Layout (Tablets / Landscape)
+    // MARK: - Wide 2-Column Studio Layout (Matching Web Silver Print: Center Stage + 376px Docked Inspector)
     private var wideStudioLayout: some View {
-        HStack(spacing: 12) {
-            // Zone 1: Left Navigation Rail
-            VStack(spacing: 10) {
+        VStack(spacing: 0) {
+            wideTopbar
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
+                .background(Studio.surface)
+                .overlay(
+                    Rectangle()
+                        .frame(height: 1)
+                        .foregroundStyle(Studio.line),
+                    alignment: .bottom
+                )
+
+            HStack(spacing: 20) {
+                // Zone 1: Center Photo Stage + Info Bar
+                VStack(spacing: 8) {
+                    stage
+
+                    // Stage status bar
+                    HStack(spacing: 10) {
+                        Text(editor.status)
+                            .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                            .foregroundStyle(Studio.muted)
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        if let recipe = editor.recipe {
+                            Text("✦ \(recipe.name)")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Studio.accent)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Studio.accent.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                    }
+                    .padding(.horizontal, 6)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // Zone 2: Docked 376px Right Inspector with Top Tab Bar
+                VStack(spacing: 0) {
+                    inspectorTabBar
+                        .padding(10)
+                        .background(Studio.surfaceContainer)
+                        .overlay(
+                            Rectangle()
+                                .frame(height: 1)
+                                .foregroundStyle(Studio.line),
+                            alignment: .bottom
+                        )
+
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 14) {
+                            switch selectedTab {
+                            case .filters:
+                                wideFiltersSection
+                            case .adjust:
+                                adjustSection
+                            case .frame:
+                                wideFramesSection
+                            case .lightcraft:
+                                lightCraftSection
+                            }
+                        }
+                        .padding(16)
+                    }
+                }
+                .frame(width: 376)
+                .background(Studio.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Studio.line, lineWidth: 1.0)
+                )
+                .disabled(editor.busy)
+            }
+            .padding(16)
+        }
+    }
+
+    // MARK: - Inspector Top Tab Bar (4 Tabs)
+    private var inspectorTabBar: some View {
+        HStack(spacing: 4) {
+            ForEach(EditorToolTab.allCases) { tab in
+                let isSelected = selectedTab == tab
+                Button {
+                    Haptics.light()
+                    withAnimation(.spring(response: 0.24, dampingFraction: 0.8)) {
+                        selectedTab = tab
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: tab.icon)
+                            .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                        Text(tab.rawValue)
+                            .font(.system(size: 12, weight: isSelected ? .bold : .medium, design: .rounded))
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .foregroundStyle(isSelected ? Studio.ink : Studio.muted)
+                    .background(
+                        Group {
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Studio.surface)
+                                    .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1)
+                            } else {
+                                Color.clear
+                            }
+                        }
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Studio.surfaceContainer)
+        )
+    }
+
+    // MARK: - Wide Topbar (Parity with Web studio topbar)
+    private var wideTopbar: some View {
+        HStack(spacing: 14) {
+            // Cụm Trái: Nút Quay lại + Thương hiệu IRO Studio + Pill công thức đang dùng
+            HStack(spacing: 12) {
                 Button {
                     showDeleteConfirmation = true
                 } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Studio.ink)
-                        .liquidGlassCircle(size: 38)
+                    HStack(spacing: 5) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("Quay lại")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                    }
+                    .foregroundStyle(Studio.ink)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(Studio.line, lineWidth: 1.0)
+                    )
                 }
                 .buttonStyle(.plain)
                 .disabled(editor.busy)
 
-                HStack(spacing: 6) {
-                    Button {
-                        Haptics.light()
-                        Task { await editor.undo() }
-                    } label: {
-                        Image(systemName: "arrow.uturn.backward")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(editor.canUndo ? Studio.ink : Studio.muted.opacity(0.35))
-                            .liquidGlassCircle(size: 32)
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut("z", modifiers: [.command])
-                    .disabled(!editor.canUndo || editor.busy)
-
-                    Button {
-                        Haptics.light()
-                        Task { await editor.redo() }
-                    } label: {
-                        Image(systemName: "arrow.uturn.forward")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(editor.canRedo ? Studio.ink : Studio.muted.opacity(0.35))
-                            .liquidGlassCircle(size: 32)
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut("z", modifiers: [.command, .shift])
-                    .disabled(!editor.canRedo || editor.busy)
+                HStack(spacing: 7) {
+                    Image(systemName: "camera.aperture")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Studio.accent)
+                    Text("IRO")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(Studio.ink)
+                    Text("Studio")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Studio.muted)
                 }
 
-                Divider()
-                    .padding(.horizontal, 8)
-
-                ForEach(EditorToolTab.allCases) { tab in
-                    let isSelected = selectedTab == tab
-                    Button {
-                        Haptics.light()
-                        withAnimation(.spring(response: 0.24, dampingFraction: 0.8)) {
-                            selectedTab = tab
-                        }
-                    } label: {
-                        VStack(spacing: 4) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(isSelected ? Studio.ink : Color.white)
-                                    .frame(width: 46, height: 36)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                            .strokeBorder(isSelected ? Color.clear : Studio.line, lineWidth: 1.0)
-                                    )
-                                Image(systemName: tab.icon)
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(isSelected ? Color.white : Studio.ink)
-                            }
-                            Text(tab.rawValue)
-                                .font(.system(size: 10, weight: isSelected ? .bold : .medium, design: .rounded))
-                                .foregroundStyle(isSelected ? Studio.ink : Studio.muted)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
+                Button {
+                    withAnimation(.spring(response: 0.24, dampingFraction: 0.8)) {
+                        selectedTab = .filters
                     }
-                    .buttonStyle(.plain)
+                } label: {
+                    HStack(spacing: 5) {
+                        Text("✦")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Studio.accent)
+                        Text(editor.recipe?.name ?? "Classic Chrome · Gốc")
+                            .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                            .foregroundStyle(Studio.muted)
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Studio.surfaceContainer)
+                    .clipShape(Capsule())
                 }
+                .buttonStyle(.plain)
+            }
 
-                Spacer()
+            Spacer()
+
+            // Cụm Giữa: Viên thuốc Segmented Capsule tối giản
+            HStack(spacing: 2) {
+                Button {
+                    Haptics.light()
+                    Task { await editor.undo() }
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(editor.canUndo ? Studio.ink : Studio.muted.opacity(0.35))
+                        .frame(width: 36, height: 34)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("z", modifiers: [.command])
+                .disabled(!editor.canUndo || editor.busy)
+                .help("Hoàn tác (⌘Z)")
+
+                Button {
+                    Haptics.light()
+                    Task { await editor.redo() }
+                } label: {
+                    Image(systemName: "arrow.uturn.forward")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(editor.canRedo ? Studio.ink : Studio.muted.opacity(0.35))
+                        .frame(width: 36, height: 34)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .disabled(!editor.canRedo || editor.busy)
+                .help("Làm lại (⇧⌘Z)")
+
+                Rectangle()
+                    .fill(Studio.line)
+                    .frame(width: 1, height: 18)
+                    .padding(.horizontal, 2)
 
                 Button {
                     Haptics.medium()
                     Task { await editor.autoBalance() }
                 } label: {
-                    ZStack {
-                        Circle()
-                            .fill(editor.isAutoBalanced ? Studio.ink : Color.white)
-                            .frame(width: 38, height: 38)
-                            .overlay(Circle().strokeBorder(Studio.line, lineWidth: 1.0))
+                    HStack(spacing: 5) {
                         if editor.isAutoAnalyzing {
                             ProgressView()
                                 .controlSize(.small)
-                                .tint(editor.isAutoBalanced ? Color.white : Studio.ink)
+                                .tint(Studio.ink)
                         } else {
                             Image(systemName: "wand.and.stars")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(editor.isAutoBalanced ? Color.white : Studio.ink)
+                                .font(.system(size: 12, weight: .semibold))
                         }
+                        Text("AI Auto")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
                     }
+                    .foregroundStyle(editor.isAutoBalanced ? Studio.accent : Studio.ink)
+                    .padding(.horizontal, 9)
+                    .frame(height: 34)
                 }
                 .buttonStyle(.plain)
                 .disabled(editor.isAutoAnalyzing)
+                .help("Cân chỉnh màu tự động bằng AI")
+
+                Rectangle()
+                    .fill(Studio.line)
+                    .frame(width: 1, height: 18)
+                    .padding(.horizontal, 2)
+
+                Button {
+                    Haptics.light()
+                    isComparing.toggle()
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: isComparing ? "eye.slash.fill" : "eye.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("So sánh")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundStyle(isComparing ? Studio.googleRed : Studio.ink)
+                    .padding(.horizontal, 9)
+                    .frame(height: 34)
+                }
+                .buttonStyle(.plain)
+                .help("So sánh ảnh gốc (Phím Space hoặc C)")
+
+                Button {
+                    Haptics.medium()
+                    Task { await editor.rotateClockwise() }
+                } label: {
+                    Image(systemName: "rotate.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Studio.ink)
+                        .frame(width: 36, height: 34)
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("r", modifiers: [.command])
+                .disabled(!editor.hasPhoto || editor.busy)
+                .help("Xoay ảnh 90° (⌘R)")
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 3)
+            .background(Studio.surfaceContainer)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(Studio.line, lineWidth: 0.8)
+            )
+
+            Spacer()
+
+            // Cụm Phải: Mở ảnh + Xuất ảnh (Ink Pill) + Overflow menu
+            HStack(spacing: 10) {
+                Button {
+                    showPhotoPicker = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Mở ảnh")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                    }
+                    .foregroundStyle(Studio.ink)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(Studio.line, lineWidth: 1.0)
+                    )
+                }
+                .buttonStyle(.plain)
+
+                exportPillButton
 
                 overflowMenuButton
             }
-            .padding(.vertical, 12)
-            .frame(width: 82)
-            .liquidGlassCard(cornerRadius: 24)
-
-            // Zone 2: Center Photo Stage + Top Status Bar
-            VStack(spacing: 8) {
-                HStack {
-                    Text(editor.status)
-                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
-                        .foregroundStyle(Studio.muted)
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    exportPillButton
-                }
-                .padding(.horizontal, 8)
-
-                stage
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            // Zone 3: Right Docked Inspector Panel
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 12) {
-                    switch selectedTab {
-                    case .adjust:
-                        adjustSection
-                    case .filters:
-                        wideFiltersSection
-                    case .frame:
-                        wideFramesSection
-                    case .lightcraft:
-                        lightCraftSection
-                    }
-                }
-                .padding(14)
-            }
-            .frame(width: 390)
-            .liquidGlassCard(cornerRadius: 24)
-            .disabled(editor.busy)
         }
-        .padding(12)
+        .frame(height: 44)
     }
 
     // MARK: - Header (Back, Undo, Redo, Export, Menu)
@@ -609,7 +781,7 @@ struct EditorView: View {
                 Text("Xuất")
                     .font(.system(size: 12.5, weight: .bold, design: .rounded))
             }
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Studio.background)
             .padding(.horizontal, 14)
             .padding(.vertical, 7)
             .background(
@@ -677,48 +849,47 @@ struct EditorView: View {
 
     // MARK: - Sub-Header Mode Switcher Pill (4 Tabs)
     private var modeSwitcherPill: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                ForEach(EditorToolTab.allCases) { tab in
-                    let isSelected = selectedTab == tab
-                    Button {
-                        Haptics.light()
-                        withAnimation(.spring(response: 0.24, dampingFraction: 0.8)) {
-                            selectedTab = tab
-                        }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: tab.icon)
-                                .font(.system(size: 11, weight: isSelected ? .bold : .medium))
-                            Text(tab.rawValue)
-                                .font(.system(size: 12, weight: isSelected ? .bold : .medium, design: .rounded))
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .foregroundStyle(isSelected ? Studio.ink : Studio.muted)
-                        .background(
-                            Group {
-                                if isSelected {
-                                    Capsule()
-                                        .fill(Studio.surface)
-                                        .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 1)
-                                } else {
-                                    Color.clear
-                                }
-                            }
-                        )
+        HStack(spacing: 2) {
+            ForEach(EditorToolTab.allCases) { tab in
+                let isSelected = selectedTab == tab
+                Button {
+                    Haptics.light()
+                    withAnimation(.spring(response: 0.24, dampingFraction: 0.8)) {
+                        selectedTab = tab
                     }
-                    .buttonStyle(.plain)
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: tab.icon)
+                            .font(.system(size: 11, weight: isSelected ? .bold : .medium))
+                        Text(tab.rawValue)
+                            .font(.system(size: 11.5, weight: isSelected ? .bold : .medium, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .foregroundStyle(isSelected ? Studio.ink : Studio.muted)
+                    .background(
+                        Group {
+                            if isSelected {
+                                Capsule()
+                                    .fill(Studio.surface)
+                                    .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 1)
+                            } else {
+                                Color.clear
+                            }
+                        }
+                    )
                 }
+                .buttonStyle(.plain)
             }
-            .padding(3)
-            .background(
-                Capsule()
-                    .fill(Studio.surface)
-                    .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
-            )
         }
+        .padding(3)
+        .background(
+            Capsule()
+                .fill(Studio.surfaceContainer)
+                .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
+        )
     }
 
     // MARK: - Spacious Photo Stage (Zoom, Pan, Compare & Mask Overlay)
@@ -1076,7 +1247,7 @@ struct EditorView: View {
                         VStack(spacing: 5) {
                             ZStack {
                                 Circle()
-                                    .fill(editor.isAutoBalanced ? Studio.ink : Color.white)
+                                    .fill(editor.isAutoBalanced ? Studio.ink : Studio.surface)
                                     .frame(width: 46, height: 46)
                                     .overlay(
                                         Circle().strokeBorder(editor.isAutoBalanced ? Color.clear : Studio.line, lineWidth: 1.0)
@@ -1085,11 +1256,11 @@ struct EditorView: View {
                                 if editor.isAutoAnalyzing {
                                     ProgressView()
                                         .controlSize(.small)
-                                        .tint(editor.isAutoBalanced ? Color.white : Studio.ink)
+                                        .tint(editor.isAutoBalanced ? Studio.background : Studio.ink)
                                 } else {
                                     Image(systemName: GeminiAutoService.hasAPIKey ? "sparkles" : "wand.and.stars")
                                         .font(.system(size: 15, weight: .semibold))
-                                        .foregroundStyle(editor.isAutoBalanced ? Color.white : Studio.ink)
+                                        .foregroundStyle(editor.isAutoBalanced ? Studio.background : Studio.ink)
                                 }
                             }
 
@@ -1113,7 +1284,7 @@ struct EditorView: View {
                             VStack(spacing: 5) {
                                 ZStack {
                                     Circle()
-                                        .fill(isSelected ? Studio.ink : Color.white)
+                                        .fill(isSelected ? Studio.ink : Studio.surface)
                                         .frame(width: 46, height: 46)
                                         .overlay(
                                             Circle().strokeBorder(isSelected ? Color.clear : Studio.line, lineWidth: 1.0)
@@ -1122,14 +1293,14 @@ struct EditorView: View {
                                     if isSelected && modified {
                                         Text(formattedValue(for: param))
                                             .font(.system(size: 11, weight: .bold, design: .rounded))
-                                            .foregroundStyle(Color.white)
+                                            .foregroundStyle(Studio.background)
                                             .minimumScaleFactor(0.65)
                                             .lineLimit(1)
                                             .padding(.horizontal, 4)
                                     } else {
                                         Image(systemName: param.icon)
                                             .font(.system(size: 16, weight: .medium))
-                                            .foregroundStyle(isSelected ? Color.white : Studio.ink)
+                                            .foregroundStyle(isSelected ? Studio.background : Studio.ink)
                                     }
 
                                     if !isSelected && modified {
@@ -1254,7 +1425,7 @@ struct EditorView: View {
                             VStack(spacing: 5) {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                        .fill(isSelected ? Studio.ink : Color.white)
+                                        .fill(isSelected ? Studio.ink : Studio.surface)
                                         .frame(width: 52, height: 48)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1263,7 +1434,7 @@ struct EditorView: View {
 
                                     Image(systemName: frameIcon(for: idx))
                                         .font(.system(size: 16, weight: .medium))
-                                        .foregroundStyle(isSelected ? Color.white : Studio.ink)
+                                        .foregroundStyle(isSelected ? Studio.background : Studio.ink)
                                 }
 
                                 Text(frameLabel(for: idx))
@@ -1376,12 +1547,12 @@ struct EditorView: View {
                         } label: {
                             Text(chip)
                                 .font(.system(size: 11, weight: selected ? .bold : .medium, design: .rounded))
-                                .foregroundStyle(selected ? Color.white : Studio.ink)
+                                .foregroundStyle(selected ? Studio.background : Studio.ink)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
                                 .background(
                                     Capsule()
-                                        .fill(selected ? Studio.ink : Color.white)
+                                        .fill(selected ? Studio.ink : Studio.surface)
                                         .overlay(Capsule().strokeBorder(selected ? Color.clear : Studio.line, lineWidth: 1))
                                 )
                         }
@@ -1417,7 +1588,7 @@ struct EditorView: View {
                     VStack(spacing: 5) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(editor.recipe == nil ? Studio.ink : Color.white)
+                                .fill(editor.recipe == nil ? Studio.ink : Studio.surface)
                                 .frame(height: 76)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -1425,7 +1596,7 @@ struct EditorView: View {
                                 )
                             Image(systemName: "circle.lefthalf.filled")
                                 .font(.system(size: 20, weight: .semibold))
-                                .foregroundStyle(editor.recipe == nil ? Color.white : Studio.ink)
+                                .foregroundStyle(editor.recipe == nil ? Studio.background : Studio.ink)
                         }
                         Text("Nguyên bản")
                             .font(.system(size: 11, weight: editor.recipe == nil ? .bold : .medium, design: .rounded))
@@ -1502,7 +1673,7 @@ struct EditorView: View {
                         VStack(spacing: 6) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(isSelected ? Studio.ink : Color.white)
+                                    .fill(isSelected ? Studio.ink : Studio.surface)
                                     .frame(height: 60)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -1511,7 +1682,7 @@ struct EditorView: View {
 
                                 Image(systemName: frameIcon(for: idx))
                                     .font(.system(size: 18, weight: .medium))
-                                    .foregroundStyle(isSelected ? Color.white : Studio.ink)
+                                    .foregroundStyle(isSelected ? Studio.background : Studio.ink)
                             }
 
                             Text(frameLabel(for: idx))
@@ -1540,7 +1711,7 @@ struct EditorView: View {
                         } label: {
                             Text(sub.title)
                                 .font(.system(size: 11.5, weight: active ? .bold : .medium, design: .rounded))
-                                .foregroundStyle(active ? Color.white : Studio.ink)
+                                .foregroundStyle(active ? Studio.background : Studio.ink)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(
@@ -1580,12 +1751,12 @@ struct EditorView: View {
                             } label: {
                                 Text(ch.rawValue)
                                     .font(.system(size: 10.5, weight: active ? .bold : .medium, design: .rounded))
-                                    .foregroundStyle(active ? Color.white : Studio.ink)
+                                    .foregroundStyle(active ? Studio.background : Studio.ink)
                                     .padding(.horizontal, 9)
                                     .padding(.vertical, 4.5)
                                     .background(
                                         Capsule()
-                                            .fill(active ? ch.color : Color.white)
+                                            .fill(active ? ch.color : Studio.surface)
                                             .overlay(Capsule().strokeBorder(active ? Color.clear : Studio.line, lineWidth: 1.0))
                                     )
                             }
@@ -1702,12 +1873,12 @@ struct EditorView: View {
                                     Text(Self.hslBandNames[idx])
                                         .font(.system(size: 11, weight: active ? .bold : .medium, design: .rounded))
                                 }
-                                .foregroundStyle(active ? Color.white : Studio.ink)
+                                .foregroundStyle(active ? Studio.background : Studio.ink)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
                                 .background(
                                     Capsule()
-                                        .fill(active ? Studio.ink : Color.white)
+                                        .fill(active ? Studio.ink : Studio.surface)
                                         .overlay(
                                             Capsule().strokeBorder(bandModified && !active ? Studio.ink : Studio.line, lineWidth: 1.0)
                                         )
@@ -1768,12 +1939,12 @@ struct EditorView: View {
                         } label: {
                             Text(mode.label)
                                 .font(.system(size: 10.5, weight: active ? .bold : .medium, design: .rounded))
-                                .foregroundStyle(active ? Color.white : Studio.ink)
+                                .foregroundStyle(active ? Studio.background : Studio.ink)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 5)
                                 .background(
                                     Capsule()
-                                        .fill(active ? Studio.ink : Color.white)
+                                        .fill(active ? Studio.ink : Studio.surface)
                                         .overlay(Capsule().strokeBorder(active ? Color.clear : Studio.line, lineWidth: 1.0))
                                 )
                         }
@@ -1865,12 +2036,12 @@ struct EditorView: View {
                         } label: {
                             Text("Gốc")
                                 .font(.system(size: 11, weight: isOriginalPreset ? .bold : .medium, design: .rounded))
-                                .foregroundStyle(isOriginalPreset ? Color.white : Studio.ink)
+                                .foregroundStyle(isOriginalPreset ? Studio.background : Studio.ink)
                                 .padding(.horizontal, 11)
                                 .padding(.vertical, 6)
                                 .background(
                                     Capsule()
-                                        .fill(isOriginalPreset ? Studio.ink : Color.white)
+                                        .fill(isOriginalPreset ? Studio.ink : Studio.surface)
                                         .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
                                 )
                         }
@@ -1886,12 +2057,12 @@ struct EditorView: View {
                             } label: {
                                 Text("\(preset.name) · \(preset.subtitle)")
                                     .font(.system(size: 11, weight: active ? .bold : .medium, design: .rounded))
-                                    .foregroundStyle(active ? Color.white : Studio.ink)
+                                    .foregroundStyle(active ? Studio.background : Studio.ink)
                                     .padding(.horizontal, 11)
                                     .padding(.vertical, 6)
                                     .background(
                                         Capsule()
-                                            .fill(active ? Studio.ink : Color.white)
+                                            .fill(active ? Studio.ink : Studio.surface)
                                             .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
                                     )
                             }

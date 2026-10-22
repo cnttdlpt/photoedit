@@ -1,19 +1,40 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Dynamic UIColor Helper for Dark / Light Theming
+extension UIColor {
+    convenience init(hex: UInt32, alpha: CGFloat = 1.0) {
+        let r = CGFloat((hex >> 16) & 0xff) / 255.0
+        let g = CGFloat((hex >> 8) & 0xff) / 255.0
+        let b = CGFloat(hex & 0xff) / 255.0
+        self.init(red: r, green: g, blue: b, alpha: alpha)
+    }
+
+    static func dynamic(light: UInt32, dark: UInt32) -> UIColor {
+        return UIColor { traitCollection in
+            traitCollection.userInterfaceStyle == .dark ? UIColor(hex: dark) : UIColor(hex: light)
+        }
+    }
+}
+
+// MARK: - Design System: IRO Silver Print (Synchronized with DESIGN.md & Web studio.css)
 enum Studio {
-    // Semantic surfaces follow the device appearance and accessibility contrast.
-    static let background = Color(uiColor: .systemGroupedBackground)
-    static let surface = Color(uiColor: .secondarySystemGroupedBackground)
-    static let surfaceContainer = Color(uiColor: .tertiarySystemGroupedBackground)
+    // Semantic surfaces matching DESIGN.md and Web studio.css
+    static let background = Color(uiColor: .dynamic(light: 0xF4F4F2, dark: 0x171918))
+    static let surface = Color(uiColor: .dynamic(light: 0xFFFFFF, dark: 0x202321))
+    static let surfaceContainer = Color(uiColor: .dynamic(light: 0xF0F1EE, dark: 0x2B2F2C))
+    static let stageGround = Color(uiColor: .dynamic(light: 0xE8EAE6, dark: 0x111312))
+    static let line = Color(uiColor: .dynamic(light: 0xD8DDD8, dark: 0x414942))
+    static let ink = Color(uiColor: .dynamic(light: 0x202322, dark: 0xF1F3EF))
+    static let muted = Color(uiColor: .dynamic(light: 0x606762, dark: 0xB1B9B2))
+    static let accent = Color(uiColor: .dynamic(light: 0x365F50, dark: 0xAFCBB8))
+    static let accentHover = Color(uiColor: .dynamic(light: 0x284B3E, dark: 0xC5DDCD))
+    static let focus = Color(uiColor: .dynamic(light: 0x29684F, dark: 0xAFCBB8))
+
     static let m3SurfaceLow = surface
     static let m3SurfaceHigh = surfaceContainer
-    static let line = Color(uiColor: .separator)
-    static let ink = Color.primary
-    static let muted = Color.secondary
-    static let m3Amber = Color(uiColor: .systemGreen)
-    static let m3AmberContainer = Color(uiColor: .tertiarySystemFill)
-    static let accent = Color(uiColor: .systemGreen)
+    static let m3Amber = accent
+    static let m3AmberContainer = surfaceContainer
     static let accentContainer = surfaceContainer
     static let onAccentContainer = ink
     static let darkPill = ink
@@ -24,12 +45,12 @@ enum Studio {
     static let cardBorder = line
 
     // Functional RGB Channel Colors (Histograms & Tone Curves)
-    static let googleBlue = Color(red: 66/255, green: 133/255, blue: 244/255)        // #4285F4
-    static let googleRed = Color(red: 234/255, green: 67/255, blue: 53/255)          // #EA4335
-    static let googleYellow = Color(red: 251/255, green: 188/255, blue: 4/255)       // #FBBC04
-    static let googleGreen = Color(red: 52/255, green: 168/255, blue: 83/255)        // #34A853
+    static let googleBlue = Color(red: 66/255, green: 133/255, blue: 244/255)
+    static let googleRed = Color(red: 234/255, green: 67/255, blue: 53/255)
+    static let googleYellow = Color(red: 251/255, green: 188/255, blue: 4/255)
+    static let googleGreen = Color(red: 52/255, green: 168/255, blue: 83/255)
 
-    // Material Design 3 Expressive Spring Animations (Matches MotionStudio.java)
+    // Material Design 3 Expressive Spring Animations
     static let m3Spring = Animation.spring(response: 0.28, dampingFraction: 0.72, blendDuration: 0)
     static let m3GentleSpring = Animation.spring(response: 0.34, dampingFraction: 0.82, blendDuration: 0)
     static let m3Emphasized = Animation.timingCurve(0.2, 0.0, 0.0, 1.0, duration: 0.28)
@@ -60,16 +81,15 @@ enum EditorToolTab: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
+        case .filters: return "camera.filters"
         case .adjust: return "slider.horizontal.3"
-        case .filters: return "sparkles"
         case .frame: return "photo.artframe"
         case .lightcraft: return "point.topleft.down.curvedto.point.bottomright.up"
         }
     }
 }
 
-
-// MARK: - Impeccable & Taste Skill Modifiers
+// MARK: - Modifiers
 extension View {
     @ViewBuilder
     func symbolMorphReplace() -> some View {
@@ -86,10 +106,9 @@ extension View {
     }
 }
 
-// MARK: - Material Design 3 Expressive Spring Button Style
 struct M3ExpressiveButtonStyle: ButtonStyle {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    var scaleAmount: CGFloat = 0.95
+    var scaleAmount: CGFloat = 0.96
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -98,75 +117,59 @@ struct M3ExpressiveButtonStyle: ButtonStyle {
     }
 }
 
-// MARK: - Material Design 3 Ambient Tonal Studio Background
 struct AntigravityBackground: View {
     var body: some View { Studio.background.ignoresSafeArea() }
 }
 
-// MARK: - Minimal Studio View Modifiers
 extension View {
-    /// Clean Minimal Studio Card (M3 Surface Container Lowest + Outline Variant)
-    func liquidGlassCard(cornerRadius: CGFloat = 24) -> some View {
+    func liquidGlassCard(cornerRadius: CGFloat = 16) -> some View {
         self
-            .background(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(Studio.surface)
-            )
+            .background(Studio.surface)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(Studio.line, lineWidth: 1.0)
             )
-            .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 3)
+            .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 2)
     }
 
-    /// Clean Minimal Studio Capsule Pill
     func liquidGlassPill() -> some View {
         self
-            .background(
-                Capsule()
-                    .fill(Studio.surface)
-            )
+            .background(Studio.surface)
             .clipShape(Capsule())
             .overlay(
                 Capsule()
                     .strokeBorder(Studio.line, lineWidth: 1.0)
             )
-            .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 1)
+            .shadow(color: Color.black.opacity(0.02), radius: 3, x: 0, y: 1)
     }
 
-    /// Clean Minimal Studio Circular Button
     func liquidGlassCircle(size: CGFloat = 36) -> some View {
         self
             .frame(width: max(44, size), height: max(44, size))
-            .background(
-                Circle()
-                    .fill(Studio.surface)
-            )
+            .background(Studio.surface)
             .overlay(
                 Circle()
                     .strokeBorder(Studio.line, lineWidth: 1.0)
             )
-            .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 1)
+            .clipShape(Circle())
+            .shadow(color: Color.black.opacity(0.02), radius: 3, x: 0, y: 1)
     }
 
-    /// Dark Ink Pill
     func liquidDarkPill() -> some View {
         self
-            .background(
-                Capsule()
-                    .fill(Studio.ink)
-            )
+            .background(Studio.ink)
+            .clipShape(Capsule())
             .overlay(
                 Capsule()
-                    .strokeBorder(Color.white.opacity(0.14), lineWidth: 0.8)
+                    .strokeBorder(Studio.ink, lineWidth: 1.0)
             )
-            .shadow(color: Color.black.opacity(0.12), radius: 6, x: 0, y: 2)
     }
 }
 
-// MARK: - Minimal Studio Landing Empty View (Adaptive Dual-Pane on Wide Screens)
+// MARK: - Landing Screen (Synchronized with Web Landing & Bento Cards)
 struct EmptyPhoto: View {
+    @EnvironmentObject private var editor: EditorModel
     var onPickPhoto: () -> Void = {}
     var onImportFile: () -> Void = {}
     var onOpenRecipes: () -> Void = {}
@@ -176,99 +179,82 @@ struct EmptyPhoto: View {
     var onLoadSample: (String?) -> Void = { _ in }
     var onSelectFrameSample: () -> Void = {}
 
-    private let filmChips = [
-        "Classic Chrome", "Portra 400", "Kodak Gold", "Tri-X 400",
-        "Velvia 50", "Natura 1600", "Astia Soft", "Eterna Cinema"
-    ]
+    @State private var selectedSensor: String = "Tất cả"
+    @State private var searchQuery: String = ""
+
+    private let sensors = ["Tất cả", "X-Trans V", "X-Trans IV", "X-Trans III", "Bayer / GFX"]
+
+    private var filteredRecipes: [Recipe] {
+        let list = editor.recipes
+        return list.filter { recipe in
+            let matchesSensor: Bool
+            if selectedSensor == "Tất cả" {
+                matchesSensor = true
+            } else if selectedSensor == "Bayer / GFX" {
+                matchesSensor = recipe.sensors.contains(where: { $0.contains("Bayer") || $0.contains("GFX") })
+            } else {
+                matchesSensor = recipe.sensors.contains(selectedSensor)
+            }
+            let q = searchQuery.trimmingCharacters(in: .whitespaces)
+            let matchesQuery = q.isEmpty ||
+                recipe.name.localizedStandardContains(q) ||
+                recipe.film.localizedStandardContains(q)
+            return matchesSensor && matchesQuery
+        }
+    }
 
     var body: some View {
         GeometryReader { geo in
-            let isWide = geo.size.width >= 640
+            let isWide = geo.size.width >= 700
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 16) {
-                    topSearchBarRow
+                VStack(spacing: 20) {
+                    topBrandHeader
 
-                    if isWide {
-                        HStack(alignment: .top, spacing: 18) {
-                            VStack(spacing: 14) {
-                                heroPrimaryCard
-                                filmSimulationChipStrip
-                            }
-                            .frame(maxWidth: .infinity)
+                    heroBanner(isWide: isWide)
 
-                            VStack(spacing: 12) {
-                                albumsHeaderRow
-                                albumsGrid
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                    } else {
-                        heroPrimaryCard
-                        filmSimulationChipStrip
-                        DisclosureGroup("Thư viện & công cụ") {
-                            albumsHeaderRow
-                            albumsGrid
-                        }
-                    }
+                    sensorBentoCard(isWide: isWide)
+
+                    framesRibbonCard
+
+                    Spacer(minLength: 24)
                 }
-                .padding(.vertical, 10)
+                .padding(.horizontal, isWide ? 24 : 16)
+                .padding(.vertical, 14)
             }
         }
     }
 
-    // 1. Top Search Bar Row
-    private var topSearchBarRow: some View {
-        HStack(spacing: 8) {
-            Button {
-                Haptics.light()
-                onOpenRecipes()
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Studio.muted)
-
-                    Text("Tìm kiếm công thức màu phim…")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundStyle(Studio.muted)
-                        .lineLimit(1)
-
-                    Spacer()
-                }
-                .padding(.horizontal, 13)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Studio.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .strokeBorder(Studio.line, lineWidth: 1.0)
-                        )
-                )
-            }
-            .buttonStyle(M3ExpressiveButtonStyle(scaleAmount: 0.98))
-
-            Button {
-                Haptics.light()
-                onOpenRecipes()
-            } label: {
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 13))
+    // 1. Top Brand Header
+    private var topBrandHeader: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Text("IRO")
+                    .font(.system(size: 20, weight: .black, design: .rounded))
                     .foregroundStyle(Studio.ink)
-                    .liquidGlassCircle(size: 38)
+                Text("Studio")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(Studio.accent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Studio.accent.opacity(0.12))
+                    .clipShape(Capsule())
+                Text("Phòng màu ảnh")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Studio.muted)
             }
-            .buttonStyle(M3ExpressiveButtonStyle())
+
+            Spacer()
 
             Menu {
                 Button("Mở ảnh từ Thư viện", systemImage: "photo.badge.plus") { onPickPhoto() }
                 Button("Mở ảnh từ Tệp", systemImage: "folder") { onImportFile() }
                 Button("Dùng thử ảnh mẫu Studio", systemImage: "sparkles") { onLoadSample(nil) }
                 Divider()
-                Button("Kho Công thức màu màu", systemImage: "camera.filters") { onOpenRecipes() }
+                Button("Kho 421 công thức màu", systemImage: "camera.filters") { onOpenRecipes() }
                 Button("Quản lý LUT", systemImage: "square.stack.3d.up") { onOpenLuts() }
                 Button("Kho LUT trực tuyến", systemImage: "globe") { onOpenOnline() }
                 Divider()
-                Button("Hướng dẫn", systemImage: "info.circle") { onOpenHelp() }
+                Button("Hướng dẫn & Phím tắt", systemImage: "info.circle") { onOpenHelp() }
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 13, weight: .bold))
@@ -278,113 +264,38 @@ struct EmptyPhoto: View {
         }
     }
 
-    // 2. Albums Section Header
-    private var albumsHeaderRow: some View {
-        HStack(spacing: 8) {
-            Text("Albums & Màu phim")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(Studio.ink)
-
-            Text("392")
-                .font(.system(size: 10.5, weight: .bold, design: .rounded))
-                .foregroundStyle(Studio.ink)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 2.5)
-                .background(
-                    Capsule()
-                        .fill(Studio.surface)
-                        .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
-                )
-
-            Spacer()
-
-            Button {
-                Haptics.light()
-                onPickPhoto()
-            } label: {
-                Text("+ Mở ảnh")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+    // 2. Hero Banner Card (Parity with Web Hero)
+    private func heroBanner(isWide: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Một bức ảnh. Màu của bạn.")
+                    .font(.system(size: isWide ? 28 : 22, weight: .bold, design: .rounded))
                     .foregroundStyle(Studio.ink)
-            }
-            .buttonStyle(M3ExpressiveButtonStyle())
-        }
-        .padding(.horizontal, 4)
-    }
+                    .tracking(-0.5)
 
-    // 3. 2x2 Albums Grid
-    private var albumsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-            AlbumCard(
-                title: "Fuji Chrome",
-                subtitle: "Công thức màu",
-                icon: "camera.filters",
-                action: onOpenRecipes
-            )
-            AlbumCard(
-                title: "Kodak Portra",
-                subtitle: "Màu da ấm áp",
-                icon: "sparkles",
-                action: onOpenRecipes
-            )
-            AlbumCard(
-                title: "Đen Trắng",
-                subtitle: "Tri-X & Acros",
-                icon: "circle.lefthalf.filled",
-                action: onOpenRecipes
-            )
-            AlbumCard(
-                title: "Khung & EXIF",
-                subtitle: "30+ viền ảnh",
-                icon: "photo.artframe",
-                action: onSelectFrameSample
-            )
-        }
-    }
-
-    // 4. Primary CTA Hero Card
-    private var heroPrimaryCard: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Studio.surface)
-                        .frame(width: 44, height: 44)
-                        .overlay(Circle().strokeBorder(Studio.line, lineWidth: 1.0))
-                    Image(systemName: "photo.badge.plus")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(Studio.ink)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Bắt đầu chỉnh màu ngay")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(Studio.ink)
-                    Text("Chọn ảnh từ Thư viện, Tệp tin hoặc thử ảnh mẫu")
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundStyle(Studio.muted)
-                }
-
-                Spacer()
+                Text("Mở ảnh, chọn màu phim và tinh chỉnh theo ý bạn. Xuất ảnh khi đã ưng ý.")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Studio.muted)
+                    .lineLimit(2)
             }
 
+            // Action Buttons
             HStack(spacing: 10) {
                 Button {
                     Haptics.medium()
                     onPickPhoto()
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "photo.on.rectangle")
-                            .font(.system(size: 12, weight: .semibold))
-                        Text("Thư viện ảnh")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                        Image(systemName: "photo.badge.plus")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("Chọn ảnh từ thiết bị")
+                            .font(.system(size: 13.5, weight: .bold, design: .rounded))
                     }
-                    .frame(maxWidth: .infinity)
+                    .foregroundStyle(Studio.background)
+                    .padding(.horizontal, 18)
                     .padding(.vertical, 11)
-                    .foregroundStyle(Color.white)
-                    .background(
-                        Capsule()
-                            .fill(Studio.ink)
-                    )
+                    .background(Studio.ink)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(M3ExpressiveButtonStyle())
 
@@ -392,131 +303,243 @@ struct EmptyPhoto: View {
                     Haptics.light()
                     onImportFile()
                 } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 6) {
                         Image(systemName: "folder")
-                            .font(.system(size: 12))
+                            .font(.system(size: 13))
                         Text("Tệp tin")
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 11)
                     .foregroundStyle(Studio.ink)
-                    .liquidGlassPill()
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .background(Studio.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Studio.line, lineWidth: 1.0))
+                }
+                .buttonStyle(M3ExpressiveButtonStyle())
+
+                Button {
+                    Haptics.medium()
+                    onLoadSample(nil)
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12))
+                        Text("Thử ảnh mẫu")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundStyle(Studio.ink)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 11)
+                    .background(Studio.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Studio.line, lineWidth: 1.0))
                 }
                 .buttonStyle(M3ExpressiveButtonStyle())
             }
 
-            Button {
-                Haptics.medium()
-                onLoadSample(nil)
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 11.5, weight: .bold))
-                    Text("Dùng thử ngay với ảnh mẫu Studio (Golden Hour)")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .lineLimit(1)
+            // Workflow Steps
+            HStack(spacing: 12) {
+                ForEach(["Chọn ảnh", "Chọn màu", "Tinh chỉnh", "Xuất ảnh"], id: \.self) { step in
+                    HStack(spacing: 6) {
+                        Text(step)
+                            .font(.system(size: 11.5, weight: .semibold))
+                            .foregroundStyle(Studio.muted)
+                        if step != "Xuất ảnh" {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(Studio.muted.opacity(0.5))
+                        }
+                    }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 9)
-                .foregroundStyle(Studio.ink)
-                .background(
-                    Capsule()
-                        .fill(Studio.surface)
-                        .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
-                )
             }
-            .buttonStyle(M3ExpressiveButtonStyle())
+            .padding(.top, 2)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Studio.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .strokeBorder(Studio.line, lineWidth: 1.0)
-                )
-                .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 2)
-        )
+        .padding(isWide ? 22 : 18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .liquidGlassCard(cornerRadius: 16)
     }
 
-    // 5. Film Simulation Pills
-    private var filmSimulationChipStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+    // 3. Sensor Bento Card with Direct Recipe Grid
+    private func sensorBentoCard(isWide: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Khám phá màu phim")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(Studio.ink)
+                    Text("Tìm công thức theo tên màu hoặc dòng film.")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(Studio.muted)
+                }
+
+                Spacer()
+
+                Button {
+                    onOpenRecipes()
+                } label: {
+                    Text("Quản lý thư viện ›")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(Studio.accent)
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Sensor Filter Chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(sensors, id: \.self) { sensor in
+                        let isSelected = selectedSensor == sensor
+                        Button {
+                            Haptics.selection()
+                            selectedSensor = sensor
+                        } label: {
+                            Text(sensor)
+                                .font(.system(size: 12, weight: isSelected ? .bold : .medium, design: .rounded))
+                                .foregroundStyle(isSelected ? Studio.ink : Studio.muted)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .fill(isSelected ? Studio.surfaceContainer : Studio.surface)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                                .strokeBorder(isSelected ? Studio.ink : Studio.line, lineWidth: isSelected ? 1.2 : 1.0)
+                                        )
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            // Search Bar
             HStack(spacing: 8) {
-                ForEach(filmChips, id: \.self) { film in
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Studio.muted)
+
+                TextField("Tìm tên công thức, film…", text: $searchQuery)
+                    .font(.system(size: 13, design: .rounded))
+                    .textFieldStyle(.plain)
+
+                if !searchQuery.isEmpty {
+                    Button {
+                        searchQuery = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Studio.muted)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Studio.surfaceContainer)
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Studio.line, lineWidth: 1.0))
+            )
+
+            // Direct Recipe Grid (Showing top 18 matches)
+            let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: isWide ? 3 : 2)
+            LazyVGrid(columns: columns, spacing: 10) {
+                ForEach(filteredRecipes.prefix(18)) { recipe in
                     Button {
                         Haptics.selection()
-                        onLoadSample(film)
+                        Task {
+                            await editor.openStudioSample(filmKeyword: recipe.film)
+                            await editor.apply(recipe)
+                        }
                     } label: {
-                        Text(film)
-                            .font(.system(size: 11.5, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Studio.ink)
-                            .padding(.horizontal, 13)
-                            .padding(.vertical, 7)
-                            .background(
-                                Capsule()
-                                    .fill(Studio.surface)
-                                    .overlay(Capsule().strokeBorder(Studio.line, lineWidth: 1.0))
-                            )
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(recipe.name)
+                                .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                                .foregroundStyle(Studio.ink)
+                                .lineLimit(1)
+
+                            HStack(spacing: 4) {
+                                Text(recipe.film)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(Studio.muted)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                if let s = recipe.sensors.first {
+                                    Text(s)
+                                        .font(.system(size: 9.5, weight: .semibold))
+                                        .foregroundStyle(Studio.accent)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1.5)
+                                        .background(Studio.accent.opacity(0.12))
+                                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                                }
+                            }
+                        }
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Studio.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(Studio.line, lineWidth: 1.0)
+                        )
                     }
                     .buttonStyle(M3ExpressiveButtonStyle())
                 }
             }
+
+            if filteredRecipes.isEmpty {
+                Text("Không tìm thấy công thức màu phù hợp.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Studio.muted)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 16)
+            }
         }
+        .padding(isWide ? 20 : 16)
+        .liquidGlassCard(cornerRadius: 16)
     }
-}
 
-private struct AlbumCard: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let action: () -> Void
-
-    var body: some View {
-        Button {
-            Haptics.light()
-            action()
-        } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    ZStack {
-                        Circle()
-                            .fill(Studio.surface)
-                            .frame(width: 34, height: 34)
-                            .overlay(Circle().strokeBorder(Studio.line, lineWidth: 1.0))
-                        Image(systemName: icon)
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Studio.ink)
-                    }
-                    Spacer()
-                }
-
-                Spacer(minLength: 4)
-
+    // 4. Frames Ribbon Card
+    private var framesRibbonCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                    Text("30 Mẫu Khung Triển Lãm & EXIF")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(Studio.ink)
-                        .lineLimit(1)
-                    Text(subtitle)
-                        .font(.system(size: 11.5, weight: .regular))
+                    Text("Trang trí tác phẩm với thông số máy ảnh & chữ ký nghệ thuật")
+                        .font(.system(size: 11.5))
                         .foregroundStyle(Studio.muted)
-                        .lineLimit(1)
+                }
+                Spacer()
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(Array(["Polaroid Classic", "Film Strip 35mm", "Triển lãm Bảo tàng", "Tạp chí Thời trang", "Tem Bưu Chính", "Tối giản Đen Tuyền", "Hồ sơ Lưu trữ", "Góc Cài Cổ Điển"].enumerated()), id: \.offset) { idx, name in
+                        Button {
+                            Haptics.selection()
+                            onSelectFrameSample()
+                        } label: {
+                            Text(name)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(Studio.ink)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Studio.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Studio.line, lineWidth: 1.0))
+                        }
+                        .buttonStyle(M3ExpressiveButtonStyle())
+                    }
                 }
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Studio.surface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .strokeBorder(Studio.line, lineWidth: 1.0)
-                    )
-                    .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 2)
-            )
         }
-        .buttonStyle(M3ExpressiveButtonStyle())
+        .padding(16)
+        .liquidGlassCard(cornerRadius: 16)
     }
 }

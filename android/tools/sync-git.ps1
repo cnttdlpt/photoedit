@@ -25,22 +25,37 @@ if ($Pull) {
     }
 
     Write-Host "-> Syncing from Git into Android Studio workspace..." -ForegroundColor Cyan
-    $syncFolders = @("app\src", "desktop", "tools")
-    $syncFiles = @("build.gradle", "settings.gradle", "gradle.properties", "gradlew", "gradlew.bat", "README.md")
+    $syncFolders = @("app\src", "desktop", "tools", "design", "gradle")
+    $syncFiles = @(
+        "app\build.gradle",
+        "app\proguard-rules.pro",
+        "build.gradle",
+        "settings.gradle",
+        "gradle.properties",
+        "gradlew",
+        "gradlew.bat",
+        "README.md",
+        "AGENTS.md"
+    )
 
     foreach ($folder in $syncFolders) {
         $src = Join-Path $gitAndroid $folder
         $dst = Join-Path $localWorkspace $folder
         if (Test-Path -LiteralPath $src) {
-            Get-ChildItem -LiteralPath $src -Force | ForEach-Object {
-                Copy-Item -LiteralPath $_.FullName -Destination $dst -Recurse -Force
+            if (-not (Test-Path -LiteralPath $dst)) {
+                New-Item -ItemType Directory -Path $dst -Force | Out-Null
             }
+            robocopy $src $dst /E /XD dist build .gradle cache .idea bin /XF *.jar *.apk *.exe *.log *.class /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
         }
     }
     foreach ($file in $syncFiles) {
         $src = Join-Path $gitAndroid $file
         $dst = Join-Path $localWorkspace $file
         if (Test-Path -LiteralPath $src) {
+            $parent = Split-Path -Parent $dst
+            if (-not (Test-Path -LiteralPath $parent)) {
+                New-Item -ItemType Directory -Path $parent -Force | Out-Null
+            }
             Copy-Item -LiteralPath $src -Destination $dst -Force
         }
     }

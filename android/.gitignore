@@ -14,3 +14,7 @@ tools/urls.json
 *.apk
 *.exe
 *.jar
+
+*.db
+*.db-shm
+*.db-wal

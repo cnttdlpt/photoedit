@@ -861,13 +861,14 @@ final class EditorModel: ObservableObject {
             if CloudSyncService.shared.isEnabled {
                 Task.detached(priority: .background) {
                     _ = await CloudSyncService.shared.uploadExportedPhoto(
-                    fileURL: destination,
-                    filename: exportFilename,
-                    recipeName: currentRecipeName,
-                    settings: currentSettings,
-                    width: photoWidth,
-                    height: photoHeight
-                )
+                        fileURL: destination,
+                        filename: exportFilename,
+                        recipeName: currentRecipeName,
+                        settings: currentSettings,
+                        width: photoWidth,
+                        height: photoHeight
+                    )
+                }
             }
         } catch { try? FileManager.default.removeItem(at: destination); show(error) }
     }

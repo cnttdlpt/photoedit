@@ -3,7 +3,6 @@ package vn.iro.editor;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -14,11 +13,16 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -60,8 +64,6 @@ import android.widget.Toast;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -80,16 +82,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Máy ảnh quang học Leica & Film Simulation trực tiếp (Live Viewfinder Camera).
+ * Phân hệ máy ảnh quang học Leica M Rangefinder & Film Alchemy trực tiếp (Live Optical Camera).
  *
- * <p>Tính năng vượt trội chuyển đổi từ Xiaomi / Leica Pro Camera (APK 9.0.2):
+ * <p>Thiết kế lại toàn diện theo chuẩn máy ảnh cơ khí Leica M11 / M9 & Leica Lux:
  * <ul>
- *     <li>Khung ngắm thời gian thực Camera2 hỗ trợ chạm lấy nét (Tap-to-Focus) và đo sáng vùng chọn.</li>
- *     <li>Thước ngắm bù trừ sáng quang học EV (-3.0 EV .. +3.0 EV).</li>
- *     <li>Hệ thống 28 dòng màu phim kinh điển & Leica (Leica M9 CCD, M3 Silver Gelatin, M10-R, Kodachrome, Portra, CineStill...).</li>
- *     <li>Tự động nướng màu độ phân giải đầy đủ (Full-Sensor Color Engine Baking) qua 3D LUT ngay khi bấm nút chụp.</li>
- *     <li>Tùy chọn đóng dấu khung ảnh Leica Watermark kinh điển (Leica Red Dot, thông số ống kính, khẩu độ, ISO, tốc độ).</li>
- *     <li>Nút chụp cơ học Leica với phản hồi rung xúc giác (Haptic Click) và hiệu ứng chớp sáng màn trập.</li>
+ *     <li>Khung ngắm Rangefinder Brightlines tỉ lệ chuẩn 4:3 / 3:2 với vạch góc quang học và tâm ngắm cơ học.</li>
+ *     <li>Thước cân bằng điện tử thời gian thực (Electronic Horizon Gyro Level) phản hồi haptic khi cân bằng 0°.</li>
+ *     <li>Dải thông số quang học Telemetry HUD trực tiếp (ISO · Shutter Speed · Aperture · EV · Ống kính Summilux).</li>
+ *     <li>Chạm lấy nét kèm thanh trượt bù sáng EV trực quan cạnh điểm đo sáng (Tap-to-Focus & Sunlight EV Slider).</li>
+ *     <li>Bàn xoay phim cơ học (Film Simulation Reel): 28 profile Leica M & Film kinh điển với thẻ phim tactile.</li>
+ *     <li>Nút chụp cơ khí Leica M: Vòng khía kim loại knurled bezel, lỗ ren bấm mềm và chớp màn trập giật nẩy xúc giác.</li>
+ *     <li>Bộ chuyển đổi tiêu cự ống kính cố định (Leica Prime Crop): 28mm (Wide) · 35mm (Street) · 50mm (Standard) · 75mm (Portrait).</li>
+ *     <li>Trải nghiệm chụp liên tục không gián đoạn (Non-disruptive): Thông báo nướng màu trượt êm ái, chạm mở phòng tối ngay.</li>
+ *     <li>Khung ảnh đóng dấu Leica Exhibition Watermark chuẩn triển lãm mỹ thuật.</li>
  * </ul>
  */
 public class CameraActivity extends Activity {
@@ -98,17 +103,23 @@ public class CameraActivity extends Activity {
     public static final String EXTRA_RECIPE_ID = "recipe_id";
     public static final String EXTRA_IMAGE_URI = "image_uri";
 
+    // Views
     private TextureView textureView;
-    private GridOverlayView gridOverlay;
+    private RangefinderOverlayView rangefinderOverlay;
     private FocusReticleView focusReticle;
     private View shutterFlashView;
     private TextView countdownView;
-    private TextView activeLookBadge;
-    private TextView evBadge;
+    private TextView hudTelemetryView;
     private ImageView recentThumbBtn;
     private View shutterInnerBtn;
-    private LinearLayout ribbonContainer;
+    private LinearLayout filmReelContainer;
+    private HorizontalScrollView filmReelScroll;
+    private LinearLayout focalSelectorRow;
+    private View toastNotificationBanner;
+    private ImageView toastThumbView;
+    private TextView toastTitleView;
 
+    // Camera2 API
     private CameraManager cameraManager;
     private String cameraId;
     private CameraDevice cameraDevice;
@@ -116,23 +127,30 @@ public class CameraActivity extends Activity {
     private CaptureRequest.Builder previewRequestBuilder;
     private Size previewSize;
     private Size captureSize;
+    private Rect sensorArraySize;
     private ImageReader imageReader;
     private int sensorOrientation = 0;
     private boolean isFrontFacing = false;
 
+    // Threads
     private HandlerThread backgroundThread;
     private Handler backgroundHandler;
     private final ExecutorService processExecutor = Executors.newSingleThreadExecutor();
 
+    // Sensors
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+
+    // Data catalog
     private final List<Recipe> cameraRecipes = new ArrayList<>();
     private Recipe activeRecipe;
     private CubeLut activeLut;
 
-    // Camera controls state
+    // Camera settings state
     private int flashMode = CaptureRequest.CONTROL_AE_MODE_ON;
     private int flashStateIndex = 0; // 0: Auto, 1: On, 2: Off
     private int timerSeconds = 0; // 0: Off, 3: 3s, 10: 10s
-    private boolean isGridEnabled = false;
+    private boolean isGridEnabled = true;
     private boolean isWatermarkEnabled = true;
     private int currentEv = 0;
     private Range<Integer> evRange = new Range<>(0, 0);
@@ -140,11 +158,27 @@ public class CameraActivity extends Activity {
     private Uri lastCapturedUri = null;
     private boolean isCapturing = false;
 
+    // Lens focal crop settings (28mm, 35mm, 50mm, 75mm)
+    private int currentFocalIndex = 1; // Mặc định 35mm (Classic Leica Street)
+    private final float[] FOCAL_ZOOMS = { 1.0f, 1.25f, 1.8f, 2.7f };
+    private final String[] FOCAL_NAMES = { "28mm", "35mm", "50mm", "75mm" };
+    private final String[] FOCAL_LENSES = {
+            "SUMMICRON-M 1:2.0/28 ASPH.",
+            "SUMMILUX-M 1:1.4/35 ASPH.",
+            "NOCTILUX-M 1:0.95/50 ASPH.",
+            "APO-SUMMICRON-M 1:2.0/75 ASPH."
+    };
+
+    // Live exposure telemetry
+    private int liveIso = 100;
+    private String liveShutter = "1/250s";
+    private float liveAperture = 1.4f;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Chế độ toàn màn hình tối đa (Immersive Fullscreen)
+        // Chế độ toàn màn hình điện ảnh (Immersive Cinematic Mode)
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
@@ -155,8 +189,12 @@ public class CameraActivity extends Activity {
         }
 
         cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        loadCameraCatalog();
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        if (sensorManager != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        }
 
+        loadCameraCatalog();
         buildUi();
     }
 
@@ -164,9 +202,12 @@ public class CameraActivity extends Activity {
         return Math.round(dp * getResources().getDisplayMetrics().density);
     }
 
+    // =========================================================================
+    // NẠP CATALOG MÀU PHIM & 3D LUT
+    // =========================================================================
+
     private void loadCameraCatalog() {
         try {
-            // Nạp 28 công thức CameraLook & Leica M
             try (InputStream in = getAssets().open("cameralook-recipes.json")) {
                 JSONObject obj = new JSONObject(new String(readAll(in), StandardCharsets.UTF_8));
                 JSONArray arr = obj.getJSONArray("recipes");
@@ -175,7 +216,7 @@ public class CameraActivity extends Activity {
                 }
             }
 
-            // Nạp công thức mặc định (ưu tiên Leica M9 CCD hoặc recipe_id truyền vào)
+            // Chọn công thức mặc định (Leica M9 Classic CCD hoặc ID truyền vào)
             String targetId = getIntent().getStringExtra(EXTRA_RECIPE_ID);
             if (targetId != null) {
                 for (Recipe r : cameraRecipes) {
@@ -186,7 +227,6 @@ public class CameraActivity extends Activity {
                 }
             }
             if (activeRecipe == null && !cameraRecipes.isEmpty()) {
-                // Mặc định: Leica M9 Classic CCD (id: leica_m9_classic_ccd) hoặc tone 0
                 for (Recipe r : cameraRecipes) {
                     if ("leica_m9_classic_ccd".equals(r.id)) {
                         activeRecipe = r;
@@ -214,7 +254,7 @@ public class CameraActivity extends Activity {
                 CubeLut lut = CubeLut.parse(r);
                 runOnUiThread(() -> {
                     activeLut = lut;
-                    updateBadgeText();
+                    updateTelemetryDisplay();
                 });
             } catch (Exception e) {
                 e.printStackTrace();
@@ -233,92 +273,87 @@ public class CameraActivity extends Activity {
     }
 
     // =========================================================================
-    // XÂY DỰNG GIAO DIỆN KHUNG NGẮM MÁY ẢNH (VIEWFINDER UI)
+    // XÂY DỰNG GIAO DIỆN LEICA M LUX PRO VIEWFINDER
     // =========================================================================
 
     private void buildUi() {
         FrameLayout root = new FrameLayout(this);
-        root.setBackgroundColor(Color.BLACK);
+        root.setBackgroundColor(0xff090a0d); // Obsidian Black
         setContentView(root);
 
-        // 1. Khung ngắm TextureView
+        // 1. Khung ngắm chính TextureView (4:3 chuẩn cảm biến quang học)
+        FrameLayout viewfinderContainer = new FrameLayout(this);
+        FrameLayout.LayoutParams vfLp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                Gravity.CENTER);
+        root.addView(viewfinderContainer, vfLp);
+
         textureView = new TextureView(this);
         textureView.setSurfaceTextureListener(textureListener);
         textureView.setOnTouchListener(viewfinderTouchListener);
-        root.addView(textureView, new FrameLayout.LayoutParams(
+        viewfinderContainer.addView(textureView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.CENTER));
 
-        // 2. Lưới bố cục (Grid Overlay)
-        gridOverlay = new GridOverlayView(this);
-        gridOverlay.setVisibility(isGridEnabled ? View.VISIBLE : View.GONE);
-        root.addView(gridOverlay, new FrameLayout.LayoutParams(
+        // 2. Lớp lưới & vạch ngắm Rangefinder (Brightlines, Center Patch, Horizon Level)
+        rangefinderOverlay = new RangefinderOverlayView(this);
+        rangefinderOverlay.setGridEnabled(isGridEnabled);
+        viewfinderContainer.addView(rangefinderOverlay, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // 3. Điểm lấy nét chạm (Focus Reticle)
+        // 3. Vòng lấy nét chạm & thước trượt bù sáng EV trực quan
         focusReticle = new FocusReticleView(this);
-        root.addView(focusReticle, new FrameLayout.LayoutParams(
+        viewfinderContainer.addView(focusReticle, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // 4. Thanh điều khiển trên đỉnh (Top Toolbar)
+        // 4. Thanh công cụ Top Pro Bar
         LinearLayout topBar = buildTopBar();
         FrameLayout.LayoutParams topLp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP);
-        topLp.topMargin = dp(16);
+        topLp.topMargin = dp(14);
         topLp.leftMargin = dp(16);
         topLp.rightMargin = dp(16);
         root.addView(topBar, topLp);
 
-        // 5. Huy hiệu hiển thị màu phim đang kích hoạt (Active Optical Look Badge)
-        activeLookBadge = new TextView(this);
-        activeLookBadge.setTextColor(Color.WHITE);
-        activeLookBadge.setTextSize(11.5f);
-        activeLookBadge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        activeLookBadge.setPadding(dp(12), dp(6), dp(12), dp(6));
-        activeLookBadge.setBackground(createPillDrawable(0x80000000, 0x33ffffff, dp(14)));
-        updateBadgeText();
-
-        FrameLayout.LayoutParams badgeLp = new FrameLayout.LayoutParams(
+        // 5. Dải thông số quang học Telemetry HUD (Ngay dưới thanh topBar)
+        hudTelemetryView = buildTelemetryHud();
+        FrameLayout.LayoutParams hudLp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        badgeLp.topMargin = dp(76);
-        root.addView(activeLookBadge, badgeLp);
+        hudLp.topMargin = dp(68);
+        root.addView(hudTelemetryView, hudLp);
 
-        // 6. Thước bù sáng EV (Bên phải khung ngắm)
-        evBadge = new TextView(this);
-        evBadge.setTextColor(0xfff59e0b);
-        evBadge.setTextSize(12f);
-        evBadge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        evBadge.setPadding(dp(8), dp(4), dp(8), dp(4));
-        evBadge.setBackground(createPillDrawable(0x70000000, 0x33ffffff, dp(12)));
-        evBadge.setText("0.0 EV");
-        evBadge.setVisibility(View.GONE);
-        FrameLayout.LayoutParams evLp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER_VERTICAL | Gravity.END);
-        evLp.rightMargin = dp(16);
-        root.addView(evBadge, evLp);
-
-        // 7. Bệ máy ảnh dưới đáy (Bottom Camera Deck)
+        // 6. Bệ điều khiển máy ảnh đáy (Bottom Control Deck)
         LinearLayout bottomDeck = buildBottomDeck();
         FrameLayout.LayoutParams bottomLp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.BOTTOM);
-        bottomLp.bottomMargin = dp(20);
+        bottomLp.bottomMargin = dp(14);
         root.addView(bottomDeck, bottomLp);
+
+        // 7. Banner thông báo nướng ảnh thành công (Non-disruptive Toast Banner)
+        toastNotificationBanner = buildToastBanner();
+        FrameLayout.LayoutParams toastLp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP);
+        toastLp.topMargin = dp(14);
+        toastLp.leftMargin = dp(16);
+        toastLp.rightMargin = dp(16);
+        root.addView(toastNotificationBanner, toastLp);
 
         // 8. Đồng hồ đếm ngược hẹn giờ (Countdown)
         countdownView = new TextView(this);
-        countdownView.setTextColor(Color.WHITE);
-        countdownView.setTextSize(88f);
+        countdownView.setTextColor(0xfff59e0b);
+        countdownView.setTextSize(92f);
         countdownView.setTypeface(Typeface.create("sans-serif-thin", Typeface.BOLD));
         countdownView.setGravity(Gravity.CENTER);
         countdownView.setVisibility(View.GONE);
@@ -327,31 +362,27 @@ public class CameraActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.CENTER));
 
-        // 9. Chớp màn trập khi chụp (Shutter Flash Blink)
+        // 9. Hiệu ứng chớp màn trập cơ khí (Mechanical Shutter Flash Curtain)
         shutterFlashView = new View(this);
         shutterFlashView.setBackgroundColor(Color.WHITE);
         shutterFlashView.setAlpha(0f);
         root.addView(shutterFlashView, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
+
+        updateTelemetryDisplay();
     }
 
-    private void updateBadgeText() {
-        if (activeLookBadge == null) return;
-        if (activeRecipe != null) {
-            String name = activeRecipe.name.replace("[CameraLook] ", "").replace("[Leica M] ", "");
-            activeLookBadge.setText("🔴 " + name.toUpperCase(Locale.ROOT));
-        } else {
-            activeLookBadge.setText("🔴 CHẾ ĐỘ TIÊU CHUẨN");
-        }
-    }
+    // =========================================================================
+    // CÁC THÀNH PHẦN GIAO DIỆN CON
+    // =========================================================================
 
     private LinearLayout buildTopBar() {
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding(dp(8), dp(6), dp(8), dp(6));
-        bar.setBackground(createPillDrawable(0x70000000, 0x26ffffff, dp(22)));
+        bar.setPadding(dp(8), dp(4), dp(8), dp(4));
+        bar.setBackground(createPillDrawable(0xe612141a, 0x33ffffff, dp(22)));
 
         // Nút Back
         ImageView backBtn = createIconBtn("back", v -> finish());
@@ -360,54 +391,93 @@ public class CameraActivity extends Activity {
         // Spacer
         bar.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
 
-        // Nút Flash
-        final TextView flashBtn = createTextBtn("⚡ Tự động", v -> {
+        // Flash Button (Auto / On / Off)
+        final TextView flashBtn = createTextBtn("⚡ A", v -> {
             flashStateIndex = (flashStateIndex + 1) % 3;
             if (flashStateIndex == 0) {
                 flashMode = CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH;
-                ((TextView) v).setText("⚡ Tự động");
+                ((TextView) v).setText("⚡ A");
+                ((TextView) v).setTextColor(0xfff59e0b);
             } else if (flashStateIndex == 1) {
                 flashMode = CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH;
-                ((TextView) v).setText("⚡ Luôn bật");
+                ((TextView) v).setText("⚡ ON");
+                ((TextView) v).setTextColor(0xfff59e0b);
             } else {
                 flashMode = CaptureRequest.CONTROL_AE_MODE_ON;
-                ((TextView) v).setText("⚡ Tắt");
+                ((TextView) v).setText("⚡ ⃠");
+                ((TextView) v).setTextColor(0xff8a8e9b);
             }
             updatePreviewSettings();
         });
+        flashBtn.setTextColor(0xfff59e0b);
         bar.addView(flashBtn);
 
-        // Nút Grid
-        final TextView gridBtn = createTextBtn("Lưới", v -> {
+        // Lưới & Thước cân bằng Level
+        final TextView gridBtn = createTextBtn("☩ GRID", v -> {
             isGridEnabled = !isGridEnabled;
-            gridOverlay.setVisibility(isGridEnabled ? View.VISIBLE : View.GONE);
-            ((TextView) v).setTextColor(isGridEnabled ? 0xfff59e0b : Color.WHITE);
+            rangefinderOverlay.setGridEnabled(isGridEnabled);
+            ((TextView) v).setTextColor(isGridEnabled ? 0xfff59e0b : 0xff8a8e9b);
         });
+        gridBtn.setTextColor(isGridEnabled ? 0xfff59e0b : 0xff8a8e9b);
         bar.addView(gridBtn);
 
-        // Nút Hẹn giờ (Timer)
-        final TextView timerBtn = createTextBtn("⏱️ Tắt", v -> {
+        // Hẹn giờ (Timer)
+        final TextView timerBtn = createTextBtn("⏱ OFF", v -> {
             if (timerSeconds == 0) {
                 timerSeconds = 3;
-                ((TextView) v).setText("⏱️ 3s");
+                ((TextView) v).setText("⏱ 3s");
                 ((TextView) v).setTextColor(0xfff59e0b);
             } else if (timerSeconds == 3) {
                 timerSeconds = 10;
-                ((TextView) v).setText("⏱️ 10s");
+                ((TextView) v).setText("⏱ 10s");
                 ((TextView) v).setTextColor(0xfff59e0b);
             } else {
                 timerSeconds = 0;
-                ((TextView) v).setText("⏱️ Tắt");
-                ((TextView) v).setTextColor(Color.WHITE);
+                ((TextView) v).setText("⏱ OFF");
+                ((TextView) v).setTextColor(0xff8a8e9b);
             }
         });
         bar.addView(timerBtn);
 
-        // Nút Đảo Camera Trước/Sau
+        // Đóng dấu khung Leica (Exhibition Watermark)
+        final TextView watermarkBtn = createTextBtn(isWatermarkEnabled ? "🔴 KHUNG" : "○ GỐC", v -> {
+            isWatermarkEnabled = !isWatermarkEnabled;
+            ((TextView) v).setText(isWatermarkEnabled ? "🔴 KHUNG" : "○ GỐC");
+            ((TextView) v).setTextColor(isWatermarkEnabled ? 0xffffffff : 0xff8a8e9b);
+        });
+        watermarkBtn.setTextColor(0xffffffff);
+        bar.addView(watermarkBtn);
+
+        // Đảo camera Trước/Sau
         ImageView flipBtn = createIconBtn("rotate_right", v -> switchCamera());
         bar.addView(flipBtn);
 
         return bar;
+    }
+
+    private TextView buildTelemetryHud() {
+        TextView tv = new TextView(this);
+        tv.setTextColor(0xfff0f2f8);
+        tv.setTextSize(10.5f);
+        tv.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        tv.setPadding(dp(12), dp(5), dp(12), dp(5));
+        tv.setBackground(createPillDrawable(0xb30d0f14, 0x26ffffff, dp(14)));
+        return tv;
+    }
+
+    private void updateTelemetryDisplay() {
+        if (hudTelemetryView == null) return;
+        String recipeTag = "LEICA M9 · CCD";
+        if (activeRecipe != null) {
+            recipeTag = activeRecipe.name.replace("[CameraLook] ", "").replace("[Leica M] ", "").toUpperCase(Locale.ROOT);
+        }
+        float displayEv = currentEv * evStep;
+        String evStr = (displayEv >= 0 ? "+" : "") + String.format(Locale.ROOT, "%.1f", displayEv) + " EV";
+        String lens = FOCAL_NAMES[currentFocalIndex];
+
+        hudTelemetryView.setText(String.format(Locale.ROOT,
+                "🔴 %s  ·  %s  ·  ISO %d  ·  %s  ·  f/%.1f  ·  %s",
+                recipeTag, lens, liveIso, liveShutter, liveAperture, evStr));
     }
 
     private LinearLayout buildBottomDeck() {
@@ -415,118 +485,332 @@ public class CameraActivity extends Activity {
         deck.setOrientation(LinearLayout.VERTICAL);
         deck.setGravity(Gravity.CENTER_HORIZONTAL);
 
-        // 1. Dải chọn màu phim ngang (Film Ribbon)
-        HorizontalScrollView scroll = new HorizontalScrollView(this);
-        scroll.setHorizontalScrollBarEnabled(false);
-        scroll.setClipToPadding(false);
-        scroll.setPadding(dp(16), 0, dp(16), dp(10));
+        // 1. Hàng chọn tiêu cự ống kính cố định Leica (Lens Focal Crop Switcher)
+        focalSelectorRow = new LinearLayout(this);
+        focalSelectorRow.setOrientation(LinearLayout.HORIZONTAL);
+        focalSelectorRow.setGravity(Gravity.CENTER);
+        focalSelectorRow.setPadding(dp(16), 0, dp(16), dp(8));
+        populateFocalSelector();
+        deck.addView(focalSelectorRow);
 
-        ribbonContainer = new LinearLayout(this);
-        ribbonContainer.setOrientation(LinearLayout.HORIZONTAL);
-        ribbonContainer.setGravity(Gravity.CENTER_VERTICAL);
-        populateRibbon();
-        scroll.addView(ribbonContainer);
-        deck.addView(scroll);
+        // 2. Bàn xoay phim cơ học (Film Simulation Reel)
+        filmReelScroll = new HorizontalScrollView(this);
+        filmReelScroll.setHorizontalScrollBarEnabled(false);
+        filmReelScroll.setClipToPadding(false);
+        filmReelScroll.setPadding(dp(16), 0, dp(16), dp(12));
 
-        // 2. Hàng nút Chụp chính (Shutter row)
+        filmReelContainer = new LinearLayout(this);
+        filmReelContainer.setOrientation(LinearLayout.HORIZONTAL);
+        filmReelContainer.setGravity(Gravity.CENTER_VERTICAL);
+        populateFilmReel();
+        filmReelScroll.addView(filmReelContainer);
+        deck.addView(filmReelScroll);
+
+        // 3. Cụm phím bấm chụp cơ học Leica M (Mechanical Shutter Deck)
         LinearLayout shutterRow = new LinearLayout(this);
         shutterRow.setOrientation(LinearLayout.HORIZONTAL);
-        shutterRow.setGravity(Gravity.CENTER);
-        shutterRow.setPadding(dp(24), dp(8), dp(24), dp(8));
+        shutterRow.setGravity(Gravity.CENTER_VERTICAL);
+        shutterRow.setPadding(dp(28), dp(4), dp(28), dp(4));
 
-        // Nút xem ảnh gần nhất (Recent Thumb)
+        // Nút xem ảnh gần nhất (Recent Film Reel Thumbnail)
+        FrameLayout recentFrame = new FrameLayout(this);
+        recentFrame.setBackground(createPillDrawable(0xff181a22, 0x40ffffff, dp(12)));
+        recentFrame.setPadding(dp(2), dp(2), dp(2), dp(2));
+
         recentThumbBtn = new ImageView(this);
         recentThumbBtn.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        recentThumbBtn.setBackground(createCircleDrawable(0x40ffffff, 0xffffffff, dp(1.5f)));
-        recentThumbBtn.setPadding(dp(2), dp(2), dp(2), dp(2));
-        recentThumbBtn.setOnClickListener(v -> {
+        recentFrame.addView(recentThumbBtn, new FrameLayout.LayoutParams(dp(46), dp(46)));
+
+        recentFrame.setOnClickListener(v -> {
+            v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
             if (lastCapturedUri != null) {
                 Intent res = new Intent();
                 res.setData(lastCapturedUri);
                 setResult(RESULT_OK, res);
                 finish();
             } else {
-                Toast.makeText(this, "Chưa có ảnh chụp mới", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Chưa có ảnh mới vừa chụp", Toast.LENGTH_SHORT).show();
             }
         });
-        shutterRow.addView(recentThumbBtn, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        shutterRow.addView(recentFrame);
 
         // Spacer
         shutterRow.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
 
-        // Nút Shutter cơ học Leica
+        // Nút chụp cơ khí Leica M (Milled Knurled Bezel & Cable Release Center Hole)
         FrameLayout shutterFrame = new FrameLayout(this);
-        GradientDrawable outerRing = new GradientDrawable();
-        outerRing.setShape(GradientDrawable.OVAL);
-        outerRing.setColor(Color.TRANSPARENT);
-        outerRing.setStroke(dp(3.5f), Color.WHITE);
-        shutterFrame.setBackground(outerRing);
 
+        // Vòng khía kim loại knurled ngoài
+        GradientDrawable knurledBezel = new GradientDrawable();
+        knurledBezel.setShape(GradientDrawable.OVAL);
+        knurledBezel.setColor(0xff22252e);
+        knurledBezel.setStroke(dp(3f), 0xff3a3e4c);
+        shutterFrame.setBackground(knurledBezel);
+
+        // Nút bấm tròn thép phay xước bên trong
         shutterInnerBtn = new View(this);
-        GradientDrawable innerCircle = new GradientDrawable();
-        innerCircle.setShape(GradientDrawable.OVAL);
-        innerCircle.setColor(Color.WHITE);
-        shutterInnerBtn.setBackground(innerCircle);
+        GradientDrawable innerButton = new GradientDrawable();
+        innerButton.setShape(GradientDrawable.OVAL);
+        innerButton.setColor(0xfff8f9fb);
+        innerButton.setStroke(dp(1.5f), 0xffd1d5db);
+        shutterInnerBtn.setBackground(innerButton);
 
-        FrameLayout.LayoutParams innerLp = new FrameLayout.LayoutParams(dp(62), dp(62), Gravity.CENTER);
+        // Lỗ ren dây bấm mềm đặc trưng Leica M ở tâm
+        View cableReleaseHole = new View(this);
+        GradientDrawable hole = new GradientDrawable();
+        hole.setShape(GradientDrawable.OVAL);
+        hole.setColor(0xff16181f);
+        cableReleaseHole.setBackground(hole);
+
+        FrameLayout.LayoutParams innerLp = new FrameLayout.LayoutParams(dp(64), dp(64), Gravity.CENTER);
         shutterFrame.addView(shutterInnerBtn, innerLp);
+        shutterFrame.addView(cableReleaseHole, new FrameLayout.LayoutParams(dp(10), dp(10), Gravity.CENTER));
 
         shutterFrame.setOnClickListener(v -> handleShutterClick());
-        shutterRow.addView(shutterFrame, new LinearLayout.LayoutParams(dp(76), dp(76)));
+        shutterRow.addView(shutterFrame, new LinearLayout.LayoutParams(dp(82), dp(82)));
 
         // Spacer
         shutterRow.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
 
-        // Nút Bật/Tắt Watermark Leica
-        final TextView watermarkBtn = createTextBtn(isWatermarkEnabled ? "🔴 Khung Leica" : "⚪ Không khung", v -> {
-            isWatermarkEnabled = !isWatermarkEnabled;
-            ((TextView) v).setText(isWatermarkEnabled ? "🔴 Khung Leica" : "⚪ Không khung");
-            ((TextView) v).setTextColor(isWatermarkEnabled ? 0xfff59e0b : Color.WHITE);
-        });
-        watermarkBtn.setPadding(dp(12), dp(8), dp(12), dp(8));
-        watermarkBtn.setBackground(createPillDrawable(0x60000000, 0x26ffffff, dp(16)));
-        shutterRow.addView(watermarkBtn);
+        // Nút huy hiệu chế độ quang học (Optical Mode Badge / Indicator)
+        LinearLayout modeIndicator = new LinearLayout(this);
+        modeIndicator.setOrientation(LinearLayout.VERTICAL);
+        modeIndicator.setGravity(Gravity.CENTER);
+        modeIndicator.setPadding(dp(12), dp(8), dp(12), dp(8));
+        modeIndicator.setBackground(createPillDrawable(0xff181a22, 0x33ffffff, dp(14)));
 
+        TextView modeTitle = new TextView(this);
+        modeTitle.setText("LEICA M");
+        modeTitle.setTextColor(0xfff59e0b);
+        modeTitle.setTextSize(10f);
+        modeTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        modeIndicator.addView(modeTitle);
+
+        TextView modeSub = new TextView(this);
+        modeSub.setText("RAW BAKED");
+        modeSub.setTextColor(0xff94a3b8);
+        modeSub.setTextSize(8.5f);
+        modeIndicator.addView(modeSub);
+
+        shutterRow.addView(modeIndicator);
         deck.addView(shutterRow);
         return deck;
     }
 
-    private void populateRibbon() {
-        ribbonContainer.removeAllViews();
-
-        for (final Recipe r : cameraRecipes) {
-            final boolean selected = (activeRecipe != null && activeRecipe.id.equals(r.id));
-            final TextView chip = new TextView(this);
-            String title = r.name.replace("[CameraLook] ", "").replace("[Leica M] ", "");
-            chip.setText(title);
-            chip.setTextSize(11f);
-            chip.setTypeface(Typeface.create("sans-serif-medium", selected ? Typeface.BOLD : Typeface.NORMAL));
-            chip.setPadding(dp(12), dp(6), dp(12), dp(6));
-            chip.setTextColor(selected ? Color.BLACK : Color.WHITE);
+    private void populateFocalSelector() {
+        focalSelectorRow.removeAllViews();
+        for (int i = 0; i < FOCAL_NAMES.length; i++) {
+            final int index = i;
+            final boolean active = (index == currentFocalIndex);
+            TextView chip = new TextView(this);
+            chip.setText(FOCAL_NAMES[i]);
+            chip.setTextSize(10.5f);
+            chip.setTypeface(Typeface.create("sans-serif-medium", active ? Typeface.BOLD : Typeface.NORMAL));
+            chip.setTextColor(active ? 0xff090a0d : 0xffc4c8d4);
+            chip.setPadding(dp(14), dp(4), dp(14), dp(4));
             chip.setBackground(createPillDrawable(
-                    selected ? 0xfff59e0b : 0x60000000,
-                    selected ? 0 : 0x26ffffff,
-                    dp(16)));
+                    active ? 0xfff59e0b : 0xcc181a22,
+                    active ? 0 : 0x33ffffff,
+                    dp(12)));
 
             chip.setOnClickListener(v -> {
                 v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                setFocalLength(index);
+            });
+
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(dp(4), 0, dp(4), 0);
+            focalSelectorRow.addView(chip, lp);
+        }
+    }
+
+    private void setFocalLength(int index) {
+        currentFocalIndex = index;
+        populateFocalSelector();
+        applyFocalCrop();
+        updateTelemetryDisplay();
+    }
+
+    private void applyFocalCrop() {
+        if (captureSession == null || previewRequestBuilder == null || sensorArraySize == null) return;
+        try {
+            float zoom = FOCAL_ZOOMS[currentFocalIndex];
+            int cropW = Math.round(sensorArraySize.width() / zoom);
+            int cropH = Math.round(sensorArraySize.height() / zoom);
+            int cropX = (sensorArraySize.width() - cropW) / 2;
+            int cropY = (sensorArraySize.height() - cropH) / 2;
+            Rect cropRect = new Rect(cropX, cropY, cropX + cropW, cropY + cropH);
+            previewRequestBuilder.set(CaptureRequest.SCALER_CROP_REGION, cropRect);
+            captureSession.setRepeatingRequest(previewRequestBuilder.build(), previewCaptureCallback, backgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void populateFilmReel() {
+        filmReelContainer.removeAllViews();
+
+        for (final Recipe r : cameraRecipes) {
+            final boolean selected = (activeRecipe != null && activeRecipe.id.equals(r.id));
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setGravity(Gravity.CENTER_VERTICAL);
+            card.setPadding(dp(12), dp(6), dp(12), dp(6));
+
+            // Xác định màu accent & tag loại phim
+            int accentColor = 0xfff59e0b; // Amber mặc định
+            String subTag = "COLOR FILM";
+            if (r.id.contains("leica")) {
+                accentColor = 0xffd41428; // Leica Red
+                subTag = r.id.contains("mono") ? "M3 MONOCHROM" : "CCD VINTAGE";
+            } else if (r.id.contains("kodak") || r.id.contains("portra") || r.id.contains("kodachrome")) {
+                accentColor = 0xffeab308; // Kodak Gold
+                subTag = "COLOR NEGATIVE";
+            } else if (r.id.contains("fuji") || r.id.contains("velvia") || r.id.contains("provia")) {
+                accentColor = 0xff10b981; // Fuji Emerald
+                subTag = "CHROME REVERSAL";
+            } else if (r.id.contains("cinestill")) {
+                accentColor = 0xff06b6d4; // CineStill Neon
+                subTag = "TUNGSTEN 800T";
+            } else if (r.id.contains("mono") || r.id.contains("tri_x") || r.id.contains("hp5")) {
+                accentColor = 0xffe2e8f0; // Silver Gelatin
+                subTag = "SILVER B&W";
+            }
+
+            card.setBackground(createPillDrawable(
+                    selected ? 0xff20242e : 0xd913151b,
+                    selected ? accentColor : 0x2bffffff,
+                    dp(14)));
+
+            // Hàng trên: Chấm accent + Tên phim
+            LinearLayout header = new LinearLayout(this);
+            header.setOrientation(LinearLayout.HORIZONTAL);
+            header.setGravity(Gravity.CENTER_VERTICAL);
+
+            View dot = new View(this);
+            GradientDrawable dotDraw = new GradientDrawable();
+            dotDraw.setShape(GradientDrawable.OVAL);
+            dotDraw.setColor(accentColor);
+            dot.setBackground(dotDraw);
+            header.addView(dot, new LinearLayout.LayoutParams(dp(6), dp(6)));
+
+            TextView title = new TextView(this);
+            String titleText = r.name.replace("[CameraLook] ", "").replace("[Leica M] ", "").toUpperCase(Locale.ROOT);
+            title.setText(titleText);
+            title.setTextSize(11f);
+            title.setTypeface(Typeface.create("sans-serif-medium", selected ? Typeface.BOLD : Typeface.NORMAL));
+            title.setTextColor(selected ? Color.WHITE : 0xffc7cad4);
+            LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT);
+            titleLp.leftMargin = dp(6);
+            header.addView(title, titleLp);
+            card.addView(header);
+
+            // Hàng dưới: Thẻ thông số quang học
+            TextView sub = new TextView(this);
+            sub.setText(subTag);
+            sub.setTextSize(8.5f);
+            sub.setTextColor(selected ? accentColor : 0xff737987);
+            sub.setTypeface(Typeface.create("sans-serif-condensed", Typeface.NORMAL));
+            card.addView(sub);
+
+            card.setOnClickListener(v -> {
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
                 activeRecipe = r;
                 loadActiveLut();
-                populateRibbon();
+                populateFilmReel();
+                updateTelemetryDisplay();
+                // Tự động cuộn thẻ được chọn vào trung tâm
+                int targetX = card.getLeft() - (filmReelScroll.getWidth() - card.getWidth()) / 2;
+                filmReelScroll.smoothScrollTo(Math.max(0, targetX), 0);
             });
 
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.rightMargin = dp(8);
-            ribbonContainer.addView(chip, lp);
+            filmReelContainer.addView(card, lp);
         }
     }
+
+    private View buildToastBanner() {
+        LinearLayout banner = new LinearLayout(this);
+        banner.setOrientation(LinearLayout.HORIZONTAL);
+        banner.setGravity(Gravity.CENTER_VERTICAL);
+        banner.setPadding(dp(12), dp(8), dp(14), dp(8));
+        banner.setBackground(createPillDrawable(0xf2141720, 0x40f59e0b, dp(18)));
+        banner.setVisibility(View.GONE);
+        banner.setAlpha(0f);
+
+        toastThumbView = new ImageView(this);
+        toastThumbView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        toastThumbView.setBackground(createPillDrawable(0xff000000, 0x33ffffff, dp(6)));
+        banner.addView(toastThumbView, new LinearLayout.LayoutParams(dp(36), dp(36)));
+
+        LinearLayout textCol = new LinearLayout(this);
+        textCol.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams textLp = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        textLp.leftMargin = dp(10);
+
+        toastTitleView = new TextView(this);
+        toastTitleView.setTextColor(Color.WHITE);
+        toastTitleView.setTextSize(11.5f);
+        toastTitleView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        textCol.addView(toastTitleView);
+
+        TextView actionHint = new TextView(this);
+        actionHint.setText("Chạm để mở phòng tối IRO Studio →");
+        actionHint.setTextColor(0xfff59e0b);
+        actionHint.setTextSize(9.5f);
+        textCol.addView(actionHint);
+        banner.addView(textCol, textLp);
+
+        banner.setOnClickListener(v -> {
+            if (lastCapturedUri != null) {
+                Intent res = new Intent();
+                res.setData(lastCapturedUri);
+                setResult(RESULT_OK, res);
+                finish();
+            }
+        });
+
+        return banner;
+    }
+
+    private void showToastBanner(String filmName, Bitmap thumb) {
+        if (toastNotificationBanner == null) return;
+        toastThumbView.setImageBitmap(thumb);
+        toastTitleView.setText("✓ Đã nướng màu [" + filmName + "]");
+        toastNotificationBanner.setVisibility(View.VISIBLE);
+        toastNotificationBanner.animate()
+                .alpha(1f)
+                .translationY(0)
+                .setDuration(220)
+                .start();
+
+        toastNotificationBanner.removeCallbacks(hideToastRunnable);
+        toastNotificationBanner.postDelayed(hideToastRunnable, 3200);
+    }
+
+    private final Runnable hideToastRunnable = () -> {
+        if (toastNotificationBanner != null) {
+            toastNotificationBanner.animate()
+                    .alpha(0f)
+                    .translationY(-dp(20))
+                    .setDuration(250)
+                    .withEndAction(() -> toastNotificationBanner.setVisibility(View.GONE))
+                    .start();
+        }
+    };
 
     private ImageView createIconBtn(String iconName, View.OnClickListener l) {
         ImageView iv = new ImageView(this);
         iv.setImageDrawable(new StudioStyle.Icon(iconName, Color.WHITE, dp(18)));
-        iv.setPadding(dp(10), dp(10), dp(10), dp(10));
+        iv.setPadding(dp(10), dp(8), dp(10), dp(8));
         iv.setOnClickListener(v -> {
             v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
             l.onClick(v);
@@ -537,9 +821,9 @@ public class CameraActivity extends Activity {
     private TextView createTextBtn(String text, View.OnClickListener l) {
         TextView tv = new TextView(this);
         tv.setText(text);
-        tv.setTextColor(Color.WHITE);
-        tv.setTextSize(11.5f);
-        tv.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        tv.setTextColor(0xffc4c8d4);
+        tv.setTextSize(11f);
+        tv.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         tv.setPadding(dp(10), dp(6), dp(10), dp(6));
         tv.setOnClickListener(v -> {
             v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
@@ -559,27 +843,20 @@ public class CameraActivity extends Activity {
         return gd;
     }
 
-    private GradientDrawable createCircleDrawable(int bgColor, int strokeColor, float strokeWidth) {
-        GradientDrawable gd = new GradientDrawable();
-        gd.setShape(GradientDrawable.OVAL);
-        gd.setColor(bgColor);
-        if (strokeColor != 0) {
-            gd.setStroke(Math.round(strokeWidth), strokeColor);
-        }
-        return gd;
-    }
-
     // =========================================================================
-    // XỬ LÝ CHỤP ẢNH & ĐẾM NGƯỢC (SHUTTER PIPELINE)
+    // QUY TRÌNH BẤM MÀN TRẬP & NƯỚNG MÀU PHIM (SHUTTER PIPELINE)
     // =========================================================================
 
     private void handleShutterClick() {
         if (isCapturing) return;
 
+        // Phản hồi cơ khí haptic kép
         shutterInnerBtn.performHapticFeedback(HapticFeedbackConstants.CONFIRM);
-        shutterInnerBtn.animate().scaleX(0.85f).scaleY(0.85f).setDuration(70).withEndAction(() -> {
-            shutterInnerBtn.animate().scaleX(1f).scaleY(1f).setDuration(120).start();
-        }).start();
+        shutterInnerBtn.animate()
+                .scaleX(0.86f).scaleY(0.86f)
+                .setDuration(60)
+                .withEndAction(() -> shutterInnerBtn.animate().scaleX(1f).scaleY(1f).setDuration(120).start())
+                .start();
 
         if (timerSeconds > 0) {
             startCountdown(timerSeconds);
@@ -601,51 +878,59 @@ public class CameraActivity extends Activity {
             return;
         }
         countdownView.setText(String.valueOf(count));
-        countdownView.setAlpha(1f);
         countdownView.setScaleX(1.4f);
         countdownView.setScaleY(1.4f);
-        countdownView.animate().scaleX(1f).scaleY(1f).alpha(0.6f).setDuration(900).withEndAction(() -> {
-            runTimerTick(count - 1);
-        }).start();
+        countdownView.animate().scaleX(1f).scaleY(1f).setDuration(350).start();
+        countdownView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+
+        countdownView.postDelayed(() -> runTimerTick(count - 1), 1000);
     }
 
     private void captureStillPicture() {
-        if (cameraDevice == null || captureSession == null || imageReader == null) {
+        if (cameraDevice == null || captureSession == null) {
             isCapturing = false;
             return;
         }
 
         try {
             isCapturing = true;
-            // Hiệu ứng chớp màn trập
-            shutterFlashView.setAlpha(0.7f);
-            shutterFlashView.animate().alpha(0f).setDuration(160).start();
 
-            final CaptureRequest.Builder captureBuilder =
+            // Hiệu ứng chớp màn trập cơ học (Shutter curtain flash)
+            shutterFlashView.setAlpha(0.85f);
+            shutterFlashView.animate().alpha(0f).setDuration(110).start();
+            shutterFlashView.performHapticFeedback(HapticFeedbackConstants.CONFIRM);
+
+            CaptureRequest.Builder captureBuilder =
                     cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(imageReader.getSurface());
 
-            // Tự động nét và phơi sáng
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
             captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, flashMode);
             captureBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, currentEv);
 
-            // Căn góc xoay EXIF theo cảm biến và hướng cầm máy
+            // Áp dụng zoom crop quang học
+            float zoom = FOCAL_ZOOMS[currentFocalIndex];
+            if (sensorArraySize != null && zoom > 1.0f) {
+                int cropW = Math.round(sensorArraySize.width() / zoom);
+                int cropH = Math.round(sensorArraySize.height() / zoom);
+                int cropX = (sensorArraySize.width() - cropW) / 2;
+                int cropY = (sensorArraySize.height() - cropH) / 2;
+                captureBuilder.set(CaptureRequest.SCALER_CROP_REGION, new Rect(cropX, cropY, cropX + cropW, cropY + cropH));
+            }
+
             int rotation = getWindowManager().getDefaultDisplay().getRotation();
-            int jpegOrientation = getJpegOrientation(sensorOrientation, rotation, isFrontFacing);
-            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, jpegOrientation);
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getJpegOrientation(sensorOrientation, rotation, isFrontFacing));
 
             captureSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
-                    // Sau khi chụp xong, tiếp tục duy trì luồng preview
-                    updatePreviewSettings();
+                    isCapturing = false;
                 }
             }, backgroundHandler);
 
-        } catch (Exception e) {
-            isCapturing = false;
+        } catch (CameraAccessException e) {
             e.printStackTrace();
+            isCapturing = false;
         }
     }
 
@@ -656,81 +941,88 @@ public class CameraActivity extends Activity {
             try {
                 image = reader.acquireLatestImage();
                 if (image == null) return;
-
                 ByteBuffer buffer = image.getPlanes()[0].getBuffer();
                 byte[] bytes = new byte[buffer.remaining()];
                 buffer.get(bytes);
 
-                // Chuyển sang luồng xử lý nướng màu ảnh gốc (ColorEngine Baking Pipeline)
-                processExecutor.execute(() -> bakeAndSavePhoto(bytes));
-
+                Bitmap rawBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                if (rawBitmap != null) {
+                    processExecutor.execute(() -> bakeAndSavePhoto(rawBitmap));
+                }
             } catch (Exception e) {
                 e.printStackTrace();
             } finally {
-                if (image != null) {
-                    image.close();
-                }
-                isCapturing = false;
+                if (image != null) image.close();
             }
         }
     };
 
-    /**
-     * Nướng màu phim & 3D LUT trực tiếp lên ảnh độ phân giải đầy đủ của cảm biến máy ảnh.
-     */
-    private void bakeAndSavePhoto(byte[] rawBytes) {
+    private void bakeAndSavePhoto(Bitmap rawBitmap) {
         try {
-            BitmapFactory.Options opts = new BitmapFactory.Options();
-            opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
-            Bitmap original = BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.length, opts);
-            if (original == null) return;
+            // Xử lý lật gương ảnh nếu là camera trước
+            Bitmap oriented = rawBitmap;
+            if (isFrontFacing) {
+                Matrix m = new Matrix();
+                m.preScale(-1.0f, 1.0f);
+                oriented = Bitmap.createBitmap(rawBitmap, 0, 0, rawBitmap.getWidth(), rawBitmap.getHeight(), m, true);
+                if (oriented != rawBitmap) rawBitmap.recycle();
+            }
 
-            int w = original.getWidth();
-            int h = original.getHeight();
-
-            // 1. Nướng màu qua ColorEngine với công thức Recipe và LUT đang chọn
-            Recipe r = (activeRecipe != null) ? activeRecipe : cameraRecipes.get(0);
-            Settings settings = r.adjustments(new ArrayList<>());
+            Recipe r = activeRecipe;
             CubeLut lut = activeLut;
 
+            int w = oriented.getWidth();
+            int h = oriented.getHeight();
             int[] pixels = new int[w * h];
-            original.getPixels(pixels, 0, w, 0, 0, w, h);
-            original.recycle();
+            oriented.getPixels(pixels, 0, w, 0, 0, w, h);
+            oriented.recycle();
+
+            // Nướng màu qua ColorEngine với 3D LUT độ phân giải gốc
+            Settings settings = (r != null)
+                    ? r.adjustments(new ArrayList<>())
+                    : new Settings();
 
             int[] processedPixels = ColorEngine.process(pixels, w, h, settings, lut);
             Bitmap baked = Bitmap.createBitmap(processedPixels, w, h, Bitmap.Config.ARGB_8888);
 
-            // 2. Chèn khung đóng dấu Leica Watermark (nếu bật)
-            Bitmap finalPhoto = isWatermarkEnabled ? drawLeicaWatermark(baked, r) : baked;
+            // Chèn khung đóng dấu Leica Watermark chuẩn mỹ thuật nếu bật
+            Bitmap finalPhoto = isWatermarkEnabled ? drawLeicaExhibitionWatermark(baked, r) : baked;
             if (finalPhoto != baked) {
                 baked.recycle();
             }
 
-            // 3. Lưu ảnh vào Thư viện hệ thống (DCIM/IRO Studio)
+            // Lưu vào Thư viện hệ thống
             Uri savedUri = saveToGallery(finalPhoto);
             lastCapturedUri = savedUri;
 
-            // 4. Tạo thumbnail nhỏ góc trái và thông báo
-            final Bitmap thumb = Bitmap.createScaledBitmap(finalPhoto, dp(44), dp(44), true);
+            // Thumbnail mượt mà
+            final Bitmap thumb = Bitmap.createScaledBitmap(finalPhoto, dp(46), dp(46), true);
+            final String filmName = (r != null)
+                    ? r.name.replace("[CameraLook] ", "").replace("[Leica M] ", "")
+                    : "TIÊU CHUẨN";
 
             runOnUiThread(() -> {
                 if (recentThumbBtn != null) {
                     recentThumbBtn.setImageBitmap(thumb);
+                    recentThumbBtn.setScaleX(1.2f);
+                    recentThumbBtn.setScaleY(1.2f);
+                    recentThumbBtn.animate().scaleX(1f).scaleY(1f).setDuration(200).start();
                 }
-                showCaptureSuccessDialog(r, savedUri);
+                showToastBanner(filmName, thumb);
             });
 
         } catch (Exception | OutOfMemoryError e) {
             e.printStackTrace();
-            runOnUiThread(() -> Toast.makeText(this, "Lỗi xử lý ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            runOnUiThread(() -> Toast.makeText(this, "Lỗi nướng màu ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show());
         }
     }
 
-    private Bitmap drawLeicaWatermark(Bitmap photo, Recipe recipe) {
+    private Bitmap drawLeicaExhibitionWatermark(Bitmap photo, Recipe recipe) {
         int w = photo.getWidth();
         int h = photo.getHeight();
 
-        int footH = Math.max(dp(60), Math.round(w * 0.09f));
+        // Footer chuẩn triển lãm Leica Gallery (chiếm ~8.5% chiều rộng ảnh)
+        int footH = Math.max(dp(70), Math.round(w * 0.088f));
         Bitmap framed = Bitmap.createBitmap(w, h + footH, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(framed);
 
@@ -738,39 +1030,67 @@ public class CameraActivity extends Activity {
         c.drawColor(0xffffffff);
         c.drawBitmap(photo, 0, 0, null);
 
-        // Dải trắng dưới đáy kiểu Leica
+        // Dải trắng tinh khiết dưới đáy
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         p.setColor(0xffffffff);
         c.drawRect(0, h, w, h + footH, p);
 
-        // Vạch phân cách mỏng
-        p.setColor(0x14000000);
-        c.drawLine(w * 0.05f, h, w * 0.95f, h, p);
+        // Đường chỉ mỏng phân cách
+        p.setColor(0x18000000);
+        p.setStrokeWidth(Math.max(1f, w * 0.0006f));
+        c.drawLine(w * 0.04f, h, w * 0.96f, h, p);
 
-        // Chấm đỏ Leica
-        float dotRadius = footH * 0.16f;
+        // Chấm đỏ tròn Leica kinh điển 🔴
+        float dotRadius = footH * 0.17f;
         float dotX = w * 0.055f;
         float dotY = h + footH * 0.48f;
-        p.setColor(0xffd41428); // Leica Red
+        p.setColor(0xffd41428); // Leica Heritage Red
+        p.setStyle(Paint.Style.FILL);
         c.drawCircle(dotX, dotY, dotRadius, p);
 
-        // Chữ "LEICA" trong chấm đỏ hoặc cạnh chấm đỏ
-        p.setColor(0xff16181c);
-        p.setTextSize(footH * 0.28f);
-        p.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        String cameraName = "LEICA M9 · " + recipe.film.toUpperCase(Locale.ROOT);
-        c.drawText(cameraName, dotX + dotRadius * 2.2f, dotY + footH * 0.09f, p);
+        // Chữ "Leica" script trắng ở tâm chấm đỏ
+        Paint whiteP = new Paint(Paint.ANTI_ALIAS_FLAG);
+        whiteP.setColor(Color.WHITE);
+        whiteP.setTextSize(dotRadius * 0.9f);
+        whiteP.setTypeface(Typeface.create("sans-serif", Typeface.BOLD_ITALIC));
+        whiteP.setTextAlign(Paint.Align.CENTER);
+        c.drawText("Leica", dotX, dotY + dotRadius * 0.32f, whiteP);
 
-        // Thông số khẩu độ, tốc độ, ISO bên phải
-        p.setColor(0xff737987);
-        p.setTextSize(footH * 0.22f);
+        // Tên dòng máy & Cấu hình phim
+        p.setColor(0xff12141a);
+        p.setTextSize(footH * 0.26f);
+        p.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        p.setTextAlign(Paint.Align.LEFT);
+
+        String filmName = (recipe != null)
+                ? recipe.film.toUpperCase(Locale.ROOT)
+                : "CLASSIC CCD";
+        String cameraHeader = "LEICA M9  ·  " + filmName;
+        c.drawText(cameraHeader, dotX + dotRadius * 2.1f, dotY + footH * 0.08f, p);
+
+        // Vạch phân cách đứng mảnh
+        float dividerX = w * 0.44f;
+        p.setColor(0x22000000);
+        c.drawLine(dividerX, h + footH * 0.28f, dividerX, h + footH * 0.72f, p);
+
+        // Tên ống kính Summilux
+        p.setColor(0xff525866);
+        p.setTextSize(footH * 0.20f);
+        p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        String lensName = FOCAL_LENSES[currentFocalIndex];
+        c.drawText(lensName, dividerX + w * 0.02f, dotY + footH * 0.07f, p);
+
+        // Thông số khẩu độ, tốc độ, ISO và ngày giờ bên phải
+        p.setColor(0xff6e7485);
+        p.setTextSize(footH * 0.21f);
         p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         p.setTextAlign(Paint.Align.RIGHT);
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd  HH:mm", Locale.ROOT);
         String dateStr = sdf.format(new Date());
-        String exifStr = "35mm  f/2.0  1/250s  ISO 200  |  " + dateStr;
-        c.drawText(exifStr, w * 0.95f, dotY + footH * 0.08f, p);
+        String exifStr = String.format(Locale.ROOT, "%s  f/%.1f  %s  ISO %d  |  %s",
+                FOCAL_NAMES[currentFocalIndex], liveAperture, liveShutter, liveIso, dateStr);
+        c.drawText(exifStr, w * 0.95f, dotY + footH * 0.07f, p);
 
         return framed;
     }
@@ -789,7 +1109,7 @@ public class CameraActivity extends Activity {
         if (uri == null) throw new Exception("Không thể tạo bản ghi MediaStore");
 
         try (OutputStream out = getContentResolver().openOutputStream(uri)) {
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 97, out);
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 98, out);
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -801,46 +1121,13 @@ public class CameraActivity extends Activity {
         return uri;
     }
 
-    private void showCaptureSuccessDialog(Recipe r, Uri uri) {
-        new AlertDialog.Builder(this)
-                .setTitle("📸 Đã chụp & nướng màu phim")
-                .setMessage("Tác phẩm đã nướng thành công phong cách: " + r.name + " và lưu vào Thư viện ảnh.")
-                .setPositiveButton("Chỉnh sửa trong IRO Studio", (dialog, which) -> {
-                    Intent res = new Intent();
-                    res.setData(uri);
-                    setResult(RESULT_OK, res);
-                    finish();
-                })
-                .setNegativeButton("Chụp tiếp", null)
-                .show();
-    }
-
     // =========================================================================
-    // CAMERA2 INITIALIZATION & LIFECYCLE
+    // CHẠM LẤY NÉT & ĐIỀU CHỈNH BÙ SÁNG EV TRỰC QUAN
     // =========================================================================
-
-    private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-            openCamera();
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-            return true;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        }
-    };
 
     private final View.OnTouchListener viewfinderTouchListener = new View.OnTouchListener() {
         private float startY = 0;
+        private boolean isDraggingEv = false;
 
         @SuppressLint("ClickableViewAccessibility")
         @Override
@@ -848,12 +1135,14 @@ public class CameraActivity extends Activity {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     startY = event.getY();
+                    isDraggingEv = false;
                     triggerTapToFocus(event.getX(), event.getY());
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
                     float dy = startY - event.getY();
-                    if (Math.abs(dy) > dp(10)) {
+                    if (Math.abs(dy) > dp(12)) {
+                        isDraggingEv = true;
                         adjustEv(dy > 0 ? 1 : -1);
                         startY = event.getY();
                     }
@@ -869,7 +1158,8 @@ public class CameraActivity extends Activity {
     private void triggerTapToFocus(float x, float y) {
         if (cameraDevice == null || captureSession == null) return;
         try {
-            focusReticle.show(x, y);
+            float displayEv = currentEv * evStep;
+            focusReticle.show(x, y, displayEv);
 
             Rect viewRect = new Rect(0, 0, textureView.getWidth(), textureView.getHeight());
             int areaSize = dp(60);
@@ -885,7 +1175,7 @@ public class CameraActivity extends Activity {
             previewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
             previewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_START);
 
-            captureSession.setRepeatingRequest(previewRequestBuilder.build(), null, backgroundHandler);
+            captureSession.setRepeatingRequest(previewRequestBuilder.build(), previewCaptureCallback, backgroundHandler);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -898,17 +1188,15 @@ public class CameraActivity extends Activity {
         if (next != currentEv) {
             currentEv = next;
             float displayEv = currentEv * evStep;
-            evBadge.setVisibility(View.VISIBLE);
-            evBadge.setText(String.format(Locale.ROOT, "%+.1f EV", displayEv));
+            focusReticle.updateEv(displayEv);
             updatePreviewSettings();
-            evBadge.removeCallbacks(hideEvBadgeRunnable);
-            evBadge.postDelayed(hideEvBadgeRunnable, 2000);
+            updateTelemetryDisplay();
         }
     }
 
-    private final Runnable hideEvBadgeRunnable = () -> {
-        if (evBadge != null) evBadge.setVisibility(View.GONE);
-    };
+    // =========================================================================
+    // VÒNG ĐỜI CAMERA2 & SENSOR GYRO LEVEL
+    // =========================================================================
 
     private void openCamera() {
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -929,6 +1217,7 @@ public class CameraActivity extends Activity {
                     sensorOrientation = chars.get(CameraCharacteristics.SENSOR_ORIENTATION) != null
                             ? chars.get(CameraCharacteristics.SENSOR_ORIENTATION) : 90;
 
+                    sensorArraySize = chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
                     evRange = chars.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
                     android.util.Rational step = chars.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP);
                     if (step != null) evStep = step.floatValue();
@@ -954,7 +1243,7 @@ public class CameraActivity extends Activity {
             }
         } catch (SecurityException | CameraAccessException e) {
             e.printStackTrace();
-            Toast.makeText(this, "Không thể truy cập máy ảnh", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Không thể truy cập máy ảnh quang học", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -995,6 +1284,7 @@ public class CameraActivity extends Activity {
                         public void onConfigured(CameraCaptureSession session) {
                             if (cameraDevice == null) return;
                             captureSession = session;
+                            applyFocalCrop();
                             updatePreviewSettings();
                         }
 
@@ -1015,11 +1305,32 @@ public class CameraActivity extends Activity {
             previewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
             previewRequestBuilder.set(CaptureRequest.CONTROL_AE_MODE, flashMode);
             previewRequestBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, currentEv);
-            captureSession.setRepeatingRequest(previewRequestBuilder.build(), null, backgroundHandler);
+            captureSession.setRepeatingRequest(previewRequestBuilder.build(), previewCaptureCallback, backgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
+
+    private final CameraCaptureSession.CaptureCallback previewCaptureCallback = new CameraCaptureSession.CaptureCallback() {
+        @Override
+        public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+            Integer iso = result.get(CaptureResult.SENSOR_SENSITIVITY);
+            Long exp = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+            Float ap = result.get(CaptureResult.LENS_APERTURE);
+
+            if (iso != null) liveIso = iso;
+            if (ap != null) liveAperture = ap;
+            if (exp != null) {
+                double s = exp / 1_000_000_000.0;
+                if (s >= 1.0) {
+                    liveShutter = String.format(Locale.ROOT, "%.1fs", s);
+                } else if (s > 0) {
+                    liveShutter = "1/" + Math.round(1.0 / s) + "s";
+                }
+            }
+            runOnUiThread(CameraActivity.this::updateTelemetryDisplay);
+        }
+    };
 
     private void switchCamera() {
         isFrontFacing = !isFrontFacing;
@@ -1061,10 +1372,30 @@ public class CameraActivity extends Activity {
         }
     }
 
+    private final SensorEventListener sensorListener = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+                float ax = event.values[0];
+                float ay = event.values[1];
+                float roll = (float) Math.toDegrees(Math.atan2(-ax, ay));
+                if (rangefinderOverlay != null) {
+                    rangefinderOverlay.setHorizonRoll(roll);
+                }
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+    };
+
     @Override
     protected void onResume() {
         super.onResume();
         startBackgroundThread();
+        if (sensorManager != null && accelerometer != null) {
+            sensorManager.registerListener(sensorListener, accelerometer, SensorManager.SENSOR_DELAY_UI);
+        }
         if (textureView.isAvailable()) {
             openCamera();
         } else {
@@ -1074,6 +1405,9 @@ public class CameraActivity extends Activity {
 
     @Override
     protected void onPause() {
+        if (sensorManager != null) {
+            sensorManager.unregisterListener(sensorListener);
+        }
         closeCamera();
         stopBackgroundThread();
         super.onPause();
@@ -1085,11 +1419,29 @@ public class CameraActivity extends Activity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 openCamera();
             } else {
-                Toast.makeText(this, "Cần cấp quyền máy ảnh để chụp ảnh", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Cần cấp quyền máy ảnh để sử dụng phân hệ Leica Camera", Toast.LENGTH_LONG).show();
                 finish();
             }
         }
     }
+
+    private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
+        @Override
+        public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+            openCamera();
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {}
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(SurfaceTexture surface) {}
+    };
 
     private static int getJpegOrientation(int sensorOrientation, int deviceOrientation, boolean isFrontFacing) {
         if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
@@ -1130,16 +1482,53 @@ public class CameraActivity extends Activity {
     }
 
     // =========================================================================
-    // CUSTOM VIEWS CHO KHUNG NGẮM (OVERLAYS)
+    // LỚP OVERLAY QUANG HỌC LEICA M (BRIGHTLINES & GYRO LEVEL)
     // =========================================================================
 
-    private static class GridOverlayView extends View {
-        private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private static class RangefinderOverlayView extends View {
+        private final Paint framePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint horizonPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint patchPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
-        public GridOverlayView(Context context) {
+        private boolean gridEnabled = true;
+        private float horizonRoll = 0f;
+        private boolean wasLevel = false;
+
+        public RangefinderOverlayView(Context context) {
             super(context);
-            linePaint.setColor(0x38ffffff);
-            linePaint.setStrokeWidth(1.5f);
+            framePaint.setColor(0x73ffffff); // Brightline white
+            framePaint.setStyle(Paint.Style.STROKE);
+            framePaint.setStrokeWidth(2.5f);
+            framePaint.setStrokeCap(Paint.Cap.ROUND);
+
+            gridPaint.setColor(0x24ffffff);
+            gridPaint.setStrokeWidth(1.2f);
+
+            horizonPaint.setColor(0x80ffffff);
+            horizonPaint.setStyle(Paint.Style.STROKE);
+            horizonPaint.setStrokeWidth(2f);
+            horizonPaint.setStrokeCap(Paint.Cap.ROUND);
+
+            patchPaint.setColor(0x59ffffff);
+            patchPaint.setStyle(Paint.Style.STROKE);
+            patchPaint.setStrokeWidth(1.5f);
+        }
+
+        public void setGridEnabled(boolean enabled) {
+            this.gridEnabled = enabled;
+            invalidate();
+        }
+
+        public void setHorizonRoll(float roll) {
+            // Giữ trong khoảng -45 đến 45 độ
+            this.horizonRoll = Math.max(-45f, Math.min(45f, roll));
+            boolean isLevel = Math.abs(this.horizonRoll) < 1.0f;
+            if (isLevel && !wasLevel) {
+                performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+            }
+            wasLevel = isLevel;
+            invalidate();
         }
 
         @Override
@@ -1148,44 +1537,146 @@ public class CameraActivity extends Activity {
             int w = getWidth();
             int h = getHeight();
 
-            // 2 đường dọc (1/3 và 2/3)
-            canvas.drawLine(w / 3f, 0, w / 3f, h, linePaint);
-            canvas.drawLine(2f * w / 3f, 0, 2f * w / 3f, h, linePaint);
+            // 1. Lưới tam phân 1/3 (Rule of Thirds)
+            if (gridEnabled) {
+                canvas.drawLine(w / 3f, 0, w / 3f, h, gridPaint);
+                canvas.drawLine(2f * w / 3f, 0, 2f * w / 3f, h, gridPaint);
+                canvas.drawLine(0, h / 3f, w, h / 3f, gridPaint);
+                canvas.drawLine(0, 2f * h / 3f, w, 2f * h / 3f, gridPaint);
+            }
 
-            // 2 đường ngang (1/3 và 2/3)
-            canvas.drawLine(0, h / 3f, w, h / 3f, linePaint);
-            canvas.drawLine(0, 2f * h / 3f, w, 2f * h / 3f, linePaint);
+            // 2. Vạch ngắm quang học Rangefinder Brightlines (Corner Ticks)
+            float padX = w * 0.06f;
+            float padY = h * 0.08f;
+            float tickLen = w * 0.08f;
+
+            // Góc trên trái
+            canvas.drawLine(padX, padY, padX + tickLen, padY, framePaint);
+            canvas.drawLine(padX, padY, padX, padY + tickLen, framePaint);
+
+            // Góc trên phải
+            canvas.drawLine(w - padX, padY, w - padX - tickLen, padY, framePaint);
+            canvas.drawLine(w - padX, padY, w - padX, padY + tickLen, framePaint);
+
+            // Góc dưới trái
+            canvas.drawLine(padX, h - padY, padX + tickLen, h - padY, framePaint);
+            canvas.drawLine(padX, h - padY, padX, h - padY - tickLen, framePaint);
+
+            // Góc dưới phải
+            canvas.drawLine(w - padX, h - padY, w - padX - tickLen, h - padY, framePaint);
+            canvas.drawLine(w - padX, h - padY, w - padX, h - padY - tickLen, framePaint);
+
+            // 3. Vùng ngắm trung tâm Rangefinder Split Patch [ + ]
+            float cx = w / 2f;
+            float cy = h / 2f;
+            float patchW = w * 0.16f;
+            float patchH = w * 0.10f;
+            canvas.drawRect(cx - patchW / 2f, cy - patchH / 2f, cx + patchW / 2f, cy + patchH / 2f, patchPaint);
+            canvas.drawLine(cx - 10f, cy, cx + 10f, cy, patchPaint);
+            canvas.drawLine(cx, cy - 10f, cx, cy + 10f, patchPaint);
+
+            // 4. Thước chân trời cân bằng Gyro Level Line
+            boolean isLevel = Math.abs(horizonRoll) < 1.0f;
+            horizonPaint.setColor(isLevel ? 0xfff59e0b : 0x73ffffff); // Amber khi cân bằng 0°
+            horizonPaint.setStrokeWidth(isLevel ? 3f : 1.8f);
+
+            canvas.save();
+            canvas.rotate(-horizonRoll, cx, cy);
+            float lineLen = w * 0.22f;
+            canvas.drawLine(cx - lineLen, cy, cx - 18f, cy, horizonPaint);
+            canvas.drawLine(cx + 18f, cy, cx + lineLen, cy, horizonPaint);
+            canvas.drawCircle(cx, cy, 3.5f, horizonPaint);
+            canvas.restore();
         }
     }
 
+    // =========================================================================
+    // VÒNG CHẠM LẤY NÉT & THANH BÙ SÁNG SUNLIGHT EV
+    // =========================================================================
+
     private static class FocusReticleView extends View {
-        private final Paint reticlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint boxPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint sunPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
         private float fx = -1, fy = -1;
+        private float currentEv = 0f;
 
         public FocusReticleView(Context context) {
             super(context);
-            reticlePaint.setColor(0xfff59e0b); // Amber reticle
-            reticlePaint.setStyle(Paint.Style.STROKE);
-            reticlePaint.setStrokeWidth(2f);
+            boxPaint.setColor(0xfff59e0b); // Leica Amber
+            boxPaint.setStyle(Paint.Style.STROKE);
+            boxPaint.setStrokeWidth(2f);
+
+            sunPaint.setColor(0xfff59e0b);
+            sunPaint.setStyle(Paint.Style.STROKE);
+            sunPaint.setStrokeWidth(2f);
+
+            textPaint.setColor(0xfff59e0b);
+            textPaint.setTextSize(26f);
+            textPaint.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         }
 
-        public void show(float x, float y) {
+        public void show(float x, float y, float ev) {
             this.fx = x;
             this.fy = y;
+            this.currentEv = ev;
             setAlpha(1f);
-            setScaleX(1.3f);
-            setScaleY(1.3f);
+            setScaleX(1.25f);
+            setScaleY(1.25f);
             invalidate();
-            animate().scaleX(1f).scaleY(1f).alpha(0f).setDuration(1200).start();
+            animate().scaleX(1f).scaleY(1f).setDuration(180).start();
+
+            removeCallbacks(fadeOutRunnable);
+            postDelayed(fadeOutRunnable, 2800);
         }
+
+        public void updateEv(float ev) {
+            this.currentEv = ev;
+            setAlpha(1f);
+            invalidate();
+            removeCallbacks(fadeOutRunnable);
+            postDelayed(fadeOutRunnable, 2500);
+        }
+
+        private final Runnable fadeOutRunnable = () -> animate().alpha(0f).setDuration(400).start();
 
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
             if (fx >= 0 && fy >= 0) {
-                float size = 48f;
-                canvas.drawRect(fx - size, fy - size, fx + size, fy + size, reticlePaint);
-                canvas.drawCircle(fx, fy, 4f, reticlePaint);
+                float size = 42f;
+
+                // Hộp lấy nét chính
+                canvas.drawRect(fx - size, fy - size, fx + size, fy + size, boxPaint);
+                canvas.drawCircle(fx, fy, 3.5f, boxPaint);
+
+                // 4 vạch nhắm nhỏ ngoài góc
+                canvas.drawLine(fx - size, fy, fx - size - 12f, fy, boxPaint);
+                canvas.drawLine(fx + size, fy, fx + size + 12f, fy, boxPaint);
+                canvas.drawLine(fx, fy - size, fx, fy - size - 12f, boxPaint);
+                canvas.drawLine(fx, fy + size, fx, fy + size + 12f, boxPaint);
+
+                // Thanh trượt mặt trời EV bên phải hộp
+                float sliderX = fx + size + 28f;
+                canvas.drawLine(sliderX, fy - 50f, sliderX, fy + 50f, sunPaint);
+
+                // Biểu tượng mặt trời nhỏ ☀️
+                float sunY = fy - Math.max(-50f, Math.min(50f, currentEv * 15f));
+                canvas.drawCircle(sliderX, sunY, 6.5f, sunPaint);
+                for (int i = 0; i < 8; i++) {
+                    double rad = Math.toRadians(i * 45);
+                    canvas.drawLine(
+                            sliderX + (float) Math.cos(rad) * 9f,
+                            sunY + (float) Math.sin(rad) * 9f,
+                            sliderX + (float) Math.cos(rad) * 14f,
+                            sunY + (float) Math.sin(rad) * 14f,
+                            sunPaint);
+                }
+
+                // Nhãn EV
+                String evText = (currentEv >= 0 ? "+" : "") + String.format(Locale.ROOT, "%.1f", currentEv);
+                canvas.drawText(evText, sliderX + 22f, sunY + 9f, textPaint);
             }
         }
     }

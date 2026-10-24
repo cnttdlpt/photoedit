@@ -84,6 +84,7 @@ import java.util.concurrent.Future;
 public class MainActivity extends Activity {
 
     // Mã yêu cầu Intent (Activity Result Request Codes)
+    private static final int REQUEST_CAMERA = 901;
     private static final int OPEN_PHOTO = 10;
     private static final int OPEN_LUT = 11;
     private static final int OPEN_RECIPE = 12;
@@ -561,6 +562,12 @@ public class MainActivity extends Activity {
         MotionStudio.attachExpressiveTouch(searchBox, 0.98f);
         topBar.addView(searchBox, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
+        View camTopBtn = createCircleIconButton("camera", StudioStyle.WARM_AMBER, dp(40), this::launchCamera);
+        camTopBtn.setContentDescription("Máy ảnh Leica");
+        LinearLayout.LayoutParams camTopParams = new LinearLayout.LayoutParams(dp(40), dp(40));
+        camTopParams.leftMargin = dp(8);
+        topBar.addView(camTopBtn, camTopParams);
+
         View lutCloudBtn = createCircleIconButton("film", StudioStyle.INK, dp(40), this::showOnlineLuts);
         lutCloudBtn.setContentDescription("Kho LUT trực tuyến");
         LinearLayout.LayoutParams lutParams = new LinearLayout.LayoutParams(dp(40), dp(40));
@@ -632,6 +639,28 @@ public class MainActivity extends Activity {
                 12.5f, StudioStyle.MUTED);
         heroSub.setLineSpacing(dp(2), 1.0f);
         heroCard.addView(heroSub);
+
+        LinearLayout cameraBtn = row();
+        cameraBtn.setGravity(Gravity.CENTER);
+        cameraBtn.setPadding(dp(18), dp(13), dp(18), dp(13));
+        cameraBtn.setBackground(StudioStyle.warmAmberPill(dp(18)));
+        ImageView camIcon = new ImageView(this);
+        camIcon.setImageDrawable(new StudioStyle.Icon("camera", Color.WHITE, dp(18)));
+        cameraBtn.addView(camIcon, new LinearLayout.LayoutParams(dp(18), dp(18)));
+        TextView camText = text("Máy ảnh Leica M & Film · Chụp nướng màu", 13.5f, Color.WHITE);
+        camText.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        camText.setPadding(dp(10), 0, 0, 0);
+        cameraBtn.addView(camText);
+        cameraBtn.setOnClickListener(v -> {
+            v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+            launchCamera();
+        });
+        MotionStudio.attachExpressiveTouch(cameraBtn, 0.96f);
+        LinearLayout.LayoutParams camLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        camLp.topMargin = dp(14);
+        heroCard.addView(cameraBtn, camLp);
 
         LinearLayout primaryRow = row();
         primaryRow.setPadding(0, dp(16), 0, 0);
@@ -3510,7 +3539,9 @@ public class MainActivity extends Activity {
             return;
         }
         Uri uri = data.getData();
-        if (request == OPEN_PHOTO) {
+        if (request == REQUEST_CAMERA) {
+            loadPhoto(uri, true);
+        } else if (request == OPEN_PHOTO) {
             loadPhoto(uri, true);
         } else if (request == OPEN_LUT) {
             importLut(uri);
@@ -4790,4 +4821,29 @@ public class MainActivity extends Activity {
         executor.shutdownNow();
         super.onDestroy();
     }
+
+    private void launchCamera() {
+        if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.CAMERA}, REQUEST_CAMERA);
+            return;
+        }
+        Intent intent = new Intent(this, CameraActivity.class);
+        if (currentRecipe != null) {
+            intent.putExtra(CameraActivity.EXTRA_RECIPE_ID, currentRecipe.id);
+        }
+        startActivityForResult(intent, REQUEST_CAMERA);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CAMERA) {
+            if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                launchCamera();
+            } else {
+                message("Cần cấp quyền máy ảnh để chụp ảnh");
+            }
+        }
+    }
+
 }

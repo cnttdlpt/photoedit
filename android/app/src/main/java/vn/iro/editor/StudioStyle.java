@@ -500,6 +500,12 @@ public final class StudioStyle {
                     c.drawPath(path, p);
                     break;
                 }
+                case "camera": {
+                    c.drawRoundRect(new RectF(3f, 7f, 21f, 19f), 3f, 3f, p);
+                    c.drawCircle(12f, 13f, 3.5f, p);
+                    c.drawRect(new RectF(8f, 4.5f, 12f, 7f), p);
+                    break;
+                }
                 case "photo": {
                     c.drawRoundRect(3f, 4f, 21f, 20f, 3f, 3f, p);
                     c.drawCircle(8.5f, 9f, 1.6f, p);

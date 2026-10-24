@@ -69,7 +69,7 @@ public final class FujiSampleLoader {
         if (exactCached != null && !exactCached.isRecycled()) {
             view.setImageBitmap(exactCached);
             if (badge != null) {
-                badge.setText("Ảnh mẫu FujiXWeekly · " + recipe.film);
+                badge.setText(getSampleBadgeText(recipe));
             }
             return;
         }
@@ -81,12 +81,12 @@ public final class FujiSampleLoader {
             MEMORY_CACHE.put(tagKey, exactAssetBmp);
             view.setImageBitmap(exactAssetBmp);
             if (badge != null) {
-                badge.setText("Ảnh mẫu FujiXWeekly · " + recipe.film);
+                badge.setText(getSampleBadgeText(recipe));
             }
             return;
         }
 
-        // 3. Hiển thị tức thì ảnh mẫu đại diện cùng dòng Film Simulation từ assets/fujixweekly/
+        // 3. Hiển thị tức thì ảnh mẫu đại diện cùng dòng Film Simulation từ assets/fujixweekly/ hoặc cameralook/leica
         if (recipe.sampleAsset != null && !recipe.sampleAsset.isEmpty()) {
             String fallbackKey = "asset:" + recipe.sampleAsset;
             Bitmap fallbackBmp = MEMORY_CACHE.get(fallbackKey);
@@ -99,7 +99,7 @@ public final class FujiSampleLoader {
             if (fallbackBmp != null) {
                 view.setImageBitmap(fallbackBmp);
                 if (badge != null) {
-                    badge.setText("Ảnh mẫu FujiXWeekly · " + recipe.film);
+                    badge.setText(getSampleBadgeText(recipe));
                 }
             }
         }
@@ -109,7 +109,18 @@ public final class FujiSampleLoader {
         if (remoteUrl == null || remoteUrl.isEmpty()) {
             return;
         }
-        bindUrl(context, view, badge, remoteUrl, tagKey, "Ảnh mẫu FujiXWeekly · " + recipe.film, 420);
+        bindUrl(context, view, badge, remoteUrl, tagKey, getSampleBadgeText(recipe), 420);
+    }
+
+    private static String getSampleBadgeText(Recipe recipe) {
+        if (recipe == null) return "Ảnh mẫu";
+        if (recipe.id != null && recipe.id.startsWith("leica_")) {
+            return "Chất ảnh Leica M · " + recipe.film;
+        }
+        if (recipe.id != null && recipe.id.startsWith("cameralook_")) {
+            return "Màu quang học · " + recipe.film;
+        }
+        return "Ảnh mẫu FujiXWeekly · " + recipe.film;
     }
 
     /**

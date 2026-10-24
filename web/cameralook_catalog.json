@@ -1,0 +1,439 @@
+[
+  {
+    "idx": 0,
+    "nameZh": "富士 CC II",
+    "nameEn": "Fujifilm Classic Chrome II",
+    "nameVi": "Fujifilm Classic Chrome II (Tông ấm hoài cổ)",
+    "descZh": "青绿层次与温暖建筑，适合街景和阴天风景。",
+    "descVi": "Tông màu Classic Chrome thế hệ II với sắc ngả lam ngọc (cyan) dịu và kiến trúc ấm áp, đặc biệt phù hợp chụp đường phố và phong cảnh ngày nhiều mây.",
+    "lutFile": "tone-0.lut",
+    "cubeName": "cameralook-tone-0-fuji-cc2.cube",
+    "introFile": "assets/cameralook/intro-0.jpg",
+    "filmSim": "Classic Chrome",
+    "settings": {
+      "highlight": -1,
+      "shadow": 0.5,
+      "color": 1,
+      "grain": 25,
+      "temperature": 4
+    }
+  },
+  {
+    "idx": 1,
+    "nameZh": "珠光",
+    "nameEn": "Pearlescent Soft",
+    "nameVi": "Ánh ngọc trai (Pearlescent Soft)",
+    "descZh": "明亮柔和的浅色层次，适合静物和柔光场景。",
+    "descVi": "Sắc thái sáng trong mềm mại với dải chuyển vùng sáng mượt mà, lý tưởng cho tĩnh vật, hoa cỏ và chân dung ánh sáng dịu.",
+    "lutFile": "tone-1.lut",
+    "cubeName": "cameralook-tone-1-pearlescent.cube",
+    "introFile": "assets/cameralook/intro-1.jpg",
+    "filmSim": "Astia",
+    "settings": {
+      "highlight": -1.5,
+      "shadow": -0.5,
+      "color": 0.5,
+      "grain": 15,
+      "temperature": 1
+    }
+  },
+  {
+    "idx": 2,
+    "nameZh": "Pocket",
+    "nameEn": "Pocket Everyday",
+    "nameVi": "Khoảnh khắc thường nhật (Pocket Daily)",
+    "descZh": "清透轻快的日常色彩，适合街拍与旅行。",
+    "descVi": "Màu sắc trong trẻo, tự nhiên và tươi sáng, phong cách máy ảnh du lịch bỏ túi cho nhiếp ảnh đường phố và du lịch.",
+    "lutFile": "tone-2.lut",
+    "cubeName": "cameralook-tone-2-pocket.cube",
+    "introFile": "assets/cameralook/intro-2.jpg",
+    "filmSim": "Provia",
+    "settings": {
+      "highlight": 0,
+      "shadow": 0,
+      "color": 1,
+      "grain": 20,
+      "temperature": 0
+    }
+  },
+  {
+    "idx": 3,
+    "nameZh": "富士 NN",
+    "nameEn": "Fujifilm Pro Neg. Std",
+    "nameVi": "Fujifilm Pro Neg Std (Chân dung tự nhiên)",
+    "descZh": "柔和胶片层次与细腻颗粒，适合日常风景。",
+    "descVi": "Dải tương phản dịu của dòng film âm bản màu Fujifilm Pro Neg, giữ tông màu da chân dung mịn màng và trung thực.",
+    "lutFile": "tone-3.lut",
+    "cubeName": "cameralook-tone-3-fuji-nn.cube",
+    "introFile": "assets/cameralook/intro-3.jpg",
+    "filmSim": "PRO Neg. Std",
+    "settings": {
+      "highlight": -1,
+      "shadow": -1,
+      "color": 0,
+      "grain": 20,
+      "temperature": 2
+    }
+  },
+  {
+    "idx": 4,
+    "nameZh": "富士 NC",
+    "nameEn": "Fujifilm Nostalgic Negative",
+    "nameVi": "Fujifilm Nostalgic Neg (Âm bản ký ức)",
+    "descZh": "更明显的胶片颗粒与色彩氛围，适合街景。",
+    "descVi": "Mô phỏng màu film Nostalgic Neg danh tiếng: vùng tối ngả hổ phách, tương phản đầm chắc với hạt film hoài niệm những năm 1970.",
+    "lutFile": "tone-4.lut",
+    "cubeName": "cameralook-tone-4-fuji-nc.cube",
+    "introFile": "assets/cameralook/intro-4.jpg",
+    "filmSim": "Nostalgic Neg.",
+    "settings": {
+      "highlight": -1,
+      "shadow": 1,
+      "color": -1,
+      "grain": 35,
+      "temperature": 6
+    }
+  },
+  {
+    "idx": 5,
+    "nameZh": "理光正片",
+    "nameEn": "Ricoh Positive Film",
+    "nameVi": "Ricoh GR Dương bản (Positive Film)",
+    "descZh": "鲜明色彩与清晰反差，适合晴天建筑和风景。",
+    "descVi": "Chế độ Positive Film lừng danh trên dòng Ricoh GR: tương phản gắt, màu lam và lục rực rỡ, sắc nét cho ảnh kiến trúc và phố xá ngập nắng.",
+    "lutFile": "tone-5.lut",
+    "cubeName": "cameralook-tone-5-ricoh-pos.cube",
+    "introFile": "assets/cameralook/intro-5.jpg",
+    "filmSim": "Velvia",
+    "settings": {
+      "highlight": 1.5,
+      "shadow": 1.5,
+      "color": 2,
+      "grain": 30,
+      "temperature": -2
+    }
+  },
+  {
+    "idx": 6,
+    "nameZh": "理光负片",
+    "nameEn": "Ricoh Negative Film",
+    "nameVi": "Ricoh GR Âm bản (Negative Film)",
+    "descZh": "柔和的负片色彩，适合阴天街巷。",
+    "descVi": "Chế độ Negative Film mới nhất của Ricoh GR III: gam màu cổ điển ủ ấm, trầm lắng, hoàn hảo cho góc phố ngõ hẻm chiều tà.",
+    "lutFile": "tone-6.lut",
+    "cubeName": "cameralook-tone-6-ricoh-neg.cube",
+    "introFile": "assets/cameralook/intro-6.jpg",
+    "filmSim": "Classic Chrome",
+    "settings": {
+      "highlight": -0.5,
+      "shadow": 0.5,
+      "color": -0.5,
+      "grain": 30,
+      "temperature": 3
+    }
+  },
+  {
+    "idx": 7,
+    "nameZh": "全能 400",
+    "nameEn": "All-Around Gold 400",
+    "nameVi": "Kodak Gold / All-Around 400",
+    "descZh": "均衡胶片层次与颗粒，适合旅行、人文。",
+    "descVi": "Cuộn film âm bản quốc dân Kodak Gold 400 với tông vàng kim ấm áp, hạt grain vừa phải, đa dụng cho mọi chuyến hành trình.",
+    "lutFile": "tone-7.lut",
+    "cubeName": "cameralook-tone-7-gold-400.cube",
+    "introFile": "assets/cameralook/intro-7.jpg",
+    "filmSim": "Classic Chrome",
+    "settings": {
+      "highlight": 0,
+      "shadow": 0.5,
+      "color": 1.5,
+      "grain": 35,
+      "temperature": 5
+    }
+  },
+  {
+    "idx": 8,
+    "nameZh": "哈苏蓝",
+    "nameEn": "Hasselblad Natural Blue",
+    "nameVi": "Hasselblad Natural Blue (Xanh tự nhiên)",
+    "descZh": "蓝色层次与柔和质感，适合海岸和远山。",
+    "descVi": "Khoa học màu Hasselblad Natural Colour Solution (HNCS) nổi tiếng với sắc xanh biển và nền trời sâu thẳm, mềm mại cho cảnh biển và núi non trùng điệp.",
+    "lutFile": "tone-8.lut",
+    "cubeName": "cameralook-tone-8-hasselblad-blue.cube",
+    "introFile": "assets/cameralook/intro-8.jpg",
+    "filmSim": "Provia",
+    "settings": {
+      "highlight": -0.5,
+      "shadow": 0,
+      "color": 1,
+      "grain": 15,
+      "temperature": -4
+    }
+  },
+  {
+    "idx": 9,
+    "nameZh": "柯达 5207",
+    "nameEn": "Kodak Vision3 250D 5207",
+    "nameVi": "Điện ảnh Kodak Vision3 250D (5207)",
+    "descZh": "温暖电影胶片色彩，适合夕阳与旧街。",
+    "descVi": "Màu film điện ảnh Hollywood 35mm quay ban ngày Vision3 250D: giữ chi tiết highlight siêu mượt, sắc màu hoàng hôn rực rỡ và điện ảnh.",
+    "lutFile": "tone-9.lut",
+    "cubeName": "cameralook-tone-9-kodak-5207.cube",
+    "introFile": "assets/cameralook/intro-9.jpg",
+    "filmSim": "Eterna",
+    "settings": {
+      "highlight": -1.5,
+      "shadow": 0,
+      "color": 0.5,
+      "grain": 25,
+      "temperature": 4
+    }
+  },
+  {
+    "idx": 10,
+    "nameZh": "富士 CC",
+    "nameEn": "Fujifilm Classic Chrome",
+    "nameVi": "Fujifilm Classic Chrome (Tài liệu báo chí)",
+    "descZh": "含蓄的青绿与暖色，适合城市和阴天。",
+    "descVi": "Bản sao chuẩn xác của màu film phóng sự Classic Chrome: độ bão hòa giảm, sắc đỏ ấm và xanh lục ô liu đặc trưng của tạp chí ảnh thế kỷ 20.",
+    "lutFile": "tone-10.lut",
+    "cubeName": "cameralook-tone-10-fuji-cc.cube",
+    "introFile": "assets/cameralook/intro-10.jpg",
+    "filmSim": "Classic Chrome",
+    "settings": {
+      "highlight": 0,
+      "shadow": 1,
+      "color": -1,
+      "grain": 25,
+      "temperature": 2
+    }
+  },
+  {
+    "idx": 11,
+    "nameZh": "800T 冷调",
+    "nameEn": "CineStill 800T Tungsten",
+    "nameVi": "Điện ảnh Đêm CineStill 800T Tungsten",
+    "descZh": "冷调电影夜景色彩，适合霓虹和夜街。",
+    "descVi": "Chất màu film điện ảnh đèn dây tóc CineStill 800T: vùng tối xanh lạnh ma mị, tương phản cao, tôn vinh đèn neon và ánh sáng đô thị về đêm.",
+    "lutFile": "tone-11.lut",
+    "cubeName": "cameralook-tone-11-cinestill-800t.cube",
+    "introFile": "assets/cameralook/intro-11.jpg",
+    "filmSim": "Classic Chrome",
+    "settings": {
+      "highlight": 1,
+      "shadow": 1,
+      "color": 0.5,
+      "grain": 40,
+      "temperature": -8
+    }
+  },
+  {
+    "idx": 12,
+    "nameZh": "富士 C200",
+    "nameEn": "Fujifilm Fujicolor C200",
+    "nameVi": "Fujicolor C200 (Thanh xuân tươi sáng)",
+    "descZh": "明亮胶片色彩与颗粒，适合绿植和日光。",
+    "descVi": "Cuộn film Nhật Bản quen thuộc Fujicolor C200: xanh lá cây tươi tắn, ánh sáng ban ngày rạng rỡ, hạt film thanh thoát đầy sức sống.",
+    "lutFile": "tone-12.lut",
+    "cubeName": "cameralook-tone-12-fuji-c200.cube",
+    "introFile": "assets/cameralook/intro-12.jpg",
+    "filmSim": "Provia",
+    "settings": {
+      "highlight": 0.5,
+      "shadow": -0.5,
+      "color": 1.5,
+      "grain": 30,
+      "temperature": 1
+    }
+  },
+  {
+    "idx": 13,
+    "nameZh": "G7X II",
+    "nameEn": "Canon PowerShot G7X Mark II",
+    "nameVi": "Canon G7X Mark II (Màu da hồng hào)",
+    "descZh": "轻快清透的日常色彩，适合旅行与广场。",
+    "descVi": "Chất màu vlogging Canon PowerShot G7X II trứ danh: làm sáng da, sắc đỏ hồng tự nhiên, trong trẻo và tôn nét mặt người chụp.",
+    "lutFile": "tone-13.lut",
+    "cubeName": "cameralook-tone-13-canon-g7x2.cube",
+    "introFile": "assets/cameralook/intro-13.jpg",
+    "filmSim": "Astia",
+    "settings": {
+      "highlight": -0.5,
+      "shadow": -1,
+      "color": 1,
+      "grain": 10,
+      "temperature": 3
+    }
+  },
+  {
+    "idx": 14,
+    "nameZh": "柯达 5219",
+    "nameEn": "Kodak Vision3 500T 5219",
+    "nameVi": "Điện ảnh Kodak Vision3 500T (5219)",
+    "descZh": "电影负片层次与柔和高光，适合傍晚。",
+    "descVi": "Film âm bản điện ảnh nhạy sáng cao Vision3 500T: kiểm soát vùng cháy sáng cực tốt, tương phản điện ảnh mềm mại cho khung cảnh chạng vạng.",
+    "lutFile": "tone-14.lut",
+    "cubeName": "cameralook-tone-14-kodak-5219.cube",
+    "introFile": "assets/cameralook/intro-14.jpg",
+    "filmSim": "Eterna",
+    "settings": {
+      "highlight": -2,
+      "shadow": 0.5,
+      "color": 0,
+      "grain": 35,
+      "temperature": -3
+    }
+  },
+  {
+    "idx": 15,
+    "nameZh": "Classic U",
+    "nameEn": "Leica Classic Urban Vintage",
+    "nameVi": "Leica Urban Vintage (Phố cổ hoài niệm)",
+    "descZh": "复古暖色与颗粒质感，适合老街。",
+    "descVi": "Tông màu vintage phố cổ kinh điển của Leica: sắc ấm sâu lắng, hạt phim hữu cơ rõ nét, thích hợp chụp kiến trúc rêu phong và ngõ phố lịch sử.",
+    "lutFile": "tone-15.lut",
+    "cubeName": "cameralook-tone-15-classic-u.cube",
+    "introFile": "assets/cameralook/intro-15.jpg",
+    "filmSim": "Classic Chrome",
+    "settings": {
+      "highlight": -0.5,
+      "shadow": 1,
+      "color": 0,
+      "grain": 40,
+      "temperature": 6
+    }
+  },
+  {
+    "idx": 16,
+    "nameZh": "G12",
+    "nameEn": "Canon PowerShot G12 CCD",
+    "nameVi": "Canon PowerShot G12 (Cảm biến CCD hoài cổ)",
+    "descZh": "轻盈的复古数码色彩，适合日常静物。",
+    "descVi": "Màu cảm biến CCD cổ điển thập niên 2010 của Canon G12: tương phản dịu, màu sắc cô đọng, chất hoài niệm đầu thế kỷ số.",
+    "lutFile": "tone-16.lut",
+    "cubeName": "cameralook-tone-16-canon-g12.cube",
+    "introFile": "assets/cameralook/intro-16.jpg",
+    "filmSim": "PRO Neg. Std",
+    "settings": {
+      "highlight": -0.5,
+      "shadow": 0,
+      "color": 0.5,
+      "grain": 20,
+      "temperature": 2
+    }
+  },
+  {
+    "idx": 17,
+    "nameZh": "柯达正片 64",
+    "nameEn": "Kodachrome 64",
+    "nameVi": "Huyền thoại Kodachrome 64 (Dương bản)",
+    "descZh": "鲜明的暖色与蓝天，适合晴天风景。",
+    "descVi": "Mô phỏng màu film dương bản vĩ đại nhất lịch sử nhiếp ảnh Kodachrome 64 của National Geographic: đỏ rực, lam biếc, tương phản mạnh mẽ.",
+    "lutFile": "tone-17.lut",
+    "cubeName": "cameralook-tone-17-kodachrome-64.cube",
+    "introFile": "assets/cameralook/intro-17.jpg",
+    "filmSim": "Velvia",
+    "settings": {
+      "highlight": 1,
+      "shadow": 1,
+      "color": 2,
+      "grain": 20,
+      "temperature": 3
+    }
+  },
+  {
+    "idx": 18,
+    "nameZh": "Portra 160",
+    "nameEn": "Kodak Portra 160",
+    "nameVi": "Kodak Portra 160 (Chân dung nghệ thuật)",
+    "descZh": "柔和暖色与细腻层次，适合自然光场景。",
+    "descVi": "Chuẩn mực màu chân dung thương mại Kodak Portra 160: hạt siêu mịn, dải màu kem ấm dịu dàng, tôn vinh làn da dưới ánh sáng tự nhiên.",
+    "lutFile": "tone-18.lut",
+    "cubeName": "cameralook-tone-18-portra-160.cube",
+    "introFile": "assets/cameralook/intro-18.jpg",
+    "filmSim": "Astia",
+    "settings": {
+      "highlight": -1,
+      "shadow": -0.5,
+      "color": 0.5,
+      "grain": 15,
+      "temperature": 4
+    }
+  },
+  {
+    "idx": 19,
+    "nameZh": "哈苏蓝 II",
+    "nameEn": "Hasselblad Natural Blue II",
+    "nameVi": "Hasselblad Blue II (Chiều sâu đại dương)",
+    "descZh": "蓝色与暖色层次的第二种表达，适合海港。",
+    "descVi": "Biến thể thế hệ 2 của màu Hasselblad: tăng cường độ tương phản giữa sắc lam đại dương và màu nắng hoàng hôn trên cảng biển.",
+    "lutFile": "tone-19.lut",
+    "cubeName": "cameralook-tone-19-hasselblad-blue2.cube",
+    "introFile": "assets/cameralook/intro-19.jpg",
+    "filmSim": "Classic Chrome",
+    "settings": {
+      "highlight": 0,
+      "shadow": 0.5,
+      "color": 1.5,
+      "grain": 15,
+      "temperature": -2
+    }
+  },
+  {
+    "idx": 20,
+    "nameZh": "松下 S9 暖调",
+    "nameEn": "Panasonic Lumix S9 Real-Time LUT",
+    "nameVi": "Lumix S9 Warm LUT (Ấm áp quán café)",
+    "descZh": "温暖的复古气氛，适合咖啡馆和傍晚。",
+    "descVi": "Chất màu Real-Time LUT nổi tiếng của Panasonic Lumix S9: ánh vàng mật ong ấm cúng, phù hợp chụp không gian nội thất, café và hoàng hôn.",
+    "lutFile": "tone-20.lut",
+    "cubeName": "cameralook-tone-20-lumix-s9-warm.cube",
+    "introFile": "assets/cameralook/intro-20.jpg",
+    "filmSim": "Classic Chrome",
+    "settings": {
+      "highlight": -1,
+      "shadow": 0.5,
+      "color": 0.5,
+      "grain": 25,
+      "temperature": 7
+    }
+  },
+  {
+    "idx": 21,
+    "nameZh": "理光 GR III",
+    "nameEn": "Ricoh GR III Street Snap",
+    "nameVi": "Ricoh GR III Street Snap (Chụp nhanh đường phố)",
+    "descZh": "克制的日常街拍色彩与轻颗粒。",
+    "descVi": "Bản sắc đường phố thuần khiết của Ricoh GR III: màu sắc cô đọng, tương phản gãy gọn, hạt phim nhẹ nhàng ghi lại nhịp sống vỉa hè.",
+    "lutFile": "tone-21.lut",
+    "cubeName": "cameralook-tone-21-ricoh-gr3.cube",
+    "introFile": "assets/cameralook/intro-21.jpg",
+    "filmSim": "Classic Chrome",
+    "settings": {
+      "highlight": 0.5,
+      "shadow": 1,
+      "color": 0,
+      "grain": 30,
+      "temperature": 1
+    }
+  },
+  {
+    "idx": 22,
+    "nameZh": "适马 BF",
+    "nameEn": "Sigma BF (Teal and Orange / Foveon Clean)",
+    "nameVi": "Sigma BF (Màu sắc hiện đại trong trẻo)",
+    "descZh": "清爽现代的色彩，适合建筑和绿植。",
+    "descVi": "Chất màu Foveon / FP của Sigma: sắc nét cực đỉnh, tông xanh ngọc và da cam tương hỗ hiện đại, lý tưởng cho kiến trúc và thiên nhiên nhiệt đới.",
+    "lutFile": "tone-22.lut",
+    "cubeName": "cameralook-tone-22-sigma-bf.cube",
+    "introFile": "assets/cameralook/intro-22.jpg",
+    "filmSim": "Velvia",
+    "settings": {
+      "highlight": 0.5,
+      "shadow": 0,
+      "color": 1.5,
+      "grain": 10,
+      "temperature": -1
+    }
+  }
+]

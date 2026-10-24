@@ -821,7 +821,7 @@ function buildTabFilmChips() {
   const chipsContainer = document.querySelector('#tabFilmChipsRow');
   if (!chipsContainer) return;
   const categories = [
-    'Tất cả', 'Yêu thích', 'Classic Chrome', 'Classic Neg', 'Portra / Kodachrome',
+    'Tất cả', 'Yêu thích', 'Leica / CameraLook', 'Classic Chrome', 'Classic Neg', 'Portra / Kodachrome',
     'Velvia', 'Astia', 'Eterna', 'Acros', 'Nostalgic Neg', 'Bleach Bypass'
   ];
   chipsContainer.innerHTML = '';
@@ -852,7 +852,9 @@ function renderTabFilmRecipes() {
       const matchFav = currentTabFilmFilter === 'Yêu thích' ? state.favoriteRecipeIds.has(r.id) : true;
       let matchCat = true;
       if (currentTabFilmFilter !== 'Tất cả' && currentTabFilmFilter !== 'Yêu thích') {
-        if (currentTabFilmFilter === 'Portra / Kodachrome') {
+        if (currentTabFilmFilter === 'Leica / CameraLook') {
+          matchCat = r.id.startsWith('leica_') || r.id.startsWith('cameralook_') || (r.sensors && r.sensors.includes('Leica')) || (r.sensors && r.sensors.includes('CameraLook'));
+        } else if (currentTabFilmFilter === 'Portra / Kodachrome') {
           matchCat = r.name.toLowerCase().includes('portra') || r.name.toLowerCase().includes('kodachrome');
         } else {
           matchCat = r.film.toLowerCase().includes(currentTabFilmFilter.toLowerCase()) ||
@@ -959,13 +961,27 @@ async function load392Catalog() {
     const res = await fetch(`./recipes.json?v=${Date.now().toString().slice(0, 7)}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const catalog = await res.json();
-    const rawList = Array.isArray(catalog) ? catalog : catalog.recipes;
+    let rawList = Array.isArray(catalog) ? catalog : catalog.recipes;
     if (!Array.isArray(rawList)) throw new Error('Kho công thức không đúng định dạng.');
+
+    try {
+      const clRes = await fetch(`./cameralook.json?v=${Date.now().toString().slice(0, 7)}`);
+      if (clRes.ok) {
+        const clCatalog = await clRes.json();
+        const clList = Array.isArray(clCatalog) ? clCatalog : clCatalog.recipes;
+        if (Array.isArray(clList)) {
+          rawList = [...clList, ...rawList];
+        }
+      }
+    } catch (_) {}
+
     state.fullCatalogRecipes = rawList.map((record, index) => {
       const parsed = parseFujiRecipe(record, structuredClone(defaults));
       return {
         ...parsed,
         id: String(record.id || record.sourceUrl || `recipe-${index}`),
+        cubeAsset: record.cubeAsset || null,
+        sampleAsset: record.sampleAsset || null,
         wb: String(parsed.settings.wb || 'Auto'),
         dr: parsed.settings.dr || 100,
         isNew: Boolean(record.isNew),
@@ -998,8 +1014,31 @@ function applyCatalogRecipe(rec) {
   syncInputsFromSettings();
   drawCurveEditor();
   commitHistory(`Công thức: ${rec.name}`);
-  render();
-  setStatus(`🎞️ Đã áp dụng công thức "${rec.name}" (${rec.film} · DR${rec.dr} · WB ${rec.wb}).`);
+
+  if (rec.cubeAsset) {
+    fetch(`./${rec.cubeAsset}`)
+      .then(r => r.ok ? r.text() : null)
+      .then(cubeText => {
+        if (cubeText) {
+          state.lut = parseCube(cubeText);
+          render();
+          setStatus(`🎞️ Đã áp dụng công thức "${rec.name}" kèm 3D LUT (${state.lut.title || rec.film}).`);
+        } else {
+          state.lut = null;
+          render();
+          setStatus(`🎞️ Đã áp dụng công thức "${rec.name}" (${rec.film} · DR${rec.dr} · WB ${rec.wb}).`);
+        }
+      })
+      .catch(() => {
+        state.lut = null;
+        render();
+        setStatus(`🎞️ Đã áp dụng công thức "${rec.name}" (${rec.film} · DR${rec.dr} · WB ${rec.wb}).`);
+      });
+  } else {
+    state.lut = null;
+    render();
+    setStatus(`🎞️ Đã áp dụng công thức "${rec.name}" (${rec.film} · DR${rec.dr} · WB ${rec.wb}).`);
+  }
 }
 
 function applySurpriseRandomRecipe() {

@@ -90,6 +90,22 @@ final class ThumbnailSession implements AutoCloseable {
      * @param direct   Đối tượng {@link CubeLut} đã nạp sẵn trong bộ nhớ (nếu có).
      */
     void bind(ImageView image, TextView label, String key, Settings settings, File file, CubeLut direct) {
+        bind(image, label, key, settings, file, null, null, direct);
+    }
+
+    /**
+     * Gắn yêu cầu tạo ảnh thu nhỏ cho một thẻ Recipe hoặc LUT (hỗ trợ cả tệp nội bộ và asset đóng gói).
+     *
+     * @param image      View hiển thị ảnh thu nhỏ.
+     * @param label      View hiển thị trạng thái (có thể {@code null} nếu ở dải carousel dưới đáy).
+     * @param key        Khóa định danh duy nhất cho bộ nhớ đệm.
+     * @param settings   Thông số hậu kỳ của Recipe.
+     * @param file       File LUT {@code .cube} trong bộ nhớ trong (nếu có).
+     * @param assetPath  Đường dẫn asset LUT {@code .cube} (nếu có).
+     * @param context    Context ứng dụng để mở asset.
+     * @param direct     Đối tượng {@link CubeLut} đã nạp sẵn trong bộ nhớ (nếu có).
+     */
+    void bind(ImageView image, TextView label, String key, Settings settings, File file, String assetPath, android.content.Context context, CubeLut direct) {
         if (closed) {
             return;
         }
@@ -100,7 +116,7 @@ final class ThumbnailSession implements AutoCloseable {
             }
             return;
         }
-        final boolean hasLut = (file != null || direct != null);
+        final boolean hasLut = (file != null || (assetPath != null && !assetPath.isEmpty()) || direct != null);
         final String successMsg = hasLut ? "Đã gắn LUT" : "Đã áp thông số recipe";
         Bitmap cached = thumbnails.get(key);
         if (cached != null) {
@@ -137,6 +153,15 @@ final class ThumbnailSession implements AutoCloseable {
                     lut = luts.get(fileKey);
                     if (lut == null) {
                         try (Reader r = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
+                            lut = CubeLut.parse(r);
+                        }
+                        luts.put(fileKey, lut);
+                    }
+                } else if (lut == null && assetPath != null && !assetPath.isEmpty() && context != null) {
+                    String fileKey = "asset:" + assetPath;
+                    lut = luts.get(fileKey);
+                    if (lut == null) {
+                        try (Reader r = new InputStreamReader(context.getAssets().open(assetPath), StandardCharsets.UTF_8)) {
                             lut = CubeLut.parse(r);
                         }
                         luts.put(fileKey, lut);

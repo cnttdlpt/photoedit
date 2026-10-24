@@ -3788,19 +3788,32 @@ public class MainActivity extends Activity {
 
     private void loadBoundLut() {
         final int token = ++lutRevision;
-        String file = prefs.getString(lutKey(), null);
+        final String file = prefs.getString(lutKey(), null);
+        final String assetLut = (currentRecipe != null && currentRecipe.cubeAsset != null && !currentRecipe.cubeAsset.isEmpty())
+                ? currentRecipe.cubeAsset
+                : null;
         activeLut = null;
         syncFiltersSection();
         requestRender();
-        if (file == null) {
+        if (file == null && assetLut == null) {
             return;
         }
         executor.execute(() -> {
-            try (Reader r = new InputStreamReader(new FileInputStream(new File(getFilesDir(), file)), StandardCharsets.UTF_8)) {
-                CubeLut lut = CubeLut.parse(r);
+            try {
+                CubeLut lut;
+                if (file != null) {
+                    try (Reader r = new InputStreamReader(new FileInputStream(new File(getFilesDir(), file)), StandardCharsets.UTF_8)) {
+                        lut = CubeLut.parse(r);
+                    }
+                } else {
+                    try (Reader r = new InputStreamReader(getAssets().open(assetLut), StandardCharsets.UTF_8)) {
+                        lut = CubeLut.parse(r);
+                    }
+                }
+                final CubeLut finalLut = lut;
                 runOnUiThread(() -> {
                     if (dead || token != lutRevision) return;
-                    activeLut = lut;
+                    activeLut = finalLut;
                     syncFiltersSection();
                     requestRenderImmediate();
                 });
@@ -3911,6 +3924,16 @@ public class MainActivity extends Activity {
                 for (int i = 0; i < list.length(); i++) {
                     parsed.add(new Recipe(list.getJSONObject(i)));
                 }
+                try (InputStream clStream = getAssets().open("cameralook-recipes.json")) {
+                    JSONObject clObj = new JSONObject(new String(
+                            readLimited(clStream, 10 * 1024 * 1024),
+                            StandardCharsets.UTF_8));
+                    JSONArray clList = clObj.getJSONArray("recipes");
+                    for (int i = 0; i < clList.length(); i++) {
+                        parsed.add(new Recipe(clList.getJSONObject(i)));
+                    }
+                } catch (Exception ignored) {
+                }
                 runOnUiThread(() -> {
                     if (dead) return;
                     recipes.clear();
@@ -4019,12 +4042,15 @@ public class MainActivity extends Activity {
                 } else {
                     Settings recipeSettings = recipe.adjustments(new ArrayList<>());
                     String lutFile = prefs.getString("lut." + recipeSettings.film, null);
+                    String assetLut = (recipe.cubeAsset != null && !recipe.cubeAsset.isEmpty()) ? recipe.cubeAsset : null;
                     thumbnails.bind(
                             symbol,
                             previewState,
                             recipe.id,
                             recipeSettings,
                             lutFile == null ? null : new File(getFilesDir(), lutFile),
+                            assetLut,
+                            MainActivity.this,
                             null);
                 }
 

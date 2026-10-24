@@ -33,6 +33,8 @@ public final class Recipe {
     public String sourceUrl;
     /** Đường dẫn ảnh mẫu đóng gói sẵn trong {@code assets/fujixweekly/} để hiển thị tức thì khi offline. */
     public String sampleAsset;
+    /** Đường dẫn tệp 3D LUT .cube trong {@code assets/} đi kèm công thức (ví dụ CameraLook / Leica). */
+    public String cubeAsset;
     /** Đường dẫn ảnh mẫu chính trực tiếp từ bài viết trên {@code fujixweekly.com}. */
     public String sampleImageUrl;
     /** Danh sách các ảnh mẫu chụp bằng công thức này trên {@code fujixweekly.com}. */
@@ -57,6 +59,7 @@ public final class Recipe {
         this.film = json.optString("film", "Original");
         this.sourceUrl = json.optString("sourceUrl", "");
         this.sampleAsset = json.optString("sampleAsset", "");
+        this.cubeAsset = json.optString("cubeAsset", "");
         this.sampleImageUrl = json.optString("sampleImageUrl", "");
         this.reviewRequired = json.optBoolean("reviewRequired", false);
 
@@ -132,6 +135,9 @@ public final class Recipe {
         json.put("sourceUrl", sourceUrl);
         if (sampleAsset != null && !sampleAsset.isEmpty()) {
             json.put("sampleAsset", sampleAsset);
+        }
+        if (cubeAsset != null && !cubeAsset.isEmpty()) {
+            json.put("cubeAsset", cubeAsset);
         }
         if (sampleImageUrl != null && !sampleImageUrl.isEmpty()) {
             json.put("sampleImageUrl", sampleImageUrl);

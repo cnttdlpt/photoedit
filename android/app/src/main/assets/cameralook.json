@@ -1,0 +1,846 @@
+{
+  "schemaVersion": 2,
+  "recipeCount": 28,
+  "recipes": [
+    {
+      "id": "cameralook_tone_0",
+      "name": "[CameraLook] Fujifilm Classic Chrome II (Tông ấm hoài cổ)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Classic Chrome",
+      "cubeAsset": "luts/cameralook-tone-0-fuji-cc2.cube",
+      "sampleAsset": "cameralook/intro-0.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-0.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "1",
+        "Highlight": "-1.0",
+        "Shadow": "+0.5",
+        "White Balance": "Auto, +4 Red & 0 Blue",
+        "Description": "Tông màu Classic Chrome thế hệ II với sắc ngả lam ngọc (cyan) dịu và kiến trúc ấm áp, đặc biệt phù hợp chụp đường phố và phong cảnh ngày nhiều mây."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_1",
+      "name": "[CameraLook] Ánh ngọc trai (Pearlescent Soft)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Astia",
+      "cubeAsset": "luts/cameralook-tone-1-pearlescent.cube",
+      "sampleAsset": "cameralook/intro-1.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-1.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Astia",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "0.5",
+        "Highlight": "-1.5",
+        "Shadow": "-0.5",
+        "White Balance": "Auto, +1 Red & 0 Blue",
+        "Description": "Sắc thái sáng trong mềm mại với dải chuyển vùng sáng mượt mà, lý tưởng cho tĩnh vật, hoa cỏ và chân dung ánh sáng dịu."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_2",
+      "name": "[CameraLook] Khoảnh khắc thường nhật (Pocket Daily)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Provia",
+      "cubeAsset": "luts/cameralook-tone-2-pocket.cube",
+      "sampleAsset": "cameralook/intro-2.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-2.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Provia",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "1",
+        "Highlight": "+0.0",
+        "Shadow": "+0.0",
+        "White Balance": "Auto, +0 Red & 0 Blue",
+        "Description": "Màu sắc trong trẻo, tự nhiên và tươi sáng, phong cách máy ảnh du lịch bỏ túi cho nhiếp ảnh đường phố và du lịch."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_3",
+      "name": "[CameraLook] Fujifilm Pro Neg Std (Chân dung tự nhiên)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "PRO Neg. Std",
+      "cubeAsset": "luts/cameralook-tone-3-fuji-nn.cube",
+      "sampleAsset": "cameralook/intro-3.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-3.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "PRO Neg. Std",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "0",
+        "Highlight": "-1.0",
+        "Shadow": "-1.0",
+        "White Balance": "Auto, +2 Red & 0 Blue",
+        "Description": "Dải tương phản dịu của dòng film âm bản màu Fujifilm Pro Neg, giữ tông màu da chân dung mịn màng và trung thực."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_4",
+      "name": "[CameraLook] Fujifilm Nostalgic Neg (Âm bản ký ức)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Nostalgic Neg.",
+      "cubeAsset": "luts/cameralook-tone-4-fuji-nc.cube",
+      "sampleAsset": "cameralook/intro-4.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-4.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Nostalgic Neg.",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color": "-1",
+        "Highlight": "-1.0",
+        "Shadow": "+1.0",
+        "White Balance": "Auto, +6 Red & 0 Blue",
+        "Description": "Mô phỏng màu film Nostalgic Neg danh tiếng: vùng tối ngả hổ phách, tương phản đầm chắc với hạt film hoài niệm những năm 1970."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_5",
+      "name": "[CameraLook] Ricoh GR Dương bản (Positive Film)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Velvia",
+      "cubeAsset": "luts/cameralook-tone-5-ricoh-pos.cube",
+      "sampleAsset": "cameralook/intro-5.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-5.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Velvia",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color": "2",
+        "Highlight": "+1.5",
+        "Shadow": "+1.5",
+        "White Balance": "Auto, 0 Red & +2 Blue",
+        "Description": "Chế độ Positive Film lừng danh trên dòng Ricoh GR: tương phản gắt, màu lam và lục rực rỡ, sắc nét cho ảnh kiến trúc và phố xá ngập nắng."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_6",
+      "name": "[CameraLook] Ricoh GR Âm bản (Negative Film)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Classic Chrome",
+      "cubeAsset": "luts/cameralook-tone-6-ricoh-neg.cube",
+      "sampleAsset": "cameralook/intro-6.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-6.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color": "-0.5",
+        "Highlight": "-0.5",
+        "Shadow": "+0.5",
+        "White Balance": "Auto, +3 Red & 0 Blue",
+        "Description": "Chế độ Negative Film mới nhất của Ricoh GR III: gam màu cổ điển ủ ấm, trầm lắng, hoàn hảo cho góc phố ngõ hẻm chiều tà."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_7",
+      "name": "[CameraLook] Kodak Gold / All-Around 400",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Classic Chrome",
+      "cubeAsset": "luts/cameralook-tone-7-gold-400.cube",
+      "sampleAsset": "cameralook/intro-7.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-7.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color": "1.5",
+        "Highlight": "+0.0",
+        "Shadow": "+0.5",
+        "White Balance": "Auto, +5 Red & 0 Blue",
+        "Description": "Cuộn film âm bản quốc dân Kodak Gold 400 với tông vàng kim ấm áp, hạt grain vừa phải, đa dụng cho mọi chuyến hành trình."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_8",
+      "name": "[CameraLook] Hasselblad Natural Blue (Xanh tự nhiên)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Provia",
+      "cubeAsset": "luts/cameralook-tone-8-hasselblad-blue.cube",
+      "sampleAsset": "cameralook/intro-8.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-8.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Provia",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "1",
+        "Highlight": "-0.5",
+        "Shadow": "+0.0",
+        "White Balance": "Auto, 0 Red & +4 Blue",
+        "Description": "Khoa học màu Hasselblad Natural Colour Solution (HNCS) nổi tiếng với sắc xanh biển và nền trời sâu thẳm, mềm mại cho cảnh biển và núi non trùng điệp."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_9",
+      "name": "[CameraLook] Điện ảnh Kodak Vision3 250D (5207)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Eterna",
+      "cubeAsset": "luts/cameralook-tone-9-kodak-5207.cube",
+      "sampleAsset": "cameralook/intro-9.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-9.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Eterna",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "0.5",
+        "Highlight": "-1.5",
+        "Shadow": "+0.0",
+        "White Balance": "Auto, +4 Red & 0 Blue",
+        "Description": "Màu film điện ảnh Hollywood 35mm quay ban ngày Vision3 250D: giữ chi tiết highlight siêu mượt, sắc màu hoàng hôn rực rỡ và điện ảnh."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_10",
+      "name": "[CameraLook] Fujifilm Classic Chrome (Tài liệu báo chí)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Classic Chrome",
+      "cubeAsset": "luts/cameralook-tone-10-fuji-cc.cube",
+      "sampleAsset": "cameralook/intro-10.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-10.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "-1",
+        "Highlight": "+0.0",
+        "Shadow": "+1.0",
+        "White Balance": "Auto, +2 Red & 0 Blue",
+        "Description": "Bản sao chuẩn xác của màu film phóng sự Classic Chrome: độ bão hòa giảm, sắc đỏ ấm và xanh lục ô liu đặc trưng của tạp chí ảnh thế kỷ 20."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_11",
+      "name": "[CameraLook] Điện ảnh Đêm CineStill 800T Tungsten",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Classic Chrome",
+      "cubeAsset": "luts/cameralook-tone-11-cinestill-800t.cube",
+      "sampleAsset": "cameralook/intro-11.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-11.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color": "0.5",
+        "Highlight": "+1.0",
+        "Shadow": "+1.0",
+        "White Balance": "Auto, 0 Red & +8 Blue",
+        "Description": "Chất màu film điện ảnh đèn dây tóc CineStill 800T: vùng tối xanh lạnh ma mị, tương phản cao, tôn vinh đèn neon và ánh sáng đô thị về đêm."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_12",
+      "name": "[CameraLook] Fujicolor C200 (Thanh xuân tươi sáng)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Provia",
+      "cubeAsset": "luts/cameralook-tone-12-fuji-c200.cube",
+      "sampleAsset": "cameralook/intro-12.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-12.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Provia",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color": "1.5",
+        "Highlight": "+0.5",
+        "Shadow": "-0.5",
+        "White Balance": "Auto, +1 Red & 0 Blue",
+        "Description": "Cuộn film Nhật Bản quen thuộc Fujicolor C200: xanh lá cây tươi tắn, ánh sáng ban ngày rạng rỡ, hạt film thanh thoát đầy sức sống."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_13",
+      "name": "[CameraLook] Canon G7X Mark II (Màu da hồng hào)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Astia",
+      "cubeAsset": "luts/cameralook-tone-13-canon-g7x2.cube",
+      "sampleAsset": "cameralook/intro-13.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-13.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Astia",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "1",
+        "Highlight": "-0.5",
+        "Shadow": "-1.0",
+        "White Balance": "Auto, +3 Red & 0 Blue",
+        "Description": "Chất màu vlogging Canon PowerShot G7X II trứ danh: làm sáng da, sắc đỏ hồng tự nhiên, trong trẻo và tôn nét mặt người chụp."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_14",
+      "name": "[CameraLook] Điện ảnh Kodak Vision3 500T (5219)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Eterna",
+      "cubeAsset": "luts/cameralook-tone-14-kodak-5219.cube",
+      "sampleAsset": "cameralook/intro-14.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-14.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Eterna",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color": "0",
+        "Highlight": "-2.0",
+        "Shadow": "+0.5",
+        "White Balance": "Auto, 0 Red & +3 Blue",
+        "Description": "Film âm bản điện ảnh nhạy sáng cao Vision3 500T: kiểm soát vùng cháy sáng cực tốt, tương phản điện ảnh mềm mại cho khung cảnh chạng vạng."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_15",
+      "name": "[CameraLook] Leica Urban Vintage (Phố cổ hoài niệm)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Classic Chrome",
+      "cubeAsset": "luts/cameralook-tone-15-classic-u.cube",
+      "sampleAsset": "cameralook/intro-15.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-15.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color": "0",
+        "Highlight": "-0.5",
+        "Shadow": "+1.0",
+        "White Balance": "Auto, +6 Red & 0 Blue",
+        "Description": "Tông màu vintage phố cổ kinh điển của Leica: sắc ấm sâu lắng, hạt phim hữu cơ rõ nét, thích hợp chụp kiến trúc rêu phong và ngõ phố lịch sử."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_16",
+      "name": "[CameraLook] Canon PowerShot G12 (Cảm biến CCD hoài cổ)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "PRO Neg. Std",
+      "cubeAsset": "luts/cameralook-tone-16-canon-g12.cube",
+      "sampleAsset": "cameralook/intro-16.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-16.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "PRO Neg. Std",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "0.5",
+        "Highlight": "-0.5",
+        "Shadow": "+0.0",
+        "White Balance": "Auto, +2 Red & 0 Blue",
+        "Description": "Màu cảm biến CCD cổ điển thập niên 2010 của Canon G12: tương phản dịu, màu sắc cô đọng, chất hoài niệm đầu thế kỷ số."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_17",
+      "name": "[CameraLook] Huyền thoại Kodachrome 64 (Dương bản)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Velvia",
+      "cubeAsset": "luts/cameralook-tone-17-kodachrome-64.cube",
+      "sampleAsset": "cameralook/intro-17.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-17.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Velvia",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "2",
+        "Highlight": "+1.0",
+        "Shadow": "+1.0",
+        "White Balance": "Auto, +3 Red & 0 Blue",
+        "Description": "Mô phỏng màu film dương bản vĩ đại nhất lịch sử nhiếp ảnh Kodachrome 64 của National Geographic: đỏ rực, lam biếc, tương phản mạnh mẽ."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_18",
+      "name": "[CameraLook] Kodak Portra 160 (Chân dung nghệ thuật)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Astia",
+      "cubeAsset": "luts/cameralook-tone-18-portra-160.cube",
+      "sampleAsset": "cameralook/intro-18.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-18.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Astia",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "0.5",
+        "Highlight": "-1.0",
+        "Shadow": "-0.5",
+        "White Balance": "Auto, +4 Red & 0 Blue",
+        "Description": "Chuẩn mực màu chân dung thương mại Kodak Portra 160: hạt siêu mịn, dải màu kem ấm dịu dàng, tôn vinh làn da dưới ánh sáng tự nhiên."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_19",
+      "name": "[CameraLook] Hasselblad Blue II (Chiều sâu đại dương)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Classic Chrome",
+      "cubeAsset": "luts/cameralook-tone-19-hasselblad-blue2.cube",
+      "sampleAsset": "cameralook/intro-19.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-19.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "1.5",
+        "Highlight": "+0.0",
+        "Shadow": "+0.5",
+        "White Balance": "Auto, 0 Red & +2 Blue",
+        "Description": "Biến thể thế hệ 2 của màu Hasselblad: tăng cường độ tương phản giữa sắc lam đại dương và màu nắng hoàng hôn trên cảng biển."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_20",
+      "name": "[CameraLook] Lumix S9 Warm LUT (Ấm áp quán café)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Classic Chrome",
+      "cubeAsset": "luts/cameralook-tone-20-lumix-s9-warm.cube",
+      "sampleAsset": "cameralook/intro-20.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-20.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "0.5",
+        "Highlight": "-1.0",
+        "Shadow": "+0.5",
+        "White Balance": "Auto, +7 Red & 0 Blue",
+        "Description": "Chất màu Real-Time LUT nổi tiếng của Panasonic Lumix S9: ánh vàng mật ong ấm cúng, phù hợp chụp không gian nội thất, café và hoàng hôn."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_21",
+      "name": "[CameraLook] Ricoh GR III Street Snap (Chụp nhanh đường phố)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Classic Chrome",
+      "cubeAsset": "luts/cameralook-tone-21-ricoh-gr3.cube",
+      "sampleAsset": "cameralook/intro-21.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-21.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Classic Chrome",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color": "0",
+        "Highlight": "+0.5",
+        "Shadow": "+1.0",
+        "White Balance": "Auto, +1 Red & 0 Blue",
+        "Description": "Bản sắc đường phố thuần khiết của Ricoh GR III: màu sắc cô đọng, tương phản gãy gọn, hạt phim nhẹ nhàng ghi lại nhịp sống vỉa hè."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "cameralook_tone_22",
+      "name": "[CameraLook] Sigma BF (Màu sắc hiện đại trong trẻo)",
+      "source": "Codex CameraLook Optical 3D LUT",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "3D LUT CameraLook",
+        "Multi-Brand Optical"
+      ],
+      "film": "Velvia",
+      "cubeAsset": "luts/cameralook-tone-22-sigma-bf.cube",
+      "sampleAsset": "cameralook/intro-22.jpg",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "cameralook/intro-22.jpg"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Velvia",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "1.5",
+        "Highlight": "+0.5",
+        "Shadow": "+0.0",
+        "White Balance": "Auto, 0 Red & +1 Blue",
+        "Description": "Chất màu Foveon / FP của Sigma: sắc nét cực đỉnh, tông xanh ngọc và da cam tương hỗ hiện đại, lý tưởng cho kiến trúc và thiên nhiên nhiệt đới."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "leica_m3_monochrom",
+      "name": "[Leica M] M3 · 银盐黑白 (Silver Gelatin Monochrom)",
+      "source": "Leica Codex Legendary M",
+      "sourceUrl": "https://leica-camera.com/en-US/photography/cameras/m/m3",
+      "sensors": [
+        "Leica Full Frame",
+        "Leica M Series"
+      ],
+      "film": "Leica M3 Mono",
+      "cubeAsset": "luts/leica-m3-monochrom.cube",
+      "sampleAsset": "leica/sample_m3.png",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "leica/sample_m3.png"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Leica M3 Mono",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Strong",
+        "Grain Size": "Large",
+        "Color": "-4",
+        "Highlight": "+1.0",
+        "Shadow": "+1.5",
+        "White Balance": "Monochrome B&W High Contrast",
+        "Description": "Huyền thoại máy ảnh cơ Leica M3 năm 1954: công thức tráng bạc đen trắng độ tương phản cao, hạt bạc sắc nét, ghi lại chiều sâu lịch sử qua ống kính phóng sự."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "leica_m9_classic_ccd",
+      "name": "[Leica M] M9 · 经典彩色 (Cảm biến CCD Kodak)",
+      "source": "Leica Codex Legendary M",
+      "sourceUrl": "https://leica-camera.com/en-US/photography/cameras/m/m9",
+      "sensors": [
+        "Leica Full Frame",
+        "Leica M Series"
+      ],
+      "film": "Leica M9 Classic",
+      "cubeAsset": "luts/leica-m9-ccd-classic.cube",
+      "sampleAsset": "leica/sample_m9.png",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "leica/sample_m9.png"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Leica M9 Classic",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "2",
+        "Highlight": "+0.0",
+        "Shadow": "+0.5",
+        "White Balance": "Daylight, +2 Red & -1 Blue",
+        "Description": "Cảm biến Kodak CCD toàn khung trên Leica M9 năm 2009: màu đỏ và lam bão hòa sâu thẳm, bóng đổ ấm áp đặc trưng khiến các nhiếp ảnh gia say đắm."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "leica_m10r_vignette",
+      "name": "[Leica M] M10-R · 暗角颗粒 (Nostalgic Vignette Grain)",
+      "source": "Leica Codex Legendary M",
+      "sourceUrl": "https://leica-camera.com/en-US/photography/cameras/m/m10-r",
+      "sensors": [
+        "Leica Full Frame",
+        "Leica M Series"
+      ],
+      "film": "Leica M10-R",
+      "cubeAsset": "luts/leica-m10r-dynamic.cube",
+      "sampleAsset": "leica/sample_m10r.webp",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "leica/sample_m10r.webp"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Leica M10-R",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "0",
+        "Highlight": "-0.5",
+        "Shadow": "+1.0",
+        "White Balance": "Auto, +1 Red & 0 Blue",
+        "Description": "Cảm biến độ phân giải cao 40MP Leica M10-R với hiệu ứng giảm sáng rìa ống kính (vignette) và hạt hữu cơ hoài cổ, dải động rộng và chi tiết tuyệt đối."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "leica_split_tone",
+      "name": "[Leica M] Split Tone · Tách màu Điện ảnh (Teal & Amber)",
+      "source": "Leica Codex Legendary M",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "Leica Full Frame",
+        "Leica M Series"
+      ],
+      "film": "Leica Split Tone",
+      "cubeAsset": "luts/leica-split-tone.cube",
+      "sampleAsset": "leica/sample_m9plus.webp",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "leica/sample_m9plus.webp"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Leica Split Tone",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "1",
+        "Highlight": "+0.0",
+        "Shadow": "+0.5",
+        "White Balance": "Auto",
+        "Description": "Thuật toán màu Leica Split Tone: vùng tối nhuộm màu xanh ngọc (cyan/teal), vùng sáng rực rỡ sắc hổ phách ấm (warm amber), phong cách điện ảnh cao cấp."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    },
+    {
+      "id": "leica_m9plus_vivid",
+      "name": "[Leica M] M9+ · 彩色经典激进版 (Aggressive CCD Color)",
+      "source": "Leica Codex Legendary M",
+      "sourceUrl": "https://leica-camera.com/en-US/cameralook",
+      "sensors": [
+        "Leica Full Frame",
+        "Leica M Series"
+      ],
+      "film": "Leica M9+ Vivid",
+      "cubeAsset": "luts/leica-m9plus-warmth.cube",
+      "sampleAsset": "leica/sample_m9distill.webp",
+      "sampleImageUrl": "",
+      "sampleImages": [
+        "leica/sample_m9distill.webp"
+      ],
+      "rawSettings": {
+        "Film Simulation": "Leica M9+ Vivid",
+        "Dynamic Range": "DR200",
+        "Grain Effect": "Weak",
+        "Grain Size": "Small",
+        "Color": "3",
+        "Highlight": "+0.5",
+        "Shadow": "+1.0",
+        "White Balance": "Daylight, +3 Red & -1 Blue",
+        "Description": "Phiên bản nâng cấp màu sắc của Leica M9: đẩy tương phản và bão hòa màu lên mức tối đa, tái hiện sắc độ đậm đà của tấm film Kodachrome qua cảm biến CCD."
+      },
+      "reviewRequired": false,
+      "missingFields": []
+    }
+  ]
+}

@@ -7,13 +7,13 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
@@ -33,15 +33,16 @@ import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.AudioAttributes;
 import android.media.Image;
 import android.media.ImageReader;
+import android.media.SoundPool;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Looper;
 import android.provider.MediaStore;
 import android.util.Range;
 import android.util.Size;
@@ -84,17 +85,23 @@ import java.util.concurrent.Executors;
 /**
  * Phân hệ máy ảnh quang học Leica M Rangefinder & Film Alchemy trực tiếp (Live Optical Camera).
  *
- * <p>Thiết kế lại toàn diện theo chuẩn máy ảnh cơ khí Leica M11 / M9 & Leica Lux:
+ * <p>Được thiết kế và nâng cấp từ phân tích kỹ thuật REA trên Xiaomi Leica Camera Flagship (APK 9.0.2):
  * <ul>
- *     <li>Khung ngắm Rangefinder Brightlines tỉ lệ chuẩn 4:3 / 3:2 với vạch góc quang học và tâm ngắm cơ học.</li>
- *     <li>Thước cân bằng điện tử thời gian thực (Electronic Horizon Gyro Level) phản hồi haptic khi cân bằng 0°.</li>
- *     <li>Dải thông số quang học Telemetry HUD trực tiếp (ISO · Shutter Speed · Aperture · EV · Ống kính Summilux).</li>
- *     <li>Chạm lấy nét kèm thanh trượt bù sáng EV trực quan cạnh điểm đo sáng (Tap-to-Focus & Sunlight EV Slider).</li>
- *     <li>Bàn xoay phim cơ học (Film Simulation Reel): 28 profile Leica M & Film kinh điển với thẻ phim tactile.</li>
- *     <li>Nút chụp cơ khí Leica M: Vòng khía kim loại knurled bezel, lỗ ren bấm mềm và chớp màn trập giật nẩy xúc giác.</li>
- *     <li>Bộ chuyển đổi tiêu cự ống kính cố định (Leica Prime Crop): 28mm (Wide) · 35mm (Street) · 50mm (Standard) · 75mm (Portrait).</li>
- *     <li>Trải nghiệm chụp liên tục không gián đoạn (Non-disruptive): Thông báo nướng màu trượt êm ái, chạm mở phòng tối ngay.</li>
- *     <li>Khung ảnh đóng dấu Leica Exhibition Watermark chuẩn triển lãm mỹ thuật.</li>
+ *     <li><b>Âm thanh màn trập cơ học:</b> Tích hợp SoundPool phát âm thanh màn trập Leica cổ điển (vintage shutter click)
+ *         và âm báo lấy nét quang học (autofocus chirp) chuẩn cơ khí.</li>
+ *     <li><b>Biểu trưng Leica chính thức:</b> Khung ảnh đóng dấu sử dụng tệp logo Leica Red Dot chính hãng độ phân giải cao.</li>
+ *     <li><b>Đa dạng chế độ khung ảnh:</b>
+ *         <ul>
+ *             <li>Khung triển lãm trắng (Leica Exhibition White Frame).</li>
+ *             <li>Khung phiên bản giới hạn đen Obsidian (Leica Limited Edition Black).</li>
+ *             <li>Khung cuộn phim 35mm hoài cổ có lỗ răng cưa (35mm Sprocket Film Frame).</li>
+ *             <li>Chế độ nguyên bản không đóng khung (Raw Unframed).</li>
+ *         </ul>
+ *     </li>
+ *     <li><b>Khung ngắm Rangefinder Brightlines:</b> Bốn góc quang học, tâm ngắm cơ học và thước cân bằng điện tử gyro level.</li>
+ *     <li><b>Dải thông số Telemetry HUD:</b> Cập nhật ISO, tốc độ màn trập, khẩu độ và bù sáng EV từ cảm biến thời gian thực.</li>
+ *     <li><b>Bộ chuyển đổi tiêu cự Summilux:</b> 28mm (Wide) · 35mm (Street) · 50mm (Standard) · 75mm (Portrait).</li>
+ *     <li><b>Bàn xoay phim cơ học (Film Simulation Reel):</b> 28 cấu hình Leica M & phim nhựa kinh điển.</li>
  * </ul>
  */
 public class CameraActivity extends Activity {
@@ -115,6 +122,9 @@ public class CameraActivity extends Activity {
     private LinearLayout filmReelContainer;
     private HorizontalScrollView filmReelScroll;
     private LinearLayout focalSelectorRow;
+    private TextView watermarkTopBtn;
+    private TextView modeTitleView;
+    private TextView modeSubView;
     private View toastNotificationBanner;
     private ImageView toastThumbView;
     private TextView toastTitleView;
@@ -141,6 +151,21 @@ public class CameraActivity extends Activity {
     private SensorManager sensorManager;
     private Sensor accelerometer;
 
+    // Sound effects (Trích xuất từ APK Xiaomi/Leica Pro Camera 9.0.2)
+    private SoundPool soundPool;
+    private int soundShutterVintageId = 0;
+    private int soundFocusId = 0;
+
+    // Watermark graphics (Trích xuất từ APK Xiaomi/Leica Pro Camera 9.0.2)
+    private Bitmap leicaLogoBitmap = null;
+    private Bitmap sprocketTopBitmap = null;
+    private Bitmap sprocketBottomBitmap = null;
+
+    // Chế độ Watermark: 0: Trắng Leica, 1: Đen Leica, 2: Khung phim 35mm, 3: Không khung
+    private int watermarkMode = 0;
+    private final String[] WATERMARK_NAMES = { "🔴 TRẮNG", "⚫ ĐEN", "🎞 PHIM", "○ GỐC" };
+    private final String[] WATERMARK_SUB_NAMES = { "EXHIBITION", "LIMITED", "SPROCKET", "UNFRAMED" };
+
     // Data catalog
     private final List<Recipe> cameraRecipes = new ArrayList<>();
     private Recipe activeRecipe;
@@ -151,7 +176,6 @@ public class CameraActivity extends Activity {
     private int flashStateIndex = 0; // 0: Auto, 1: On, 2: Off
     private int timerSeconds = 0; // 0: Off, 3: 3s, 10: 10s
     private boolean isGridEnabled = true;
-    private boolean isWatermarkEnabled = true;
     private int currentEv = 0;
     private Range<Integer> evRange = new Range<>(0, 0);
     private float evStep = 0.333f;
@@ -194,12 +218,69 @@ public class CameraActivity extends Activity {
             accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         }
 
+        initSounds();
+        loadWatermarkBitmaps();
         loadCameraCatalog();
         buildUi();
     }
 
     private int dp(float dp) {
         return Math.round(dp * getResources().getDisplayMetrics().density);
+    }
+
+    // =========================================================================
+    // NẠP TÀI NGUYÊN ÂM THANH & ĐỒ HỌA REA
+    // =========================================================================
+
+    private void initSounds() {
+        try {
+            AudioAttributes attrs = new AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build();
+            soundPool = new SoundPool.Builder()
+                    .setMaxStreams(3)
+                    .setAudioAttributes(attrs)
+                    .build();
+
+            AssetFileDescriptor afd1 = getAssets().openFd("sounds/shutter_vintage.wav");
+            soundShutterVintageId = soundPool.load(afd1, 1);
+
+            AssetFileDescriptor afd2 = getAssets().openFd("sounds/camera_focus.wav");
+            soundFocusId = soundPool.load(afd2, 1);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void playShutterSound() {
+        if (soundPool != null && soundShutterVintageId != 0) {
+            soundPool.play(soundShutterVintageId, 1.0f, 1.0f, 1, 0, 1.0f);
+        }
+    }
+
+    private void playFocusSound() {
+        if (soundPool != null && soundFocusId != 0) {
+            soundPool.play(soundFocusId, 0.7f, 0.7f, 1, 0, 1.0f);
+        }
+    }
+
+    private void loadWatermarkBitmaps() {
+        processExecutor.execute(() -> {
+            try {
+                try (InputStream in = getAssets().open("watermarks/leica_logo.webp")) {
+                    leicaLogoBitmap = BitmapFactory.decodeStream(in);
+                }
+                try (InputStream in = getAssets().open("watermarks/sprocket_top.webp")) {
+                    sprocketTopBitmap = BitmapFactory.decodeStream(in);
+                }
+                try (InputStream in = getAssets().open("watermarks/sprocket_bottom.webp")) {
+                    sprocketBottomBitmap = BitmapFactory.decodeStream(in);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     // =========================================================================
@@ -216,7 +297,6 @@ public class CameraActivity extends Activity {
                 }
             }
 
-            // Chọn công thức mặc định (Leica M9 Classic CCD hoặc ID truyền vào)
             String targetId = getIntent().getStringExtra(EXTRA_RECIPE_ID);
             if (targetId != null) {
                 for (Recipe r : cameraRecipes) {
@@ -321,7 +401,7 @@ public class CameraActivity extends Activity {
         topLp.rightMargin = dp(16);
         root.addView(topBar, topLp);
 
-        // 5. Dải thông số quang học Telemetry HUD (Ngay dưới thanh topBar)
+        // 5. Dải thông số quang học Telemetry HUD
         hudTelemetryView = buildTelemetryHud();
         FrameLayout.LayoutParams hudLp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -339,7 +419,7 @@ public class CameraActivity extends Activity {
         bottomLp.bottomMargin = dp(14);
         root.addView(bottomDeck, bottomLp);
 
-        // 7. Banner thông báo nướng ảnh thành công (Non-disruptive Toast Banner)
+        // 7. Banner thông báo nướng ảnh thành công
         toastNotificationBanner = buildToastBanner();
         FrameLayout.LayoutParams toastLp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -362,7 +442,7 @@ public class CameraActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.CENTER));
 
-        // 9. Hiệu ứng chớp màn trập cơ khí (Mechanical Shutter Flash Curtain)
+        // 9. Hiệu ứng chớp màn trập cơ khí
         shutterFlashView = new View(this);
         shutterFlashView.setBackgroundColor(Color.WHITE);
         shutterFlashView.setAlpha(0f);
@@ -439,20 +519,28 @@ public class CameraActivity extends Activity {
         });
         bar.addView(timerBtn);
 
-        // Đóng dấu khung Leica (Exhibition Watermark)
-        final TextView watermarkBtn = createTextBtn(isWatermarkEnabled ? "🔴 KHUNG" : "○ GỐC", v -> {
-            isWatermarkEnabled = !isWatermarkEnabled;
-            ((TextView) v).setText(isWatermarkEnabled ? "🔴 KHUNG" : "○ GỐC");
-            ((TextView) v).setTextColor(isWatermarkEnabled ? 0xffffffff : 0xff8a8e9b);
-        });
-        watermarkBtn.setTextColor(0xffffffff);
-        bar.addView(watermarkBtn);
+        // Chuyển đổi khung ảnh (Watermark Mode Switcher: Trắng / Đen / Phim / Gốc)
+        watermarkTopBtn = createTextBtn(WATERMARK_NAMES[watermarkMode], v -> cycleWatermarkMode());
+        watermarkTopBtn.setTextColor(0xffffffff);
+        bar.addView(watermarkTopBtn);
 
         // Đảo camera Trước/Sau
         ImageView flipBtn = createIconBtn("rotate_right", v -> switchCamera());
         bar.addView(flipBtn);
 
         return bar;
+    }
+
+    private void cycleWatermarkMode() {
+        watermarkMode = (watermarkMode + 1) % WATERMARK_NAMES.length;
+        if (watermarkTopBtn != null) {
+            watermarkTopBtn.setText(WATERMARK_NAMES[watermarkMode]);
+            watermarkTopBtn.setTextColor(watermarkMode != 3 ? 0xffffffff : 0xff8a8e9b);
+        }
+        if (modeTitleView != null && modeSubView != null) {
+            modeTitleView.setText(WATERMARK_NAMES[watermarkMode]);
+            modeSubView.setText(WATERMARK_SUB_NAMES[watermarkMode]);
+        }
     }
 
     private TextView buildTelemetryHud() {
@@ -506,13 +594,13 @@ public class CameraActivity extends Activity {
         filmReelScroll.addView(filmReelContainer);
         deck.addView(filmReelScroll);
 
-        // 3. Cụm phím bấm chụp cơ học Leica M (Mechanical Shutter Deck)
+        // 3. Cụm phím bấm chụp cơ học Leica M
         LinearLayout shutterRow = new LinearLayout(this);
         shutterRow.setOrientation(LinearLayout.HORIZONTAL);
         shutterRow.setGravity(Gravity.CENTER_VERTICAL);
         shutterRow.setPadding(dp(28), dp(4), dp(28), dp(4));
 
-        // Nút xem ảnh gần nhất (Recent Film Reel Thumbnail)
+        // Nút xem ảnh gần nhất
         FrameLayout recentFrame = new FrameLayout(this);
         recentFrame.setBackground(createPillDrawable(0xff181a22, 0x40ffffff, dp(12)));
         recentFrame.setPadding(dp(2), dp(2), dp(2), dp(2));
@@ -540,14 +628,12 @@ public class CameraActivity extends Activity {
         // Nút chụp cơ khí Leica M (Milled Knurled Bezel & Cable Release Center Hole)
         FrameLayout shutterFrame = new FrameLayout(this);
 
-        // Vòng khía kim loại knurled ngoài
         GradientDrawable knurledBezel = new GradientDrawable();
         knurledBezel.setShape(GradientDrawable.OVAL);
         knurledBezel.setColor(0xff22252e);
         knurledBezel.setStroke(dp(3f), 0xff3a3e4c);
         shutterFrame.setBackground(knurledBezel);
 
-        // Nút bấm tròn thép phay xước bên trong
         shutterInnerBtn = new View(this);
         GradientDrawable innerButton = new GradientDrawable();
         innerButton.setShape(GradientDrawable.OVAL);
@@ -555,7 +641,6 @@ public class CameraActivity extends Activity {
         innerButton.setStroke(dp(1.5f), 0xffd1d5db);
         shutterInnerBtn.setBackground(innerButton);
 
-        // Lỗ ren dây bấm mềm đặc trưng Leica M ở tâm
         View cableReleaseHole = new View(this);
         GradientDrawable hole = new GradientDrawable();
         hole.setShape(GradientDrawable.OVAL);
@@ -572,25 +657,30 @@ public class CameraActivity extends Activity {
         // Spacer
         shutterRow.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
 
-        // Nút huy hiệu chế độ quang học (Optical Mode Badge / Indicator)
+        // Nút bấm huy hiệu khung ảnh (Chạm để đổi khung nhanh: Trắng / Đen / Phim / Gốc)
         LinearLayout modeIndicator = new LinearLayout(this);
         modeIndicator.setOrientation(LinearLayout.VERTICAL);
         modeIndicator.setGravity(Gravity.CENTER);
         modeIndicator.setPadding(dp(12), dp(8), dp(12), dp(8));
         modeIndicator.setBackground(createPillDrawable(0xff181a22, 0x33ffffff, dp(14)));
 
-        TextView modeTitle = new TextView(this);
-        modeTitle.setText("LEICA M");
-        modeTitle.setTextColor(0xfff59e0b);
-        modeTitle.setTextSize(10f);
-        modeTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-        modeIndicator.addView(modeTitle);
+        modeTitleView = new TextView(this);
+        modeTitleView.setText(WATERMARK_NAMES[watermarkMode]);
+        modeTitleView.setTextColor(0xfff59e0b);
+        modeTitleView.setTextSize(10f);
+        modeTitleView.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        modeIndicator.addView(modeTitleView);
 
-        TextView modeSub = new TextView(this);
-        modeSub.setText("RAW BAKED");
-        modeSub.setTextColor(0xff94a3b8);
-        modeSub.setTextSize(8.5f);
-        modeIndicator.addView(modeSub);
+        modeSubView = new TextView(this);
+        modeSubView.setText(WATERMARK_SUB_NAMES[watermarkMode]);
+        modeSubView.setTextColor(0xff94a3b8);
+        modeSubView.setTextSize(8.5f);
+        modeIndicator.addView(modeSubView);
+
+        modeIndicator.setOnClickListener(v -> {
+            v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+            cycleWatermarkMode();
+        });
 
         shutterRow.addView(modeIndicator);
         deck.addView(shutterRow);
@@ -660,23 +750,22 @@ public class CameraActivity extends Activity {
             card.setGravity(Gravity.CENTER_VERTICAL);
             card.setPadding(dp(12), dp(6), dp(12), dp(6));
 
-            // Xác định màu accent & tag loại phim
-            int accentColor = 0xfff59e0b; // Amber mặc định
+            int accentColor = 0xfff59e0b;
             String subTag = "COLOR FILM";
             if (r.id.contains("leica")) {
-                accentColor = 0xffd41428; // Leica Red
+                accentColor = 0xffd41428;
                 subTag = r.id.contains("mono") ? "M3 MONOCHROM" : "CCD VINTAGE";
             } else if (r.id.contains("kodak") || r.id.contains("portra") || r.id.contains("kodachrome")) {
-                accentColor = 0xffeab308; // Kodak Gold
+                accentColor = 0xffeab308;
                 subTag = "COLOR NEGATIVE";
             } else if (r.id.contains("fuji") || r.id.contains("velvia") || r.id.contains("provia")) {
-                accentColor = 0xff10b981; // Fuji Emerald
+                accentColor = 0xff10b981;
                 subTag = "CHROME REVERSAL";
             } else if (r.id.contains("cinestill")) {
-                accentColor = 0xff06b6d4; // CineStill Neon
+                accentColor = 0xff06b6d4;
                 subTag = "TUNGSTEN 800T";
             } else if (r.id.contains("mono") || r.id.contains("tri_x") || r.id.contains("hp5")) {
-                accentColor = 0xffe2e8f0; // Silver Gelatin
+                accentColor = 0xffe2e8f0;
                 subTag = "SILVER B&W";
             }
 
@@ -685,7 +774,6 @@ public class CameraActivity extends Activity {
                     selected ? accentColor : 0x2bffffff,
                     dp(14)));
 
-            // Hàng trên: Chấm accent + Tên phim
             LinearLayout header = new LinearLayout(this);
             header.setOrientation(LinearLayout.HORIZONTAL);
             header.setGravity(Gravity.CENTER_VERTICAL);
@@ -710,7 +798,6 @@ public class CameraActivity extends Activity {
             header.addView(title, titleLp);
             card.addView(header);
 
-            // Hàng dưới: Thẻ thông số quang học
             TextView sub = new TextView(this);
             sub.setText(subTag);
             sub.setTextSize(8.5f);
@@ -724,7 +811,6 @@ public class CameraActivity extends Activity {
                 loadActiveLut();
                 populateFilmReel();
                 updateTelemetryDisplay();
-                // Tự động cuộn thẻ được chọn vào trung tâm
                 int targetX = card.getLeft() - (filmReelScroll.getWidth() - card.getWidth()) / 2;
                 filmReelScroll.smoothScrollTo(Math.max(0, targetX), 0);
             });
@@ -844,11 +930,14 @@ public class CameraActivity extends Activity {
     }
 
     // =========================================================================
-    // QUY TRÌNH BẤM MÀN TRẬP & NƯỚNG MÀU PHIM (SHUTTER PIPELINE)
+    // QUY TRÌNH BẤM MÀN TRẬP & NƯỚNG MÀU PHIM
     // =========================================================================
 
     private void handleShutterClick() {
         if (isCapturing) return;
+
+        // Phát âm thanh màn trập cơ học Leica M
+        playShutterSound();
 
         // Phản hồi cơ khí haptic kép
         shutterInnerBtn.performHapticFeedback(HapticFeedbackConstants.CONFIRM);
@@ -895,7 +984,7 @@ public class CameraActivity extends Activity {
         try {
             isCapturing = true;
 
-            // Hiệu ứng chớp màn trập cơ học (Shutter curtain flash)
+            // Hiệu ứng chớp màn trập cơ học
             shutterFlashView.setAlpha(0.85f);
             shutterFlashView.animate().alpha(0f).setDuration(110).start();
             shutterFlashView.performHapticFeedback(HapticFeedbackConstants.CONFIRM);
@@ -908,7 +997,6 @@ public class CameraActivity extends Activity {
             captureBuilder.set(CaptureRequest.CONTROL_AE_MODE, flashMode);
             captureBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, currentEv);
 
-            // Áp dụng zoom crop quang học
             float zoom = FOCAL_ZOOMS[currentFocalIndex];
             if (sensorArraySize != null && zoom > 1.0f) {
                 int cropW = Math.round(sensorArraySize.width() / zoom);
@@ -959,7 +1047,6 @@ public class CameraActivity extends Activity {
 
     private void bakeAndSavePhoto(Bitmap rawBitmap) {
         try {
-            // Xử lý lật gương ảnh nếu là camera trước
             Bitmap oriented = rawBitmap;
             if (isFrontFacing) {
                 Matrix m = new Matrix();
@@ -977,7 +1064,6 @@ public class CameraActivity extends Activity {
             oriented.getPixels(pixels, 0, w, 0, 0, w, h);
             oriented.recycle();
 
-            // Nướng màu qua ColorEngine với 3D LUT độ phân giải gốc
             Settings settings = (r != null)
                     ? r.adjustments(new ArrayList<>())
                     : new Settings();
@@ -985,17 +1071,15 @@ public class CameraActivity extends Activity {
             int[] processedPixels = ColorEngine.process(pixels, w, h, settings, lut);
             Bitmap baked = Bitmap.createBitmap(processedPixels, w, h, Bitmap.Config.ARGB_8888);
 
-            // Chèn khung đóng dấu Leica Watermark chuẩn mỹ thuật nếu bật
-            Bitmap finalPhoto = isWatermarkEnabled ? drawLeicaExhibitionWatermark(baked, r) : baked;
+            // Chèn khung đóng dấu Leica hoặc 35mm Film Watermark
+            Bitmap finalPhoto = drawWatermarkPipeline(baked, r);
             if (finalPhoto != baked) {
                 baked.recycle();
             }
 
-            // Lưu vào Thư viện hệ thống
             Uri savedUri = saveToGallery(finalPhoto);
             lastCapturedUri = savedUri;
 
-            // Thumbnail mượt mà
             final Bitmap thumb = Bitmap.createScaledBitmap(finalPhoto, dp(46), dp(46), true);
             final String filmName = (r != null)
                     ? r.name.replace("[CameraLook] ", "").replace("[Leica M] ", "")
@@ -1017,48 +1101,78 @@ public class CameraActivity extends Activity {
         }
     }
 
-    private Bitmap drawLeicaExhibitionWatermark(Bitmap photo, Recipe recipe) {
+    // =========================================================================
+    // HỆ THỐNG ĐÓNG DẤU KHUNG ẢNH NÂNG CAO (WATERMARK PIPELINE REA)
+    // =========================================================================
+
+    private Bitmap drawWatermarkPipeline(Bitmap photo, Recipe recipe) {
+        // Mode 3: Không khung
+        if (watermarkMode == 3) {
+            return photo;
+        }
+
         int w = photo.getWidth();
         int h = photo.getHeight();
 
-        // Footer chuẩn triển lãm Leica Gallery (chiếm ~8.5% chiều rộng ảnh)
+        // Mode 2: Khung phim 35mm có lỗ răng cưa (Vintage 35mm Sprocket Film Frame)
+        if (watermarkMode == 2) {
+            return drawSprocketFilmFrame(photo, recipe, w, h);
+        }
+
+        // Mode 0 & 1: Khung Leica Gallery Trắng hoặc Đen Obsidian
+        boolean isWhiteMode = (watermarkMode == 0);
         int footH = Math.max(dp(70), Math.round(w * 0.088f));
         Bitmap framed = Bitmap.createBitmap(w, h + footH, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(framed);
 
-        // Vẽ ảnh chính
-        c.drawColor(0xffffffff);
+        int bgColor = isWhiteMode ? 0xffffffff : 0xff141414;
+        int fgPrimary = isWhiteMode ? 0xff12141a : 0xfff0f2f8;
+        int fgMuted = isWhiteMode ? 0xff525866 : 0xffa1a7b5;
+        int fgExif = isWhiteMode ? 0xff6e7485 : 0xff888e9d;
+        int dividerColor = isWhiteMode ? 0x22000000 : 0x33ffffff;
+
+        c.drawColor(bgColor);
         c.drawBitmap(photo, 0, 0, null);
 
-        // Dải trắng tinh khiết dưới đáy
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        p.setColor(0xffffffff);
+        p.setColor(bgColor);
         c.drawRect(0, h, w, h + footH, p);
 
-        // Đường chỉ mỏng phân cách
-        p.setColor(0x18000000);
+        // Vạch phân cách mảnh trên đỉnh footer
+        p.setColor(isWhiteMode ? 0x18000000 : 0x22ffffff);
         p.setStrokeWidth(Math.max(1f, w * 0.0006f));
         c.drawLine(w * 0.04f, h, w * 0.96f, h, p);
 
-        // Chấm đỏ tròn Leica kinh điển 🔴
-        float dotRadius = footH * 0.17f;
-        float dotX = w * 0.055f;
-        float dotY = h + footH * 0.48f;
-        p.setColor(0xffd41428); // Leica Heritage Red
-        p.setStyle(Paint.Style.FILL);
-        c.drawCircle(dotX, dotY, dotRadius, p);
+        // 1. Logo Leica Red Dot chính hãng
+        float textStartX;
+        if (leicaLogoBitmap != null) {
+            float logoH = footH * 0.42f;
+            float logoW = logoH * (leicaLogoBitmap.getWidth() / (float) leicaLogoBitmap.getHeight());
+            float logoX = w * 0.05f;
+            float logoY = h + (footH - logoH) / 2f;
+            RectF dstRect = new RectF(logoX, logoY, logoX + logoW, logoY + logoH);
+            c.drawBitmap(leicaLogoBitmap, null, dstRect, new Paint(Paint.FILTER_BITMAP_FLAG));
+            textStartX = logoX + logoW + footH * 0.16f;
+        } else {
+            float dotRadius = footH * 0.17f;
+            float dotX = w * 0.055f;
+            float dotY = h + footH * 0.48f;
+            p.setColor(0xffd41428);
+            p.setStyle(Paint.Style.FILL);
+            c.drawCircle(dotX, dotY, dotRadius, p);
 
-        // Chữ "Leica" script trắng ở tâm chấm đỏ
-        Paint whiteP = new Paint(Paint.ANTI_ALIAS_FLAG);
-        whiteP.setColor(Color.WHITE);
-        whiteP.setTextSize(dotRadius * 0.9f);
-        whiteP.setTypeface(Typeface.create("sans-serif", Typeface.BOLD_ITALIC));
-        whiteP.setTextAlign(Paint.Align.CENTER);
-        c.drawText("Leica", dotX, dotY + dotRadius * 0.32f, whiteP);
+            Paint whiteP = new Paint(Paint.ANTI_ALIAS_FLAG);
+            whiteP.setColor(Color.WHITE);
+            whiteP.setTextSize(dotRadius * 0.9f);
+            whiteP.setTypeface(Typeface.create("sans-serif", Typeface.BOLD_ITALIC));
+            whiteP.setTextAlign(Paint.Align.CENTER);
+            c.drawText("Leica", dotX, dotY + dotRadius * 0.32f, whiteP);
+            textStartX = dotX + dotRadius * 2.1f;
+        }
 
-        // Tên dòng máy & Cấu hình phim
-        p.setColor(0xff12141a);
-        p.setTextSize(footH * 0.26f);
+        // 2. Tên máy & màu phim
+        p.setColor(fgPrimary);
+        p.setTextSize(footH * 0.25f);
         p.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         p.setTextAlign(Paint.Align.LEFT);
 
@@ -1066,31 +1180,78 @@ public class CameraActivity extends Activity {
                 ? recipe.film.toUpperCase(Locale.ROOT)
                 : "CLASSIC CCD";
         String cameraHeader = "LEICA M9  ·  " + filmName;
-        c.drawText(cameraHeader, dotX + dotRadius * 2.1f, dotY + footH * 0.08f, p);
+        c.drawText(cameraHeader, textStartX, h + footH * 0.44f, p);
 
-        // Vạch phân cách đứng mảnh
-        float dividerX = w * 0.44f;
-        p.setColor(0x22000000);
-        c.drawLine(dividerX, h + footH * 0.28f, dividerX, h + footH * 0.72f, p);
-
-        // Tên ống kính Summilux
-        p.setColor(0xff525866);
-        p.setTextSize(footH * 0.20f);
+        // 3. Tên ống kính Summilux
+        p.setColor(fgMuted);
+        p.setTextSize(footH * 0.18f);
         p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         String lensName = FOCAL_LENSES[currentFocalIndex];
-        c.drawText(lensName, dividerX + w * 0.02f, dotY + footH * 0.07f, p);
+        c.drawText(lensName, textStartX, h + footH * 0.72f, p);
 
-        // Thông số khẩu độ, tốc độ, ISO và ngày giờ bên phải
-        p.setColor(0xff6e7485);
-        p.setTextSize(footH * 0.21f);
-        p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        // 4. Vạch phân cách đứng mảnh
+        float dividerX = w * 0.52f;
+        p.setColor(dividerColor);
+        c.drawLine(dividerX, h + footH * 0.24f, dividerX, h + footH * 0.76f, p);
+
+        // 5. Thông số phơi sáng EXIF & Ngày giờ
+        p.setColor(fgPrimary);
+        p.setTextSize(footH * 0.22f);
+        p.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         p.setTextAlign(Paint.Align.RIGHT);
 
+        String exifStr = String.format(Locale.ROOT, "%s  f/%.1f  %s  ISO %d",
+                FOCAL_NAMES[currentFocalIndex], liveAperture, liveShutter, liveIso);
+        c.drawText(exifStr, w * 0.95f, h + footH * 0.44f, p);
+
+        p.setColor(fgExif);
+        p.setTextSize(footH * 0.18f);
+        p.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd  HH:mm", Locale.ROOT);
-        String dateStr = sdf.format(new Date());
-        String exifStr = String.format(Locale.ROOT, "%s  f/%.1f  %s  ISO %d  |  %s",
-                FOCAL_NAMES[currentFocalIndex], liveAperture, liveShutter, liveIso, dateStr);
-        c.drawText(exifStr, w * 0.95f, dotY + footH * 0.07f, p);
+        c.drawText(sdf.format(new Date()), w * 0.95f, h + footH * 0.72f, p);
+
+        return framed;
+    }
+
+    private Bitmap drawSprocketFilmFrame(Bitmap photo, Recipe recipe, int w, int h) {
+        int sprocketH = Math.max(dp(54), Math.round(w * 0.082f));
+        Bitmap framed = Bitmap.createBitmap(w, h + sprocketH * 2, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(framed);
+
+        c.drawColor(0xff0a0b0e);
+        c.drawBitmap(photo, 0, sprocketH, null);
+
+        Paint filterP = new Paint(Paint.FILTER_BITMAP_FLAG);
+        if (sprocketTopBitmap != null) {
+            c.drawBitmap(sprocketTopBitmap, null, new Rect(0, 0, w, sprocketH), filterP);
+        }
+        if (sprocketBottomBitmap != null) {
+            c.drawBitmap(sprocketBottomBitmap, null, new Rect(0, h + sprocketH, w, h + sprocketH * 2), filterP);
+        }
+
+        // Chữ dập màu cam hổ phách phong cách viền phim nhựa Kodak Safety Film
+        Paint edgeP = new Paint(Paint.ANTI_ALIAS_FLAG);
+        edgeP.setColor(0xffe07a3b);
+        edgeP.setTextSize(sprocketH * 0.32f);
+        edgeP.setTypeface(Typeface.create("monospace", Typeface.BOLD));
+
+        edgeP.setTextAlign(Paint.Align.LEFT);
+        c.drawText("▶ 24A", w * 0.06f, sprocketH * 0.70f, edgeP);
+
+        edgeP.setTextAlign(Paint.Align.CENTER);
+        String filmTitle = (recipe != null) ? recipe.name.replace("[CameraLook] ", "").replace("[Leica M] ", "") : "KODAK SAFETY FILM";
+        c.drawText(filmTitle.toUpperCase(Locale.ROOT) + " · 35MM", w * 0.50f, sprocketH * 0.70f, edgeP);
+
+        edgeP.setTextAlign(Paint.Align.RIGHT);
+        c.drawText("DX · ISO " + liveIso, w * 0.94f, sprocketH * 0.70f, edgeP);
+
+        // Chữ dải dưới
+        edgeP.setTextAlign(Paint.Align.LEFT);
+        c.drawText("LEICA M OPTICAL SYSTEM", w * 0.06f, h + sprocketH + sprocketH * 0.70f, edgeP);
+
+        edgeP.setTextAlign(Paint.Align.RIGHT);
+        c.drawText(FOCAL_NAMES[currentFocalIndex] + "  f/" + liveAperture + "  " + liveShutter,
+                w * 0.94f, h + sprocketH + sprocketH * 0.70f, edgeP);
 
         return framed;
     }
@@ -1127,7 +1288,6 @@ public class CameraActivity extends Activity {
 
     private final View.OnTouchListener viewfinderTouchListener = new View.OnTouchListener() {
         private float startY = 0;
-        private boolean isDraggingEv = false;
 
         @SuppressLint("ClickableViewAccessibility")
         @Override
@@ -1135,14 +1295,12 @@ public class CameraActivity extends Activity {
             switch (event.getAction()) {
                 case MotionEvent.ACTION_DOWN:
                     startY = event.getY();
-                    isDraggingEv = false;
                     triggerTapToFocus(event.getX(), event.getY());
                     return true;
 
                 case MotionEvent.ACTION_MOVE:
                     float dy = startY - event.getY();
                     if (Math.abs(dy) > dp(12)) {
-                        isDraggingEv = true;
                         adjustEv(dy > 0 ? 1 : -1);
                         startY = event.getY();
                     }
@@ -1158,6 +1316,8 @@ public class CameraActivity extends Activity {
     private void triggerTapToFocus(float x, float y) {
         if (cameraDevice == null || captureSession == null) return;
         try {
+            playFocusSound();
+
             float displayEv = currentEv * evStep;
             focusReticle.show(x, y, displayEv);
 
@@ -1195,7 +1355,7 @@ public class CameraActivity extends Activity {
     }
 
     // =========================================================================
-    // VÒNG ĐỜI CAMERA2 & SENSOR GYRO LEVEL
+    // VÒNG ĐỜI CAMERA2 & SENSORS
     // =========================================================================
 
     private void openCamera() {
@@ -1414,6 +1574,15 @@ public class CameraActivity extends Activity {
     }
 
     @Override
+    protected void onDestroy() {
+        if (soundPool != null) {
+            soundPool.release();
+            soundPool = null;
+        }
+        super.onDestroy();
+    }
+
+    @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode == PERMISSION_REQUEST_CAMERA) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -1497,7 +1666,7 @@ public class CameraActivity extends Activity {
 
         public RangefinderOverlayView(Context context) {
             super(context);
-            framePaint.setColor(0x73ffffff); // Brightline white
+            framePaint.setColor(0x73ffffff);
             framePaint.setStyle(Paint.Style.STROKE);
             framePaint.setStrokeWidth(2.5f);
             framePaint.setStrokeCap(Paint.Cap.ROUND);
@@ -1521,7 +1690,6 @@ public class CameraActivity extends Activity {
         }
 
         public void setHorizonRoll(float roll) {
-            // Giữ trong khoảng -45 đến 45 độ
             this.horizonRoll = Math.max(-45f, Math.min(45f, roll));
             boolean isLevel = Math.abs(this.horizonRoll) < 1.0f;
             if (isLevel && !wasLevel) {
@@ -1537,7 +1705,6 @@ public class CameraActivity extends Activity {
             int w = getWidth();
             int h = getHeight();
 
-            // 1. Lưới tam phân 1/3 (Rule of Thirds)
             if (gridEnabled) {
                 canvas.drawLine(w / 3f, 0, w / 3f, h, gridPaint);
                 canvas.drawLine(2f * w / 3f, 0, 2f * w / 3f, h, gridPaint);
@@ -1545,28 +1712,22 @@ public class CameraActivity extends Activity {
                 canvas.drawLine(0, 2f * h / 3f, w, 2f * h / 3f, gridPaint);
             }
 
-            // 2. Vạch ngắm quang học Rangefinder Brightlines (Corner Ticks)
             float padX = w * 0.06f;
             float padY = h * 0.08f;
             float tickLen = w * 0.08f;
 
-            // Góc trên trái
             canvas.drawLine(padX, padY, padX + tickLen, padY, framePaint);
             canvas.drawLine(padX, padY, padX, padY + tickLen, framePaint);
 
-            // Góc trên phải
             canvas.drawLine(w - padX, padY, w - padX - tickLen, padY, framePaint);
             canvas.drawLine(w - padX, padY, w - padX, padY + tickLen, framePaint);
 
-            // Góc dưới trái
             canvas.drawLine(padX, h - padY, padX + tickLen, h - padY, framePaint);
             canvas.drawLine(padX, h - padY, padX, h - padY - tickLen, framePaint);
 
-            // Góc dưới phải
             canvas.drawLine(w - padX, h - padY, w - padX - tickLen, h - padY, framePaint);
             canvas.drawLine(w - padX, h - padY, w - padX, h - padY - tickLen, framePaint);
 
-            // 3. Vùng ngắm trung tâm Rangefinder Split Patch [ + ]
             float cx = w / 2f;
             float cy = h / 2f;
             float patchW = w * 0.16f;
@@ -1575,9 +1736,8 @@ public class CameraActivity extends Activity {
             canvas.drawLine(cx - 10f, cy, cx + 10f, cy, patchPaint);
             canvas.drawLine(cx, cy - 10f, cx, cy + 10f, patchPaint);
 
-            // 4. Thước chân trời cân bằng Gyro Level Line
             boolean isLevel = Math.abs(horizonRoll) < 1.0f;
-            horizonPaint.setColor(isLevel ? 0xfff59e0b : 0x73ffffff); // Amber khi cân bằng 0°
+            horizonPaint.setColor(isLevel ? 0xfff59e0b : 0x73ffffff);
             horizonPaint.setStrokeWidth(isLevel ? 3f : 1.8f);
 
             canvas.save();
@@ -1604,7 +1764,7 @@ public class CameraActivity extends Activity {
 
         public FocusReticleView(Context context) {
             super(context);
-            boxPaint.setColor(0xfff59e0b); // Leica Amber
+            boxPaint.setColor(0xfff59e0b);
             boxPaint.setStyle(Paint.Style.STROKE);
             boxPaint.setStrokeWidth(2f);
 
@@ -1647,21 +1807,17 @@ public class CameraActivity extends Activity {
             if (fx >= 0 && fy >= 0) {
                 float size = 42f;
 
-                // Hộp lấy nét chính
                 canvas.drawRect(fx - size, fy - size, fx + size, fy + size, boxPaint);
                 canvas.drawCircle(fx, fy, 3.5f, boxPaint);
 
-                // 4 vạch nhắm nhỏ ngoài góc
                 canvas.drawLine(fx - size, fy, fx - size - 12f, fy, boxPaint);
                 canvas.drawLine(fx + size, fy, fx + size + 12f, fy, boxPaint);
                 canvas.drawLine(fx, fy - size, fx, fy - size - 12f, boxPaint);
                 canvas.drawLine(fx, fy + size, fx, fy + size + 12f, boxPaint);
 
-                // Thanh trượt mặt trời EV bên phải hộp
                 float sliderX = fx + size + 28f;
                 canvas.drawLine(sliderX, fy - 50f, sliderX, fy + 50f, sunPaint);
 
-                // Biểu tượng mặt trời nhỏ ☀️
                 float sunY = fy - Math.max(-50f, Math.min(50f, currentEv * 15f));
                 canvas.drawCircle(sliderX, sunY, 6.5f, sunPaint);
                 for (int i = 0; i < 8; i++) {
@@ -1674,7 +1830,6 @@ public class CameraActivity extends Activity {
                             sunPaint);
                 }
 
-                // Nhãn EV
                 String evText = (currentEv >= 0 ? "+" : "") + String.format(Locale.ROOT, "%.1f", currentEv);
                 canvas.drawText(evText, sliderX + 22f, sunY + 9f, textPaint);
             }

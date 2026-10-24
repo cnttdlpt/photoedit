@@ -19,6 +19,12 @@ scp -o StrictHostKeyChecking=no "${localWeb}\manifest.json" "${target}:/home/ngu
 scp -o StrictHostKeyChecking=no "${localWeb}\worker.mjs" "${target}:/home/nguyennam/photoedit/web/worker.mjs"
 scp -o StrictHostKeyChecking=no "${localWeb}\server.mjs" "${target}:/home/nguyennam/photoedit/web/server.mjs"
 scp -o StrictHostKeyChecking=no "${localWeb}\api.php" "${target}:/home/nguyennam/photoedit/web/api.php"
+scp -o StrictHostKeyChecking=no "${localWeb}\cameralook.json" "${target}:/home/nguyennam/photoedit/web/cameralook.json"
+scp -o StrictHostKeyChecking=no "${localWeb}\cameralook-recipes.json" "${target}:/home/nguyennam/photoedit/web/cameralook-recipes.json"
+scp -o StrictHostKeyChecking=no "${localWeb}\cameralook_catalog.json" "${target}:/home/nguyennam/photoedit/web/cameralook_catalog.json"
+scp -o StrictHostKeyChecking=no -r "${localWeb}\luts" "${target}:/home/nguyennam/photoedit/web/"
+scp -o StrictHostKeyChecking=no -r "${localWeb}\cameralook" "${target}:/home/nguyennam/photoedit/web/"
+scp -o StrictHostKeyChecking=no -r "${localWeb}\leica" "${target}:/home/nguyennam/photoedit/web/"
 scp -o StrictHostKeyChecking=no -r "${localWeb}\vendor" "${target}:/home/nguyennam/photoedit/web/"
 scp -o StrictHostKeyChecking=no "${localBackend}\server.mjs" "${target}:/home/nguyennam/photoedit/backend/server.mjs"
 
@@ -35,6 +41,12 @@ echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/manifest.json /var/www/
 echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/worker.mjs /var/www/iro-studio/frontend/worker.mjs
 echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/server.mjs /var/www/iro-studio/frontend/server.mjs
 echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/api.php /var/www/iro-studio/frontend/api.php
+echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/cameralook.json /var/www/iro-studio/frontend/cameralook.json
+echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/cameralook-recipes.json /var/www/iro-studio/frontend/cameralook-recipes.json
+echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/web/cameralook_catalog.json /var/www/iro-studio/frontend/cameralook_catalog.json
+echo 'nam123' | sudo -S cp -r /home/nguyennam/photoedit/web/luts /var/www/iro-studio/frontend/
+echo 'nam123' | sudo -S cp -r /home/nguyennam/photoedit/web/cameralook /var/www/iro-studio/frontend/
+echo 'nam123' | sudo -S cp -r /home/nguyennam/photoedit/web/leica /var/www/iro-studio/frontend/
 echo 'nam123' | sudo -S cp -r /home/nguyennam/photoedit/web/vendor /var/www/iro-studio/frontend/
 echo 'nam123' | sudo -S cp /home/nguyennam/photoedit/backend/server.mjs /var/www/iro-studio/backend/server.mjs
 

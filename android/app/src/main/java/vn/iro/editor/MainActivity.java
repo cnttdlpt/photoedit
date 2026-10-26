@@ -97,10 +97,10 @@ public class MainActivity extends Activity {
      * Tương đương {@code enum EditorToolTab} trong {@code Studio.swift}.
      */
     public enum EditorToolTab {
-        ADJUST("Tinh chỉnh", "sliders"),
         FILTERS("Màu phim", "sparkles"),
+        ADJUST("Tinh chỉnh", "sliders"),
         FRAME("Khung ảnh", "frame"),
-        LIGHTCRAFT("LightCraft", "lightcraft");
+        LIGHTCRAFT("Nâng cao", "lightcraft");
 
         public final String title;
         public final String icon;
@@ -276,11 +276,12 @@ public class MainActivity extends Activity {
     private int cachedFrameStyle = -1;
 
     // Cờ trạng thái điều khiển luồng và UI
-    private EditorToolTab selectedTab = EditorToolTab.ADJUST;
+    private EditorToolTab selectedTab = EditorToolTab.FILTERS;
     private AdjustParam selectedAdjust = AdjustParam.EXPOSURE;
     private boolean isAutoBalanced = false;
     private boolean sliderUndoRecorded = false;
     private boolean isComparing = false;
+    private boolean isViewingLanding = false;
     private boolean dead = false;
     private boolean exportBusy = false;
     private Future<?> renderTask;
@@ -301,10 +302,14 @@ public class MainActivity extends Activity {
     private View editorWorkspaceView;
     private ImageView imageStageView;
     private TextView compareOriginBadge;
+    private TextView stageInfoPill;
     private TextView statusLabel;
     private TextView canvasRecipeChip;
     private TextView aiRecommendedBadge;
     private String aiRecommendedFilm = null;
+    private LinearLayout resumeEditorBanner;
+    private TextView resumePhotoTitle;
+    private String selectedLandingSensor = "Tất cả";
     private View undoButton;
     private View redoButton;
     private View railAutoBalanceCircle;
@@ -591,6 +596,9 @@ public class MainActivity extends Activity {
 
         outer.addView(topBar);
 
+        resumeEditorBanner = buildResumeEditorBanner();
+        outer.addView(resumeEditorBanner);
+
         LinearLayout heroCard = buildExpressiveHeroCard();
         LinearLayout bentoAndFilmsCol = buildBentoAndFilmShowcaseColumn();
 
@@ -622,32 +630,101 @@ public class MainActivity extends Activity {
     }
 
     /**
+     * Banner thông báo trạng thái "Đang sửa ảnh ➔ Tiếp tục chỉnh sửa" hiển thị trên màn hình Landing.
+     * Cho phép chuyển đổi tức thì giữa duyệt công thức trang chủ và phòng tối biên tập (App/Web Parity).
+     */
+    private LinearLayout buildResumeEditorBanner() {
+        LinearLayout banner = row();
+        banner.setGravity(Gravity.CENTER_VERTICAL);
+        banner.setPadding(dp(14), dp(10), dp(14), dp(10));
+        banner.setBackground(StudioStyle.surface(StudioStyle.SURFACE, StudioStyle.LINE, dp(14)));
+
+        LinearLayout badgeRow = row();
+        badgeRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView badge = text("Đang sửa", 11f, StudioStyle.ON_ACCENT);
+        badge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        badge.setPadding(dp(8), dp(3), dp(8), dp(3));
+        badge.setBackground(StudioStyle.shape(StudioStyle.ACCENT, 0, dp(8)));
+        badgeRow.addView(badge);
+
+        resumePhotoTitle = text("Bức ảnh hiện tại", 13f, StudioStyle.INK);
+        resumePhotoTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        resumePhotoTitle.setPadding(dp(10), 0, 0, 0);
+        resumePhotoTitle.setSingleLine(true);
+        resumePhotoTitle.setEllipsize(TextUtils.TruncateAt.END);
+        badgeRow.addView(resumePhotoTitle, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        banner.addView(badgeRow, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView resumeActionBtn = text("Tiếp tục chỉnh sửa ➔", 12.5f, StudioStyle.ACCENT);
+        resumeActionBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        resumeActionBtn.setPadding(dp(8), dp(4), dp(8), dp(4));
+        banner.addView(resumeActionBtn);
+
+        banner.setOnClickListener(v -> navigateToEditor());
+        MotionStudio.attachExpressiveTouch(banner, 0.98f);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = dp(12);
+        banner.setLayoutParams(lp);
+
+        banner.setVisibility((preview != null && isViewingLanding) ? View.VISIBLE : View.GONE);
+        return banner;
+    }
+
+    /**
      * Thẻ Hero tối giản: Mở Thư viện ảnh, Tệp tin hoặc Ảnh mẫu 1 chạm.
+     */
+    /**
+     * Thẻ Hero tối giản chuẩn IRO Silver Print: Mở Thư viện ảnh, Máy ảnh Leica hoặc Ảnh mẫu 1 chạm.
      */
     private LinearLayout buildExpressiveHeroCard() {
         LinearLayout heroCard = column();
         heroCard.setPadding(dp(20), dp(20), dp(20), dp(20));
         heroCard.setBackground(StudioStyle.liquidGlassCard(dp(22)));
 
-        TextView heroTitle = text("Chọn ảnh để chỉnh sửa", wideLayoutActive ? 19f : 17f, StudioStyle.INK);
+        TextView heroTitle = text("Một bức ảnh. Màu của bạn.", wideLayoutActive ? 21f : 18.5f, StudioStyle.INK);
         heroTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         heroTitle.setPadding(0, 0, 0, dp(4));
         heroCard.addView(heroTitle);
 
         TextView heroSub = text(
-                "392 công thức màu phim · Đường cong & HSL · 30 mẫu khung EXIF.",
-                12.5f, StudioStyle.MUTED);
+                "Mở ảnh, chọn màu phim và tinh chỉnh theo ý bạn. Xuất ảnh khi đã ưng ý.",
+                13f, StudioStyle.MUTED);
         heroSub.setLineSpacing(dp(2), 1.0f);
         heroCard.addView(heroSub);
 
+        // Quy trình 4 bước tối giản chuẩn Web North Star
+        LinearLayout workflowStrip = row();
+        workflowStrip.setPadding(0, dp(12), 0, dp(4));
+        String[] steps = {"1. Chọn ảnh", "2. Chọn màu", "3. Tinh chỉnh", "4. Xuất ảnh"};
+        for (int i = 0; i < steps.length; i++) {
+            TextView step = text(steps[i], 11f, StudioStyle.MUTED);
+            step.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            workflowStrip.addView(step);
+            if (i < steps.length - 1) {
+                TextView dot = text(" · ", 11f, StudioStyle.LINE);
+                workflowStrip.addView(dot);
+            }
+        }
+        heroCard.addView(workflowStrip);
+
+        TextView workflowSub = text("Bạn luôn có thể so sánh với ảnh gốc và hoàn tác.", 11f, StudioStyle.MUTED);
+        workflowSub.setPadding(0, 0, 0, dp(6));
+        heroCard.addView(workflowSub);
+
+        // Nút mở máy ảnh Leica M & Film
         LinearLayout cameraBtn = row();
         cameraBtn.setGravity(Gravity.CENTER);
         cameraBtn.setPadding(dp(18), dp(13), dp(18), dp(13));
         cameraBtn.setBackground(StudioStyle.warmAmberPill(dp(18)));
         ImageView camIcon = new ImageView(this);
-        camIcon.setImageDrawable(new StudioStyle.Icon("camera", Color.WHITE, dp(18)));
+        camIcon.setImageDrawable(new StudioStyle.Icon("camera", StudioStyle.ON_ACCENT, dp(18)));
         cameraBtn.addView(camIcon, new LinearLayout.LayoutParams(dp(18), dp(18)));
-        TextView camText = text("Máy ảnh Leica M & Film · Chụp nướng màu", 13.5f, Color.WHITE);
+        TextView camText = text("Máy ảnh Leica M & Film · Chụp nướng màu", 13.5f, StudioStyle.ON_ACCENT);
         camText.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         camText.setPadding(dp(10), 0, 0, 0);
         cameraBtn.addView(camText);
@@ -659,20 +736,21 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams camLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        camLp.topMargin = dp(14);
+        camLp.topMargin = dp(8);
         heroCard.addView(cameraBtn, camLp);
 
         LinearLayout primaryRow = row();
-        primaryRow.setPadding(0, dp(16), 0, 0);
+        primaryRow.setPadding(0, dp(10), 0, 0);
 
+        // Nút Thư viện ảnh chính (Primary CTA)
         LinearLayout galleryBtn = row();
         galleryBtn.setGravity(Gravity.CENTER);
         galleryBtn.setPadding(dp(16), dp(12), dp(16), dp(12));
         galleryBtn.setBackground(StudioStyle.warmAmberPill(dp(18)));
         ImageView galIcon = new ImageView(this);
-        galIcon.setImageDrawable(new StudioStyle.Icon("photo", Color.WHITE, dp(16)));
+        galIcon.setImageDrawable(new StudioStyle.Icon("photo", StudioStyle.ON_ACCENT, dp(16)));
         galleryBtn.addView(galIcon, new LinearLayout.LayoutParams(dp(16), dp(16)));
-        TextView galText = text("Thư viện ảnh", 13f, Color.WHITE);
+        TextView galText = text("Chọn ảnh từ thiết bị", 13f, StudioStyle.ON_ACCENT);
         galText.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         galText.setPadding(dp(8), 0, 0, 0);
         galleryBtn.addView(galText);
@@ -727,44 +805,62 @@ public class MainActivity extends Activity {
     }
 
     /**
-     * Lưới 2×2 & Dải chọn nhanh màu phim theo phong cách tối giản.
+     * Khám phá màu phim Bento Grid với bộ lọc Cảm biến & Dải chọn nhanh màu phim chuẩn Web.
      */
     private LinearLayout buildBentoAndFilmShowcaseColumn() {
         LinearLayout col = column();
 
         LinearLayout sectionHeader = row();
-        sectionHeader.setPadding(dp(4), 0, dp(4), dp(8));
-        TextView albumTitle = text("Bộ sưu tập & Công cụ", 14f, StudioStyle.INK);
+        sectionHeader.setPadding(dp(4), 0, dp(4), dp(4));
+        TextView albumTitle = text("Khám phá màu phim", 14f, StudioStyle.INK);
         albumTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         sectionHeader.addView(albumTitle, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
-        TextView openQuickBtn = text("Tất cả 392 ›", 12f, StudioStyle.MUTED);
+        TextView openQuickBtn = text("Quản lý thư viện ›", 12f, StudioStyle.MUTED);
         openQuickBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         openQuickBtn.setOnClickListener(v -> showLibrary());
         sectionHeader.addView(openQuickBtn);
         col.addView(sectionHeader);
 
-        LinearLayout gridRow1 = row();
-        gridRow1.addView(buildAlbumCard("Fuji Chrome", "392 công thức phim", "film", StudioStyle.INK, this::showLibrary),
-                new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        View spacer1 = new View(this);
-        gridRow1.addView(spacer1, new LinearLayout.LayoutParams(dp(10), 1));
-        gridRow1.addView(buildAlbumCard("Kodak Portra", "Tông màu ấm cổ điển", "sparkles", StudioStyle.INK, () -> loadStudioSamplePhoto("Classic Chrome")),
-                new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        col.addView(gridRow1);
+        TextView subHeader = text("Tìm công thức theo cảm biến hoặc dòng film.", 12f, StudioStyle.MUTED);
+        subHeader.setPadding(dp(4), 0, dp(4), dp(8));
+        col.addView(subHeader);
 
-        LinearLayout gridRow2 = row();
-        gridRow2.setPadding(0, dp(10), 0, 0);
-        gridRow2.addView(buildAlbumCard("Fujicolor & B&W", "Velvia, Eterna & Acros", "compare", StudioStyle.INK, () -> loadStudioSamplePhoto("Velvia")),
-                new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        View spacer2 = new View(this);
-        gridRow2.addView(spacer2, new LinearLayout.LayoutParams(dp(10), 1));
-        gridRow2.addView(buildAlbumCard("Khung & EXIF", "30 mẫu viền tối giản", "frame", StudioStyle.INK, () -> {
-            selectedTab = EditorToolTab.FRAME;
-            frameStyle = 1;
-            loadStudioSamplePhoto(null);
-        }), new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        col.addView(gridRow2);
+        // Hàng chip cảm biến Bento: Tất cả · X-Trans V · X-Trans IV · X-Trans III · Bayer / GFX
+        HorizontalScrollView sensorScroll = new HorizontalScrollView(this);
+        sensorScroll.setHorizontalScrollBarEnabled(false);
+        final LinearLayout sensorChipsRow = row();
+        sensorChipsRow.setPadding(dp(2), 0, dp(2), dp(10));
+        final String[] sensorFilters = {"Tất cả", "X-Trans V", "X-Trans IV", "X-Trans III", "Bayer / GFX"};
+        final Runnable renderSensorChips = new Runnable() {
+            @Override
+            public void run() {
+                sensorChipsRow.removeAllViews();
+                for (String sensor : sensorFilters) {
+                    boolean active = sensor.equals(selectedLandingSensor);
+                    TextView chip = text(sensor, 11.5f, active ? StudioStyle.INK : StudioStyle.MUTED);
+                    chip.setTypeface(Typeface.create("sans-serif-medium", active ? Typeface.BOLD : Typeface.NORMAL));
+                    chip.setPadding(dp(12), dp(6), dp(12), dp(6));
+                    chip.setBackground(StudioStyle.shape(
+                            active ? StudioStyle.SURFACE_CONTAINER_HIGH : StudioStyle.SURFACE_CONTAINER,
+                            StudioStyle.LINE,
+                            dp(12)));
+                    chip.setOnClickListener(v -> {
+                        selectedLandingSensor = sensor;
+                        syncLandingFilmShowcase();
+                        run();
+                    });
+                    LinearLayout.LayoutParams chipLp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT);
+                    chipLp.rightMargin = dp(8);
+                    sensorChipsRow.addView(chip, chipLp);
+                }
+            }
+        };
+        renderSensorChips.run();
+        sensorScroll.addView(sensorChipsRow);
+        col.addView(sensorScroll);
 
         LinearLayout filmShowcase = column();
         filmShowcase.setPadding(dp(14), dp(12), dp(14), dp(12));
@@ -772,7 +868,7 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams showcaseLp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        showcaseLp.topMargin = dp(10);
+        showcaseLp.topMargin = dp(6);
 
         TextView chipHeader = text("Ảnh mô phỏng bộ lọc (Fuji X Weekly)", 11.5f, StudioStyle.MUTED);
         chipHeader.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
@@ -816,8 +912,10 @@ public class MainActivity extends Activity {
             Recipe matchedRecipe = null;
             for (Recipe r : recipes) {
                 if (r.film != null && r.film.toLowerCase(Locale.ROOT).contains(filmName.toLowerCase(Locale.ROOT))) {
-                    matchedRecipe = r;
-                    break;
+                    if ("Tất cả".equals(selectedLandingSensor) || (r.sensors != null && r.sensors.contains(selectedLandingSensor.replace(" / GFX", "")))) {
+                        matchedRecipe = r;
+                        break;
+                    }
                 }
             }
             final Recipe targetRecipe = matchedRecipe;
@@ -851,7 +949,21 @@ public class MainActivity extends Activity {
 
             card.setOnClickListener(v -> {
                 v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
-                loadStudioSamplePhoto(filmName);
+                if (preview != null) {
+                    if (targetRecipe != null) {
+                        applyRecipe(targetRecipe);
+                    } else {
+                        loadStudioSamplePhoto(filmName);
+                    }
+                    navigateToEditor();
+                    message("Đã áp dụng: " + filmName);
+                } else {
+                    if (targetRecipe != null) {
+                        loadRecipeSamplePhoto(targetRecipe);
+                    } else {
+                        loadStudioSamplePhoto(filmName);
+                    }
+                }
             });
             MotionStudio.attachExpressiveTouch(card, 0.95f);
 
@@ -925,8 +1037,8 @@ public class MainActivity extends Activity {
         navRail.setPadding(dp(8), dp(12), dp(8), dp(12));
         navRail.setBackground(StudioStyle.liquidGlassCard(dp(26)));
 
-        View backBtn = createCircleIconButton("back", StudioStyle.INK, dp(42), this::confirmClosePhoto);
-        backBtn.setContentDescription("Đóng ảnh hiện tại");
+        View backBtn = createCircleIconButton("back", StudioStyle.INK, dp(42), this::navigateToLanding);
+        backBtn.setContentDescription("Về trang chủ (giữ ảnh)");
         navRail.addView(backBtn, new LinearLayout.LayoutParams(dp(42), dp(42)));
 
         View topRailSpacer = new View(this);
@@ -1080,7 +1192,7 @@ public class MainActivity extends Activity {
 
         // Cụm nút Xuất ảnh & Menu (⋯) bên phải
         LinearLayout rightActions = row();
-        TextView exportBtn = text("Xuất ảnh", 13f, Color.WHITE);
+        TextView exportBtn = text("Xuất ảnh", 13f, StudioStyle.ON_ACCENT);
         exportBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         exportBtn.setGravity(Gravity.CENTER);
         exportBtn.setPadding(dp(18), dp(9), dp(18), dp(9));
@@ -1157,8 +1269,8 @@ public class MainActivity extends Activity {
         LinearLayout header = row();
         header.setPadding(dp(2), 0, dp(2), dp(6));
 
-        View backBtn = createCircleIconButton("back", StudioStyle.INK, dp(38), this::confirmClosePhoto);
-        backBtn.setContentDescription("Đóng ảnh hiện tại");
+        View backBtn = createCircleIconButton("back", StudioStyle.INK, dp(38), this::navigateToLanding);
+        backBtn.setContentDescription("Về trang chủ (giữ ảnh)");
         header.addView(backBtn, new LinearLayout.LayoutParams(dp(38), dp(38)));
 
         View leftSpacer = new View(this);
@@ -1191,7 +1303,7 @@ public class MainActivity extends Activity {
         themeParams.rightMargin = dp(8);
         rightGroup.addView(themeBtn, themeParams);
 
-        TextView exportBtn = text("Xuất", 12.5f, Color.WHITE);
+        TextView exportBtn = text("Xuất", 12.5f, StudioStyle.ON_ACCENT);
         exportBtn.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         exportBtn.setGravity(Gravity.CENTER);
         exportBtn.setPadding(dp(14), dp(7), dp(14), dp(7));
@@ -1276,7 +1388,7 @@ public class MainActivity extends Activity {
         FrameLayout stage = new FrameLayout(this);
         stage.setPadding(dp(8), dp(8), dp(8), dp(8));
         if (wideLayoutActive) {
-            stage.setBackground(StudioStyle.shape(0x88ffffff, StudioStyle.LINE, dp(24)));
+            stage.setBackground(StudioStyle.shape(StudioStyle.STAGE, StudioStyle.LINE, dp(24)));
         }
 
         imageStageView = new ImageView(this);
@@ -1310,6 +1422,18 @@ public class MainActivity extends Activity {
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
         badgeParams.setMargins(dp(10), dp(14), dp(10), dp(10));
         stage.addView(compareOriginBadge, badgeParams);
+
+        // Chỉ báo thông tin ảnh dưới sân khấu (App Caption Pill - IRO Silver Print: Kích thước · Màu phim · Khung)
+        stageInfoPill = text("", 11f, StudioStyle.MUTED);
+        stageInfoPill.setGravity(Gravity.CENTER);
+        stageInfoPill.setPadding(dp(12), dp(5), dp(12), dp(5));
+        stageInfoPill.setBackground(StudioStyle.shape(0xd8171918, StudioStyle.LINE, dp(14)));
+        FrameLayout.LayoutParams pillParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        pillParams.bottomMargin = dp(12);
+        stage.addView(stageInfoPill, pillParams);
 
         return stage;
     }
@@ -1727,20 +1851,45 @@ public class MainActivity extends Activity {
     // =========================================================================
 
     private void updateWorkspaceVisibility() {
-        boolean hasPhoto = (preview != null);
+        boolean shouldShowEditor = (preview != null) && !isViewingLanding;
         if (emptyLandingView == null || editorWorkspaceView == null) {
             return;
         }
-        if (hasPhoto != wasShowingPhoto) {
-            wasShowingPhoto = hasPhoto;
-            if (hasPhoto) {
+        updateResumeEditorBanner();
+        if (shouldShowEditor != wasShowingPhoto) {
+            wasShowingPhoto = shouldShowEditor;
+            if (shouldShowEditor) {
                 MotionStudio.transitionScreens(emptyLandingView, editorWorkspaceView, true);
             } else {
                 MotionStudio.transitionScreens(editorWorkspaceView, emptyLandingView, false);
             }
         } else {
-            emptyLandingView.setVisibility(hasPhoto ? View.GONE : View.VISIBLE);
-            editorWorkspaceView.setVisibility(hasPhoto ? View.VISIBLE : View.GONE);
+            emptyLandingView.setVisibility(shouldShowEditor ? View.GONE : View.VISIBLE);
+            editorWorkspaceView.setVisibility(shouldShowEditor ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void navigateToLanding() {
+        if (preview == null) return;
+        isViewingLanding = true;
+        updateWorkspaceVisibility();
+    }
+
+    private void navigateToEditor() {
+        if (preview == null) return;
+        isViewingLanding = false;
+        updateWorkspaceVisibility();
+    }
+
+    private void updateResumeEditorBanner() {
+        if (resumeEditorBanner == null) return;
+        boolean hasPhoto = (preview != null);
+        resumeEditorBanner.setVisibility((hasPhoto && isViewingLanding) ? View.VISIBLE : View.GONE);
+        if (hasPhoto && resumePhotoTitle != null) {
+            String filmName = currentRecipe != null ? currentRecipe.name : "Ảnh gốc";
+            int w = preview.getWidth();
+            int h = preview.getHeight();
+            resumePhotoTitle.setText(filmName + " (" + w + " × " + h + ")");
         }
     }
 
@@ -2873,6 +3022,7 @@ public class MainActivity extends Activity {
 
                     prefs.edit().putString("photo", sampleUri.toString()).apply();
                     savePhotoFrame();
+                    isViewingLanding = false;
                     syncAllUiControls();
                     loadBoundLut();
                     showImage();
@@ -2982,6 +3132,7 @@ public class MainActivity extends Activity {
 
                     prefs.edit().putString("photo", sampleUri.toString()).apply();
                     savePhotoFrame();
+                    isViewingLanding = false;
                     syncAllUiControls();
                     loadBoundLut();
                     showImage();
@@ -3289,6 +3440,7 @@ public class MainActivity extends Activity {
         currentRecipe = null;
         recipeNotes.clear();
         prefs.edit().remove("photo").apply();
+        isViewingLanding = false;
         syncAllUiControls();
     }
 
@@ -3693,6 +3845,7 @@ public class MainActivity extends Activity {
                         }
                     }
 
+                    isViewingLanding = false;
                     syncAllUiControls();
                     showImage();
                     requestRenderImmediate();
@@ -3746,10 +3899,21 @@ public class MainActivity extends Activity {
             stageMaskOverlayView.setInteractiveEnabled(selectedTab == EditorToolTab.LIGHTCRAFT && lightCraftSubTab == 3);
             stageMaskOverlayView.invalidate();
         }
+        updateStageInfoPill();
 
         if (isComparing) {
             statusLabel.setText("Đang xem ảnh gốc (nhả tay để quay lại bản chỉnh)");
         }
+    }
+
+    private void updateStageInfoPill() {
+        if (stageInfoPill == null || preview == null) return;
+        int w = preview.getWidth();
+        int h = preview.getHeight();
+        String filmName = currentRecipe != null ? currentRecipe.name : "Gốc";
+        String frameName = frameStyle > 0 ? ("Khung #" + frameStyle) : "Không khung";
+        stageInfoPill.setText(w + " × " + h + " · " + filmName + " · " + frameName);
+        stageInfoPill.setVisibility(isComparing ? View.GONE : View.VISIBLE);
     }
 
     private final Runnable delayedRender = this::startRender;
@@ -4805,6 +4969,15 @@ public class MainActivity extends Activity {
     protected void onPause() {
         persist();
         super.onPause();
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (editorWorkspaceView != null && editorWorkspaceView.getVisibility() == View.VISIBLE) {
+            navigateToLanding();
+            return;
+        }
+        super.onBackPressed();
     }
 
     @Override

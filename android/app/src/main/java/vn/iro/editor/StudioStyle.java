@@ -55,35 +55,39 @@ public final class StudioStyle {
         applyTheme(!darkTheme);
     }
 
-    /** Nền chính ứng dụng (thích ứng theo Sáng/Tối). */
-    public static int BG = 0xff0d0f14;
-    public static int PORCELAIN = 0xff0d0f14;
+    /** Nền chính ứng dụng (thích ứng theo Sáng/Tối) - Hệ màu IRO Silver Print. */
+    public static int BG = 0xff171918;
+    public static int PORCELAIN = 0xff171918;
 
     /** Bề mặt Surface Container chính (Thẻ Hero, Bảng điều khiển). */
-    public static int SURFACE = 0xff161922;
+    public static int SURFACE = 0xff202321;
 
     /** Bề mặt Surface Container cấp 2 (Thẻ Bento con, hộp tìm kiếm, chip). */
-    public static int SURFACE_CONTAINER = 0xff1e222e;
-    public static int SURFACE_CONTAINER_HIGH = 0xff272c3b;
+    public static int SURFACE_CONTAINER = 0xff2b2f2c;
+    public static int SURFACE_CONTAINER_HIGH = 0xff373d39;
 
-    /** Đường viền mảnh siêu tinh tế chuẩn M3 Outline. */
-    public static int LINE = 0x26ffffff;
+    /** Nền sân khấu ảnh (Stage Ground). */
+    public static int STAGE = 0xff111312;
+
+    /** Đường viền mảnh siêu tinh tế chuẩn M3 Outline / Silver Print. */
+    public static int LINE = 0xff414942;
 
     /** Màu chữ & biểu tượng chính (Sáng rõ trên nền tối / Đậm mực trên nền sáng). */
-    public static int INK = 0xfff0f2f7;
+    public static int INK = 0xfff1f3ef;
 
     /** Màu chữ & biểu tượng phụ (Muted Slate / Charcoal Muted). */
-    public static int MUTED = 0xff9ba2af;
+    public static int MUTED = 0xffb1b9b2;
 
-    /** Điểm nhấn Cam Hổ Phách ấm chuyên nghiệp cho nhiếp ảnh (#F59E0B Warm Amber). */
-    public static int WARM_AMBER = 0xfff59e0b;
-    public static int ACCENT = 0xfff59e0b;
+    /** Điểm nhấn IRO Silver Print (#AFCBB8 Sage Green Dark / #365F50 Deep Sage Light). */
+    public static int WARM_AMBER = 0xffafcbb8;
+    public static int ACCENT = 0xffafcbb8;
+    public static int ON_ACCENT = 0xff18231d;
 
     /** Nền trạng thái đang chọn / Tonal Container nhạt. */
-    public static int WARM_AMBER_LIGHT = 0xff2e220a;
+    public static int WARM_AMBER_LIGHT = 0xff232e27;
 
     /** Màu nền viên thuốc tối. */
-    public static int DARK_PILL = 0xff252a36;
+    public static int DARK_PILL = 0xff2b2f2c;
 
     // Màu kênh chức năng (RGB curves, histogram, color balance)
     public static final int GOOGLE_RED = 0xffd9483b;
@@ -96,53 +100,57 @@ public final class StudioStyle {
     public static final int YELLOW_TONAL = 0xfffbf2e6;
 
     // --- Hệ thống Token M3 Tonal Surface ---
-    public static final int M3_PRIMARY = 0xfff59e0b;
-    public static final int M3_ON_PRIMARY = 0xffffffff;
-    public static final int M3_PRIMARY_CONTAINER = 0xffffdbca;
-    public static final int M3_ON_PRIMARY_CONTAINER = 0xff341100;
-    public static final int M3_OUTLINE = 0xff8a8e98;
-    public static final int M3_OUTLINE_VARIANT = 0xffdcdfe6;
-    public static final int M3_SURFACE_CONTAINER_LOW = 0xff15181e;
+    public static final int M3_PRIMARY = 0xffafcbb8;
+    public static final int M3_ON_PRIMARY = 0xff18231d;
+    public static final int M3_PRIMARY_CONTAINER = 0xff232e27;
+    public static final int M3_ON_PRIMARY_CONTAINER = 0xffafcbb8;
+    public static final int M3_OUTLINE = 0xff414942;
+    public static final int M3_OUTLINE_VARIANT = 0xffd8ddd8;
+    public static final int M3_SURFACE_CONTAINER_LOW = 0xff171918;
 
-    public static final int M3_DARK_BG = 0xff0d0f14;
-    public static final int M3_DARK_SURFACE = 0xff161922;
-    public static final int M3_DARK_SURFACE_CONTAINER_LOW = 0xff191d27;
-    public static final int M3_DARK_SURFACE_CONTAINER = 0xff1e222e;
-    public static final int M3_DARK_SURFACE_CONTAINER_HIGH = 0xff272c3b;
-    public static final int M3_DARK_PRIMARY = 0xfff59e0b;
+    public static final int M3_DARK_BG = 0xff171918;
+    public static final int M3_DARK_SURFACE = 0xff202321;
+    public static final int M3_DARK_SURFACE_CONTAINER_LOW = 0xff1c1f1d;
+    public static final int M3_DARK_SURFACE_CONTAINER = 0xff2b2f2c;
+    public static final int M3_DARK_SURFACE_CONTAINER_HIGH = 0xff373d39;
+    public static final int M3_DARK_PRIMARY = 0xffafcbb8;
 
     /**
      * Cập nhật toàn bộ bảng màu giao diện tức thì theo chế độ Tối (Darkroom Studio)
-     * hoặc Sáng (Warm Porcelain Minimal).
+     * hoặc Sáng (Warm Porcelain Minimal) - Chuẩn IRO Silver Print.
      */
     public static void applyTheme(boolean dark) {
         darkTheme = dark;
         if (dark) {
-            BG = 0xff0d0f14;
-            PORCELAIN = 0xff0d0f14;
-            SURFACE = 0xff161922;
-            SURFACE_CONTAINER = 0xff1e222e;
-            SURFACE_CONTAINER_HIGH = 0xff272c3b;
-            LINE = 0x26ffffff;
-            INK = 0xfff0f2f7;
-            MUTED = 0xff9ba2af;
-            WARM_AMBER = 0xfff59e0b;
-            ACCENT = 0xfff59e0b;
-            WARM_AMBER_LIGHT = 0xff2e220a;
-            DARK_PILL = 0xff252a36;
+            BG = 0xff171918;
+            PORCELAIN = 0xff171918;
+            SURFACE = 0xff202321;
+            SURFACE_CONTAINER = 0xff2b2f2c;
+            SURFACE_CONTAINER_HIGH = 0xff373d39;
+            STAGE = 0xff111312;
+            LINE = 0xff414942;
+            INK = 0xfff1f3ef;
+            MUTED = 0xffb1b9b2;
+            WARM_AMBER = 0xffafcbb8;
+            ACCENT = 0xffafcbb8;
+            ON_ACCENT = 0xff18231d;
+            WARM_AMBER_LIGHT = 0xff232e27;
+            DARK_PILL = 0xff2b2f2c;
         } else {
-            BG = 0xfff6f7f9;
-            PORCELAIN = 0xfff6f7f9;
+            BG = 0xfff4f4f2;
+            PORCELAIN = 0xfff4f4f2;
             SURFACE = 0xffffffff;
-            SURFACE_CONTAINER = 0xffeff1f5;
-            SURFACE_CONTAINER_HIGH = 0xffe6e9ef;
-            LINE = 0xffe1e4ea;
-            INK = 0xff181a1f;
-            MUTED = 0xff6e737d;
-            WARM_AMBER = 0xffe07a3b;
-            ACCENT = 0xffe07a3b;
-            WARM_AMBER_LIGHT = 0xffffdbca;
-            DARK_PILL = 0xff181a1f;
+            SURFACE_CONTAINER = 0xfff0f1ee;
+            SURFACE_CONTAINER_HIGH = 0xffe4e7e2;
+            STAGE = 0xffe8eae6;
+            LINE = 0xffd8ddd8;
+            INK = 0xff202322;
+            MUTED = 0xff606762;
+            WARM_AMBER = 0xff365f50;
+            ACCENT = 0xff365f50;
+            ON_ACCENT = 0xffffffff;
+            WARM_AMBER_LIGHT = 0xffd8e7de;
+            DARK_PILL = 0xff202322;
         }
     }
 
@@ -166,8 +174,16 @@ public final class StudioStyle {
         return SURFACE_CONTAINER_HIGH;
     }
 
+    public static int getStageColor() {
+        return STAGE;
+    }
+
     public static int getPrimaryColor() {
-        return WARM_AMBER;
+        return ACCENT;
+    }
+
+    public static int getOnAccentColor() {
+        return ON_ACCENT;
     }
 
     public static int getTextColor() {
@@ -317,9 +333,9 @@ public final class StudioStyle {
     }
 
     /**
-     * Lớp nền Material Design 3 Expressive Studio:
-     * Nền thích ứng theo Darkroom/Porcelain kèm 2 quầng sáng chuyển sắc dịu mắt
-     * (Warm Amber Dawn ở góc trên phải & Cool Mint Sky ở góc dưới trái).
+     * Lớp nền IRO Silver Print Studio:
+     * Mặt bàn buồng tối trầm tĩnh, trung tính thích ứng Dark/Light
+     * kèm quầng sáng nhẹ nhàng, tôn vinh màu sắc của bức ảnh làm trọng tâm.
      */
     static final class AntigravityBackground extends View {
         private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -337,20 +353,12 @@ public final class StudioStyle {
             canvas.drawColor(BG);
             if (w <= 0 || h <= 0) return;
 
-            // Quầng sáng Cam Hổ Phách bình minh ấm áp ở góc trên phải
-            int amberGlow = darkTheme ? 0x1f59e0b : 0x12f59e0b;
-            RadialGradient amberGrad = new RadialGradient(
+            // Vùng sáng vi mô dịu mắt Sage Green chuẩn IRO Silver Print
+            int sageGlow = darkTheme ? 0x0cafcbb8 : 0x05365f50;
+            RadialGradient sageGrad = new RadialGradient(
                     w * 0.88f, h * 0.10f, Math.max(w, h) * 0.52f,
-                    amberGlow, Color.TRANSPARENT, Shader.TileMode.CLAMP);
-            glowPaint.setShader(amberGrad);
-            canvas.drawRect(0, 0, w, h, glowPaint);
-
-            // Quầng sáng Bầu trời bạc hà mát mẻ ở góc dưới trái
-            int mintGlow = darkTheme ? 0x1638bdf8 : 0x0c38bdf8;
-            RadialGradient mintGrad = new RadialGradient(
-                    w * 0.12f, h * 0.90f, Math.max(w, h) * 0.48f,
-                    mintGlow, Color.TRANSPARENT, Shader.TileMode.CLAMP);
-            glowPaint.setShader(mintGrad);
+                    sageGlow, Color.TRANSPARENT, Shader.TileMode.CLAMP);
+            glowPaint.setShader(sageGrad);
             canvas.drawRect(0, 0, w, h, glowPaint);
         }
     }

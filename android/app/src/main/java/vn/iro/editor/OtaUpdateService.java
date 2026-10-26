@@ -15,18 +15,23 @@ import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
  * Dịch vụ kiểm tra và cập nhật ứng dụng tự động qua mạng (Over-The-Air Update).
  * Tự động tải bản APK mới nhất từ máy chủ IRO Cloud và mở trình cài đặt Android 1-Click.
+ * Đã được gia cố bảo mật: Whitelist miền HTTPS, xác thực toàn vẹn mã băm SHA-256,
+ * và xử lý ghi tệp tạm thời chống tấn công ghi đè độc hại.
  */
 public final class OtaUpdateService {
 
@@ -61,6 +66,53 @@ public final class OtaUpdateService {
     }
 
     /**
+     * Xác thực URL tải APK có an toàn và nằm trong whitelist máy chủ tin cậy hay không.
+     */
+    public static boolean isAllowedDownloadUrl(String urlStr) {
+        if (urlStr == null || urlStr.trim().isEmpty()) return false;
+        try {
+            URL url = new URL(urlStr);
+            if (!"https".equalsIgnoreCase(url.getProtocol())) {
+                return false;
+            }
+            String host = url.getHost();
+            if (host == null) return false;
+            host = host.toLowerCase(Locale.ROOT);
+            return host.equals("npccc.io.vn") || host.endsWith(".npccc.io.vn")
+                    || host.equals("github.com") || host.endsWith(".github.com")
+                    || host.equals("githubusercontent.com") || host.endsWith(".githubusercontent.com");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Tính toán mã băm SHA-256 của tệp để kiểm tra tính toàn vẹn (anti-tamper).
+     */
+    public static String calculateSha256(File file) {
+        if (file == null || !file.exists() || !file.isFile()) return "";
+        try (InputStream fis = new FileInputStream(file)) {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            int n;
+            while ((n = fis.read(buffer)) != -1) {
+                digest.update(buffer, 0, n);
+            }
+            byte[] hash = digest.digest();
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            Log.w(TAG, "Lỗi tính mã băm SHA-256: " + e.getMessage());
+            return "";
+        }
+    }
+
+    /**
      * Kiểm tra bản cập nhật OTA.
      * @param activity Màn hình gọi kiểm tra
      * @param userInitiated true nếu người dùng chủ động bấm kiểm tra từ Menu
@@ -90,12 +142,13 @@ public final class OtaUpdateService {
                     final int latestCode = j.optInt("latestVersionCode", curCode);
                     final String latestName = j.optString("latestVersionName", curName);
                     final String apkUrl = j.optString("apkUrl", "");
+                    final String sha256 = j.optString("sha256", j.optString("hash", "")).trim();
                     final String notes = j.optString("releaseNotes", "Cải tiến hiệu năng và tính năng mới.");
 
                     MAIN_HANDLER.post(() -> {
                         if (activity.isFinishing()) return;
                         if (hasUpdate && latestCode > curCode && !apkUrl.isEmpty()) {
-                            showUpdatePrompt(activity, latestName, latestCode, notes, apkUrl);
+                            showUpdatePrompt(activity, latestName, latestCode, notes, apkUrl, sha256);
                         } else if (userInitiated) {
                             new AlertDialog.Builder(activity)
                                     .setTitle("Phiên bản hiện tại: v" + curName)
@@ -134,17 +187,17 @@ public final class OtaUpdateService {
         });
     }
 
-    private static void showUpdatePrompt(Activity activity, String newVersionName, int newVersionCode, String notes, String apkUrl) {
+    private static void showUpdatePrompt(Activity activity, String newVersionName, int newVersionCode, String notes, String apkUrl, String sha256) {
         new AlertDialog.Builder(activity)
                 .setTitle("🚀 Có bản cập nhật mới v" + newVersionName)
                 .setMessage("Đã có bản cập nhật mới (Build " + newVersionCode + "):\n\n" + notes + "\n\nBạn có muốn tải và cài đặt ngay không?")
-                .setPositiveButton("CẬP NHẬT NGAY", (dialog, which) -> downloadAndInstall(activity, apkUrl, newVersionName))
+                .setPositiveButton("CẬP NHẬT NGAY", (dialog, which) -> downloadAndInstall(activity, apkUrl, newVersionName, sha256))
                 .setNegativeButton("ĐỂ SAU", null)
                 .setCancelable(false)
                 .show();
     }
 
-    private static void downloadAndInstall(Activity activity, String apkUrl, String versionName) {
+    private static void downloadAndInstall(Activity activity, String apkUrl, String versionName, String expectedSha256) {
         ProgressDialog progress = new ProgressDialog(activity);
         progress.setTitle("Đang tải bản cập nhật OTA");
         progress.setMessage("Đang tải IRO Studio v" + versionName + " từ máy chủ...");
@@ -158,9 +211,14 @@ public final class OtaUpdateService {
             File updatesDir = new File(activity.getCacheDir(), "updates");
             if (!updatesDir.isDirectory()) updatesDir.mkdirs();
 
-            File apkFile = new File(updatesDir, "iro-studio-latest.apk");
+            File tempFile = new File(updatesDir, "iro-update-" + System.currentTimeMillis() + ".apk.part");
+            File finalApkFile = new File(updatesDir, "iro-studio-latest.apk");
             HttpURLConnection conn = null;
             try {
+                if (!isAllowedDownloadUrl(apkUrl)) {
+                    throw new SecurityException("Địa chỉ tải APK không thuộc máy chủ an toàn được ủy quyền: " + apkUrl);
+                }
+
                 URL url = new URL(apkUrl);
                 conn = (HttpURLConnection) url.openConnection();
                 conn.setConnectTimeout(15000);
@@ -169,7 +227,7 @@ public final class OtaUpdateService {
 
                 int fileLength = conn.getContentLength();
                 try (InputStream in = conn.getInputStream();
-                     FileOutputStream out = new FileOutputStream(apkFile)) {
+                     FileOutputStream out = new FileOutputStream(tempFile)) {
 
                     byte[] buffer = new byte[8192];
                     long total = 0;
@@ -182,17 +240,46 @@ public final class OtaUpdateService {
                             MAIN_HANDLER.post(() -> progress.setProgress(percent));
                         }
                     }
+                    out.flush();
+                }
+
+                // Kiểm tra mã băm SHA-256 nếu có khai báo trong manifest
+                if (expectedSha256 != null && !expectedSha256.isEmpty()) {
+                    String actualSha256 = calculateSha256(tempFile);
+                    if (!actualSha256.equalsIgnoreCase(expectedSha256)) {
+                        tempFile.delete();
+                        throw new SecurityException("Mã băm SHA-256 không khớp! Tệp APK có thể đã bị sửa đổi trái phép.\nKỳ vọng: "
+                                + expectedSha256 + "\nThực tế: " + actualSha256);
+                    }
+                    Log.i(TAG, "Xác thực mã băm SHA-256 APK cập nhật thành công.");
+                }
+
+                // Di chuyển sang tệp chính thức
+                if (finalApkFile.exists()) {
+                    finalApkFile.delete();
+                }
+                if (!tempFile.renameTo(finalApkFile)) {
+                    // Nếu renameTo thất bại (khác filesystem), fallback sao chép
+                    try (InputStream fis = new FileInputStream(tempFile);
+                         FileOutputStream fos = new FileOutputStream(finalApkFile)) {
+                        byte[] b = new byte[8192];
+                        int n;
+                        while ((n = fis.read(b)) != -1) fos.write(b, 0, n);
+                        fos.flush();
+                    }
+                    tempFile.delete();
                 }
 
                 MAIN_HANDLER.post(() -> {
                     if (progress.isShowing()) progress.dismiss();
                     if (!activity.isFinishing()) {
-                        promptInstallApk(activity, apkFile);
+                        promptInstallApk(activity, finalApkFile);
                     }
                 });
 
             } catch (Exception e) {
                 Log.e(TAG, "Lỗi tải APK OTA: " + e.getMessage(), e);
+                if (tempFile.exists()) tempFile.delete();
                 MAIN_HANDLER.post(() -> {
                     if (progress.isShowing()) progress.dismiss();
                     if (!activity.isFinishing()) {

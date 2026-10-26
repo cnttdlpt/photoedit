@@ -140,13 +140,21 @@ function hashPassword(password, salt) {
 }
 
 function verifyPassword(password, storedHash, storedSalt) {
-  if (!storedHash) return false;
-  if (storedHash.startsWith('scrypt$')) {
-    const parts = storedHash.split('$');
-    const salt = parts[1] || storedSalt;
-    const key = parts[2];
-    const derived = crypto.scryptSync(password, salt, 64).toString('hex');
-    return crypto.timingSafeEqual(Buffer.from(derived, 'hex'), Buffer.from(key, 'hex'));
+  if (!storedHash || typeof storedHash !== 'string') return false;
+  try {
+    if (storedHash.startsWith('scrypt$')) {
+      const parts = storedHash.split('$');
+      if (parts.length < 3) return false;
+      const salt = parts[1] || storedSalt;
+      const key = parts[2];
+      if (!salt || !key) return false;
+      const bufDerived = crypto.scryptSync(password, salt, 64);
+      const bufKey = Buffer.from(key, 'hex');
+      if (bufDerived.length !== bufKey.length) return false;
+      return crypto.timingSafeEqual(bufDerived, bufKey);
+    }
+  } catch {
+    return false;
   }
   return false;
 }
@@ -636,20 +644,20 @@ const server = http.createServer(async (req, res) => {
       const tmpOut = path.join(DATA_DIR, `${tmpPrefix}.jpg`);
       try {
         await fs.promises.writeFile(tmpIn, photo.data);
-        const { execSync } = await import('node:child_process');
+        const { spawnSync } = await import('node:child_process');
         let converted = false;
 
         // Ưu tiên magick / convert giữ nguyên độ phân giải gốc cao nhất (quality 95)
-        const cmds = [
-          `magick "${tmpIn}" -auto-orient -quality 95 "${tmpOut}"`,
-          `convert "${tmpIn}" -auto-orient -quality 95 "${tmpOut}"`,
-          `magick "${tmpIn}[0]" -auto-orient -quality 95 "${tmpOut}"`,
-          `convert "${tmpIn}[0]" -auto-orient -quality 95 "${tmpOut}"`
+        const attempts = [
+          { bin: 'magick', args: [tmpIn, '-auto-orient', '-quality', '95', tmpOut] },
+          { bin: 'convert', args: [tmpIn, '-auto-orient', '-quality', '95', tmpOut] },
+          { bin: 'magick', args: [`${tmpIn}[0]`, '-auto-orient', '-quality', '95', tmpOut] },
+          { bin: 'convert', args: [`${tmpIn}[0]`, '-auto-orient', '-quality', '95', tmpOut] }
         ];
 
-        for (const cmd of cmds) {
+        for (const att of attempts) {
           try {
-            execSync(cmd, { stdio: 'ignore', timeout: 25000 });
+            spawnSync(att.bin, att.args, { stdio: 'ignore', timeout: 25000, windowsHide: true });
             if (fs.existsSync(tmpOut) && fs.statSync(tmpOut).size > 0) {
               converted = true;
               break;
@@ -721,17 +729,30 @@ const server = http.createServer(async (req, res) => {
     // STATIC UPLOADS SERVING: /uploads/...
     // -------------------------------------------------------------------------
     if (pathname.startsWith('/uploads/')) {
-      const filename = path.basename(pathname);
-      const filePath = path.join(UPLOAD_DIR, filename);
-      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-        const ext = path.extname(filename).toLowerCase();
-        const mime = ext === '.png' ? 'image/png' : (ext === '.webp' ? 'image/webp' : 'image/jpeg');
+      const rawRel = pathname.slice('/uploads/'.length);
+      const safePath = path.resolve(UPLOAD_DIR, rawRel);
+      const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+      if (!safePath.startsWith(resolvedUploadDir + path.sep)) {
+        return sendJson(res, 403, { ok: false, error: 'Access denied' });
+      }
+      if (fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
+        const ext = path.extname(safePath).toLowerCase();
+        const mimeMap = {
+          '.png': 'image/png',
+          '.webp': 'image/webp',
+          '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg',
+          '.gif': 'image/gif'
+        };
+        const mime = mimeMap[ext] || 'application/octet-stream';
         res.writeHead(200, {
           'Content-Type': mime,
+          'Content-Security-Policy': "default-src 'none'",
+          'X-Content-Type-Options': 'nosniff',
           'Cache-Control': 'public, max-age=86400',
           'Access-Control-Allow-Origin': '*'
         });
-        return fs.createReadStream(filePath).pipe(res);
+        return fs.createReadStream(safePath).pipe(res);
       }
       return sendJson(res, 404, { ok: false, error: 'File not found' });
     }
@@ -1166,20 +1187,21 @@ const server = http.createServer(async (req, res) => {
     // -------------------------------------------------------------------------
     if (pathname === '/api/mobile/photos' || action === 'mobile_get_photos') {
       const deviceId = (url.searchParams.get('deviceId') || '').trim();
-      let rows;
-      if (deviceId) {
-        rows = await dbAll(
-          `SELECT * FROM edit_sessions WHERE user_name LIKE ? ORDER BY updated_at DESC LIMIT 50`,
-          [`%${deviceId}%`]
-        );
-      } else {
-        rows = await dbAll(
-          `SELECT * FROM edit_sessions WHERE session_id LIKE 'mob_%' ORDER BY updated_at DESC LIMIT 50`
-        );
+      if (!deviceId || deviceId.length < 3) {
+        return sendJson(res, 400, { ok: false, error: 'Yêu cầu mã deviceId hợp lệ' });
       }
+      const cleanDeviceId = deviceId.slice(0, 60).replace(/[^a-zA-Z0-9_\-\.\ \(\)]/g, '');
+      const rows = await dbAll(
+        `SELECT id, session_id, user_name, filename, file_size, width, height,
+                original_url, preview_url, recipe_name, settings_json, edit_count, created_at, updated_at
+         FROM edit_sessions
+         WHERE user_name LIKE ?
+         ORDER BY updated_at DESC LIMIT 50`,
+        [`%${cleanDeviceId}%`]
+      );
       return sendJson(res, 200, {
         ok: true,
-        photos: rows.map(r => ({
+        photos: rows.map(r => ({ 
           ...r,
           settings_json: r.settings_json ? JSON.parse(r.settings_json) : {}
         }))

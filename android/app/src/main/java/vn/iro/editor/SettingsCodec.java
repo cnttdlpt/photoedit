@@ -78,6 +78,7 @@ public final class SettingsCodec {
                     low = -5.0;
                     high = 5.0;
                     break;
+                case "amount":
                 case "lutAmount":
                     low = 0.0;
                     high = 100.0;

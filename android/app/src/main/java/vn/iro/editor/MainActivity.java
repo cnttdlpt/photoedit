@@ -127,7 +127,7 @@ public class MainActivity extends Activity {
         SHARPNESS("Độ nét", "sharpness", -4.0, 4.0, 1.0, 0.0),
         CLARITY("Độ trong", "clarity", -5.0, 5.0, 1.0, 0.0),
         NR("Khử nhiễu", "nr", -4.0, 4.0, 1.0, -4.0),
-        LUT_AMOUNT("Cường độ LUT", "film", 0.0, 100.0, 1.0, 100.0),
+        LUT_AMOUNT("Cường độ Film", "film", 0.0, 100.0, 1.0, 100.0),
         COLOR_CHROME("Color Chrome", "color", 0.0, 2.0, 1.0, 0.0),
         CHROME_BLUE("Chrome Blue", "blue", 0.0, 2.0, 1.0, 0.0),
         PRO_MIST("Pro-Mist", "mist", 0.0, 100.0, 5.0, 0.0),
@@ -169,7 +169,7 @@ public class MainActivity extends Activity {
                 case SHARPNESS: return s.sharpness;
                 case CLARITY: return s.clarity;
                 case NR: return s.nr;
-                case LUT_AMOUNT: return s.lutAmount;
+                case LUT_AMOUNT: return s.amount;
                 case COLOR_CHROME: return s.colorChrome;
                 case CHROME_BLUE: return s.chromeBlue;
                 case PRO_MIST: return s.proMist;
@@ -199,7 +199,10 @@ public class MainActivity extends Activity {
                 case SHARPNESS: s.sharpness = clamped; break;
                 case CLARITY: s.clarity = clamped; break;
                 case NR: s.nr = clamped; break;
-                case LUT_AMOUNT: s.lutAmount = clamped; break;
+                case LUT_AMOUNT:
+                    s.amount = clamped;
+                    s.lutAmount = clamped;
+                    break;
                 case COLOR_CHROME: s.colorChrome = clamped; break;
                 case CHROME_BLUE: s.chromeBlue = clamped; break;
                 case PRO_MIST: s.proMist = clamped; break;

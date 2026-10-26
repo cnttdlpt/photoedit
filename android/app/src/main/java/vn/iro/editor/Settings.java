@@ -5,14 +5,7 @@ import java.util.Objects;
 
 /**
  * Cấu trúc lưu trữ toàn bộ thông số chỉnh màu hậu kỳ trên ảnh sRGB.
- * Chuyển đổi trực tiếp từ file {@code ios/IRO/Core/Settings.swift}.
- *
- * <p>Lưu ý quan trọng khi debug:
- * <ul>
- *     <li>Tên {@link #film} chỉ đóng vai trò khóa liên kết (metadata) để tìm file LUT 3D {@code .cube} tương ứng.</li>
- *     <li>Nếu chưa gắn LUT cho {@link #film}, bộ xử lý sẽ giữ nguyên màu gốc của ảnh và chỉ áp dụng các thanh chỉnh hậu kỳ.</li>
- *     <li>Mọi thông số đều có biên hợp lệ rõ ràng được kiểm tra trong {@link #validate()}.</li>
- * </ul>
+ * Tương thích và đồng bộ 100% với Web Engine ({@code engine.mjs}) và iOS ({@code Settings.swift}).
  */
 public final class Settings {
 
@@ -85,13 +78,16 @@ public final class Settings {
     /** Sương mù theo chiều sâu hậu cảnh 3D (3D Depth Fog), phạm vi [0.0, 100.0]. */
     public double depthFog = 0.0;
 
+    /** Cường độ áp dụng công thức màu film (%), phạm vi [0.0, 100.0]. Mặc định 100%. */
+    public double amount = 100.0;
+
     /** Cường độ pha trộn LUT 3D (%), phạm vi [0.0, 100.0]. Mặc định 100%. */
     public double lutAmount = 100.0;
 
     /** Dải tương phản động (Dynamic Range nén vùng sáng hậu kỳ): chỉ nhận giá trị 100, 200 hoặc 400. */
     public int dr = 100;
 
-    /** Tên giả lập màu phim (Film Simulation), dùng để ánh xạ với LUT đã lưu của người dùng. */
+    /** Tên giả lập màu phim (Film Simulation), ví dụ: Classic Chrome, Classic Neg., Velvia, Acros... */
     public String film = "Original";
 
     /** Chuỗi mô tả cân bằng trắng gốc trong công thức (ví dụ: Auto, Daylight, 5200K...). */
@@ -132,6 +128,7 @@ public final class Settings {
         s.texture = this.texture;
         s.swirlyBokeh = this.swirlyBokeh;
         s.depthFog = this.depthFog;
+        s.amount = this.amount;
         s.lutAmount = this.lutAmount;
         s.dr = this.dr;
         s.film = this.film;
@@ -143,7 +140,6 @@ public final class Settings {
      * Kiểm tra tính hợp lệ của toàn bộ thông số (tương đương {@code Settings.validated()} bên iOS).
      *
      * @return Chính đối tượng này nếu hợp lệ.
-     * @throws IllegalArgumentException Nếu có bất kỳ trường nào vượt biên hoặc không hữu hạn (NaN/Infinity).
      */
     public Settings validate() {
         checkRange("exposure", exposure, -3.0, 3.0);
@@ -169,6 +165,7 @@ public final class Settings {
         checkRange("texture", texture, -100.0, 100.0);
         checkRange("swirlyBokeh", swirlyBokeh, 0.0, 100.0);
         checkRange("depthFog", depthFog, 0.0, 100.0);
+        checkRange("amount", amount, 0.0, 100.0);
         checkRange("lutAmount", lutAmount, 0.0, 100.0);
 
         if (dr != 100 && dr != 200 && dr != 400) {
@@ -214,6 +211,7 @@ public final class Settings {
                 && Double.compare(that.texture, texture) == 0
                 && Double.compare(that.swirlyBokeh, swirlyBokeh) == 0
                 && Double.compare(that.depthFog, depthFog) == 0
+                && Double.compare(that.amount, amount) == 0
                 && Double.compare(that.lutAmount, lutAmount) == 0
                 && dr == that.dr
                 && Objects.equals(film, that.film)
@@ -225,7 +223,7 @@ public final class Settings {
         return Objects.hash(exposure, highlight, shadow, color, red, blue, temperature,
                 sharpness, nr, grain, grainSize, clarity, colorChrome, chromeBlue,
                 proMist, halation, bleachBypass, lightLeak, skinProtect, dehaze, texture,
-                swirlyBokeh, depthFog, lutAmount, dr, film, wb);
+                swirlyBokeh, depthFog, amount, lutAmount, dr, film, wb);
     }
 
     @Override

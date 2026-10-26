@@ -6,7 +6,7 @@ import java.util.*;
 /**
  * Bộ kiểm thử tự động (Unit Test) cho các mô-đun cốt lõi:
  * - {@link CubeLut}: đọc và nội suy 3D LUT (.cube)
- * - {@link ColorEngine}: pipeline xử lý điểm ảnh (EV tuyến tính, LUT, Grain, NR)
+ * - {@link ColorEngine}: pipeline xử lý điểm ảnh (EV tuyến tính, ma trận Film, Grain, NR)
  * - {@link AutoBalancer}: thuật toán tự động cân bằng sáng & màu
  * - {@link UndoState}: quản lý lịch sử Undo/Redo
  */
@@ -62,8 +62,19 @@ public class EngineTest {
 
         Settings s = new Settings();
         s.film = "Classic Chrome";
-        check(Arrays.equals(p, ColorEngine.process(p, 3, 3, s, null)), "no fake film transform when profile is absent");
+        check(!Arrays.equals(p, ColorEngine.process(p, 3, 3, s, null)), "Classic Chrome applies real film simulation look");
 
+        s = new Settings();
+        s.film = "Acros";
+        int[] acrosResult = ColorEngine.process(p, 3, 3, s, null);
+        for (int pixel : acrosResult) {
+            int r = (pixel >>> 16) & 255;
+            int g = (pixel >>> 8) & 255;
+            int b = pixel & 255;
+            check(r == g && g == b, "Acros converts color pixels to pure monochrome luminance");
+        }
+
+        s = new Settings();
         s.exposure = 1;
         int result = ColorEngine.process(new int[]{0xff808080}, 1, 1, s, null)[0];
         check((result & 255) > 170 && (result & 255) < 180, "EV is applied in linear light");

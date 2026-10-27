@@ -59,6 +59,13 @@ if ($Pull) {
             Copy-Item -LiteralPath $src -Destination $dst -Force
         }
     }
+
+    $srcAgents = Join-Path $gitRepo ".agents"
+    $dstAgents = Join-Path $localWorkspace ".agents"
+    if (Test-Path -LiteralPath $srcAgents) {
+        robocopy $srcAgents $dstAgents /E /XD .git node_modules cache dist build .idea bin /XF *.jar *.apk *.exe *.log *.class /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
+    }
+
     Write-Host "Done: Synced into Android Studio workspace." -ForegroundColor Green
     exit 0
 }
@@ -99,6 +106,12 @@ foreach ($item in $syncItems) {
             Copy-Item -LiteralPath $src -Destination $dst -Force
         }
     }
+
+    $srcAgents = Join-Path $localWorkspace ".agents"
+    $dstAgents = Join-Path $gitRepo ".agents"
+    if (Test-Path -LiteralPath $srcAgents) {
+        robocopy $srcAgents $dstAgents /E /XD .git node_modules cache dist build .idea bin /XF *.jar *.apk *.exe *.log *.class /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
+    }
 }
 
 Push-Location -LiteralPath $gitRepo
@@ -119,6 +132,12 @@ try {
         } else {
             Write-Host "Done: Working tree clean, nothing to commit." -ForegroundColor Green
         }
+    }
+
+    $srcAgents = Join-Path $localWorkspace ".agents"
+    $dstAgents = Join-Path $gitRepo ".agents"
+    if (Test-Path -LiteralPath $srcAgents) {
+        robocopy $srcAgents $dstAgents /E /XD .git node_modules cache dist build .idea bin /XF *.jar *.apk *.exe *.log *.class /NFL /NDL /NJH /NJS /nc /ns /np | Out-Null
     }
 } finally {
     Pop-Location

@@ -50,23 +50,30 @@ import javax.swing.plaf.basic.BasicScrollBarUI;
  */
 public final class DesktopWidgets {
 
-    // Bảng màu chuẩn Android Minimal Studio (đồng bộ từ StudioStyle.java & MainActivity.java)
-    public static final Color APP_BG = new Color(0xF5, 0xF6, 0xF9);
+    // Bảng màu chuẩn IRO PLAYFUL CLASSIC CLAYMORPHISM (Candy Pastels & Soft Marshmallow Ground)
+    public static final Color APP_BG = new Color(0xEB, 0xF1, 0xFA);
     public static final Color CARD_BG = new Color(0xFF, 0xFF, 0xFF);
-    public static final Color CARD_BORDER = new Color(0xE3, 0xE6, 0xEC);
-    public static final Color SURFACE_SOFT = new Color(0xF1, 0xF3, 0xF7);
-    public static final Color SURFACE_HOVER = new Color(0xE8, 0xEC, 0xF2);
-    public static final Color SURFACE_WARM = new Color(0xF5, 0xEF, 0xE6);
+    public static final Color CARD_BORDER = new Color(0xD2, 0xDB, 0xE8);
+    public static final Color SURFACE_SOFT = new Color(0xF5, 0xF8, 0xFD);
+    public static final Color SURFACE_HOVER = new Color(0xEA, 0xF0, 0xFA);
+    public static final Color SURFACE_WARM = new Color(0xFE, 0xCA, 0x57);
 
-    public static final Color INK_DARK = new Color(0x11, 0x13, 0x18);
-    public static final Color INK_HOVER = new Color(0x26, 0x2A, 0x32);
-    public static final Color TEXT_PRIMARY = new Color(0x16, 0x18, 0x1D);
-    public static final Color TEXT_SECONDARY = new Color(0x63, 0x69, 0x75);
-    public static final Color TEXT_MUTED = new Color(0x8C, 0x93, 0xA0);
+    public static final Color INK_DARK = new Color(0x2C, 0x3E, 0x50);
+    public static final Color INK_HOVER = new Color(0x1E, 0x2B, 0x37);
+    public static final Color TEXT_PRIMARY = new Color(0x2C, 0x3E, 0x50);
+    public static final Color TEXT_SECONDARY = new Color(0x7F, 0x8C, 0x8D);
+    public static final Color TEXT_MUTED = new Color(0xA0, 0xAB, 0xBA);
 
-    public static final Color ACCENT_BLUE = new Color(0x1A, 0x73, 0xE8);
-    public static final Color ACCENT_GREEN = new Color(0x1E, 0x8E, 0x3E);
-    public static final Color ACCENT_RED = new Color(0xD9, 0x30, 0x25);
+    // Bảng màu điểm nhấn kẹo Playful Clay
+    public static final Color ACCENT_CORAL = new Color(0xFF, 0x6B, 0x8B);
+    public static final Color ACCENT_SKY = new Color(0x48, 0xDB, 0xFB);
+    public static final Color ACCENT_MINT = new Color(0x1D, 0xD1, 0xA1);
+    public static final Color ACCENT_AMBER = new Color(0xFE, 0xCA, 0x57);
+    public static final Color ACCENT_LILAC = new Color(0x9B, 0x59, 0xB6);
+
+    public static final Color ACCENT_BLUE = ACCENT_SKY;
+    public static final Color ACCENT_GREEN = ACCENT_MINT;
+    public static final Color ACCENT_RED = ACCENT_CORAL;
 
     public static final Font FONT_UI = new Font("Segoe UI", Font.PLAIN, 13);
     public static final Font FONT_BOLD = new Font("Segoe UI", Font.BOLD, 13);
@@ -79,7 +86,7 @@ public final class DesktopWidgets {
     }
 
     // =========================================================================
-    // THẺ BO TRÒN NỔI (ROUNDED FLOATING CARD 28px GIỐNG ANDROID TABLET)
+    // THẺ ĐẤT SÉT PHỒNG NỔI 3D (PLAYFUL CLAYMORPHIC FLOATING CARD)
     // =========================================================================
     public static class RoundedCardPanel extends JPanel {
         private final int radius;
@@ -105,14 +112,35 @@ public final class DesktopWidgets {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             int w = getWidth();
             int h = getHeight();
-            if (fillColor != null) {
+
+            if (fillColor != null && w > 8 && h > 8) {
+                // 1. Bóng rơi mềm mại phía dưới (Soft Diffuse Drop Shadow)
+                g2.setColor(new Color(0x90, 0xA0, 0xB8, 42));
+                g2.fillRoundRect(2, 4, w - 5, h - 5, radius, radius);
+
+                // 2. Quầng sáng trắng nhẹ phía trên (Ambient White Reflection)
+                g2.setColor(new Color(255, 255, 255, 140));
+                g2.fillRoundRect(0, 0, w - 2, h - 2, radius, radius);
+
+                // 3. Thân khối đất sét (Clay Base Body)
                 g2.setColor(fillColor);
-                g2.fillRoundRect(0, 0, w - 1, h - 1, radius, radius);
+                g2.fillRoundRect(1, 1, w - 3, h - 3, radius, radius);
+
+                // 4. Gờ sáng phản xạ ánh sáng góc trên - trái (Top-Left Specular Inset Bevel)
+                g2.setColor(new Color(255, 255, 255, 190));
+                g2.setStroke(new BasicStroke(1.8f));
+                g2.drawRoundRect(2, 2, w - 6, h - 6, Math.max(0, radius - 2), Math.max(0, radius - 2));
+
+                // 5. Gờ bóng sâu góc dưới - phải (Bottom-Right Soft Depth Bevel)
+                g2.setColor(new Color(0x2C, 0x3E, 0x50, 18));
+                g2.setStroke(new BasicStroke(1.6f));
+                g2.drawRoundRect(3, 3, w - 6, h - 6, Math.max(0, radius - 2), Math.max(0, radius - 2));
             }
+
             if (borderColor != null) {
                 g2.setColor(borderColor);
                 g2.setStroke(new BasicStroke(1f));
-                g2.drawRoundRect(0, 0, w - 1, h - 1, radius, radius);
+                g2.drawRoundRect(1, 1, w - 3, h - 3, radius, radius);
             }
             g2.dispose();
             super.paintComponent(g);
@@ -120,7 +148,7 @@ public final class DesktopWidgets {
     }
 
     // =========================================================================
-    // NÚT VIÊN THUỐC BO TRÒN (ANDROID MATERIAL 3 PILL BUTTON)
+    // NÚT VIÊN THUỐC ĐẤT SÉT NẢY MỀM (PLAYFUL CLAYMORPHIC PILL BUTTON)
     // =========================================================================
     public static final class PillButton extends JButton {
         private boolean activeDark;
@@ -137,7 +165,7 @@ public final class DesktopWidgets {
             setContentAreaFilled(false);
             setOpaque(false);
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            setMargin(new Insets(6, 14, 6, 14));
+            setMargin(new Insets(6, 16, 6, 16));
         }
 
         public PillButton withRadius(int r) {
@@ -158,8 +186,8 @@ public final class DesktopWidgets {
         public Dimension getPreferredSize() {
             FontMetrics fm = getFontMetrics(getFont());
             Insets ins = getMargin();
-            int w = fm.stringWidth(getText()) + ins.left + ins.right + 8;
-            int h = Math.max(32, fm.getHeight() + ins.top + ins.bottom);
+            int w = fm.stringWidth(getText()) + ins.left + ins.right + 10;
+            int h = Math.max(34, fm.getHeight() + ins.top + ins.bottom);
             return new Dimension(w, h);
         }
 
@@ -174,30 +202,60 @@ public final class DesktopWidgets {
             boolean hover = getModel().isRollover();
             boolean pressed = getModel().isPressed();
 
-            if (activeDark) {
-                g2.setColor(pressed ? Color.BLACK : (hover ? INK_HOVER : INK_DARK));
-                g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
-            } else if (softFill) {
-                g2.setColor(pressed ? CARD_BORDER : (hover ? SURFACE_HOVER : SURFACE_SOFT));
-                g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
+            // Hiệu ứng bấm lún xúc giác (Squishy Tactile Sink)
+            int yOffset = pressed ? 2 : 0;
+
+            if (pressed) {
+                // Trạng thái lõm lún (Sunken Clay): đảo chiều ánh sáng
+                Color base = activeDark ? INK_DARK : (softFill ? SURFACE_SOFT : CARD_BG);
+                g2.setColor(base);
+                g2.fillRoundRect(1, 1 + yOffset, w - 3, h - 3 - yOffset, r, r);
+
+                // Bóng lõm trên - trái
+                g2.setColor(new Color(0, 0, 0, 40));
+                g2.setStroke(new BasicStroke(2f));
+                g2.drawRoundRect(2, 2 + yOffset, w - 5, h - 5 - yOffset, r, r);
             } else {
-                g2.setColor(hover ? SURFACE_SOFT : CARD_BG);
-                g2.fillRoundRect(0, 0, w - 1, h - 1, r, r);
-                g2.setColor(CARD_BORDER);
-                g2.drawRoundRect(0, 0, w - 1, h - 1, r, r);
+                // 1. Bóng đổ rơi 3D
+                g2.setColor(new Color(0x90, 0xA0, 0xB8, 48));
+                g2.fillRoundRect(2, 3, w - 4, h - 4, r, r);
+
+                // 2. Thân viên đất sét
+                Color baseColor;
+                if (activeDark) {
+                    baseColor = hover ? new Color(0xFF, 0x52, 0x77) : ACCENT_CORAL;
+                } else if (softFill) {
+                    baseColor = hover ? SURFACE_HOVER : SURFACE_SOFT;
+                } else {
+                    baseColor = hover ? SURFACE_SOFT : CARD_BG;
+                }
+                g2.setColor(baseColor);
+                g2.fillRoundRect(1, 1, w - 3, h - 3, r, r);
+
+                // 3. Gờ sáng phản quang trên - trái
+                g2.setColor(new Color(255, 255, 255, activeDark ? 110 : 200));
+                g2.setStroke(new BasicStroke(1.6f));
+                g2.drawRoundRect(2, 2, w - 5, h - 5, Math.max(0, r - 2), Math.max(0, r - 2));
+
+                // 4. Viền nhẹ
+                if (!activeDark) {
+                    g2.setColor(CARD_BORDER);
+                    g2.setStroke(new BasicStroke(1f));
+                    g2.drawRoundRect(1, 1, w - 3, h - 3, r, r);
+                }
             }
 
             g2.setFont(getFont());
             g2.setColor(activeDark ? Color.WHITE : TEXT_PRIMARY);
             FontMetrics fm = g2.getFontMetrics();
             int tx = (w - fm.stringWidth(getText())) / 2;
-            int ty = (h - fm.getHeight()) / 2 + fm.getAscent();
+            int ty = (h - fm.getHeight()) / 2 + fm.getAscent() + (pressed ? 1 : 0);
             g2.drawString(getText(), tx, ty);
             g2.dispose();
         }
     }
 
-    /** Nút tròn icon giống nút Undo / Redo / Menu / Back trên Android Tablet. */
+    /** Nút tròn icon đất sét phồng nổi (Clay Circle Button). */
     public static final class CircleIconButton extends JButton {
         private final String iconType;
         private final int size;
@@ -225,14 +283,37 @@ public final class DesktopWidgets {
             int w = getWidth();
             int h = getHeight();
             boolean hover = getModel().isRollover();
+            boolean pressed = getModel().isPressed();
 
-            g2.setColor(hover ? SURFACE_HOVER : (filledSoft ? SURFACE_SOFT : CARD_BG));
-            g2.fillOval(1, 1, w - 3, h - 3);
-            g2.setColor(CARD_BORDER);
-            g2.drawOval(1, 1, w - 3, h - 3);
+            int yOffset = pressed ? 1 : 0;
+
+            if (pressed) {
+                g2.setColor(SURFACE_SOFT);
+                g2.fillOval(1, 1 + yOffset, w - 3, h - 3 - yOffset);
+                g2.setColor(new Color(0, 0, 0, 35));
+                g2.setStroke(new BasicStroke(1.8f));
+                g2.drawOval(2, 2 + yOffset, w - 5, h - 5 - yOffset);
+            } else {
+                // Đổ bóng 3D
+                g2.setColor(new Color(0x90, 0xA0, 0xB8, 42));
+                g2.fillOval(2, 3, w - 4, h - 4);
+
+                // Thân tròn clay
+                g2.setColor(hover ? SURFACE_HOVER : (filledSoft ? SURFACE_SOFT : CARD_BG));
+                g2.fillOval(1, 1, w - 3, h - 3);
+
+                // Gờ sáng phản quang
+                g2.setColor(new Color(255, 255, 255, 190));
+                g2.setStroke(new BasicStroke(1.5f));
+                g2.drawOval(2, 2, w - 5, h - 5);
+
+                g2.setColor(CARD_BORDER);
+                g2.setStroke(new BasicStroke(1f));
+                g2.drawOval(1, 1, w - 3, h - 3);
+            }
 
             int cx = w / 2;
-            int cy = h / 2;
+            int cy = h / 2 + (pressed ? 1 : 0);
             g2.setColor(TEXT_PRIMARY);
             g2.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 

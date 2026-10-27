@@ -276,6 +276,26 @@ function isValidImage(buffer, ext) {
   return false;
 }
 
+// Validate auth input before string normalization or password hashing.
+function parseAuthPayload(raw, stringFields) {
+  const invalid = message => Object.assign(new Error(message), { statusCode: 400 });
+  let payload;
+  try {
+    payload = JSON.parse(raw.toString('utf8') || '{}');
+  } catch {
+    throw invalid('Dữ liệu JSON không hợp lệ.');
+  }
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+    throw invalid('Dữ liệu yêu cầu phải là một đối tượng JSON.');
+  }
+  for (const field of stringFields) {
+    if (Object.hasOwn(payload, field) && typeof payload[field] !== 'string') {
+      throw invalid(`Trường ${field} phải là chuỗi.`);
+    }
+  }
+  return payload;
+}
+
 // Request Body Reader with size limit
 function readBody(req, maxBytes = 2 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
@@ -767,7 +787,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 429, { ok: false, error: 'Quá nhiều yêu cầu đăng ký. Vui lòng thử lại sau.' });
       }
       const raw = await readBody(req);
-      const payload = JSON.parse(raw.toString() || '{}');
+      const payload = parseAuthPayload(raw, ['username', 'email', 'password', 'full_name', 'fullName']);
 
       const username = (payload.username || '').trim().toLowerCase();
       const email = (payload.email || '').trim().toLowerCase();
@@ -823,7 +843,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 429, { ok: false, error: 'Quá nhiều lần đăng nhập không thành công. Vui lòng chờ 1 phút.' });
       }
       const raw = await readBody(req);
-      const payload = JSON.parse(raw.toString() || '{}');
+      const payload = parseAuthPayload(raw, ['account', 'login', 'username', 'email', 'password']);
 
       const login = (payload.account || payload.login || payload.username || payload.email || '').trim().toLowerCase();
       const password = payload.password || '';
@@ -1605,6 +1625,9 @@ const server = http.createServer(async (req, res) => {
     // 404 for unknown endpoints
     return sendJson(res, 404, { ok: false, error: 'Endpoint not found' });
   } catch (err) {
+    if (err.statusCode === 400) {
+      return sendJson(res, 400, { ok: false, error: err.message });
+    }
     if (err.statusCode === 413 || err.message === 'PAYLOAD_TOO_LARGE') {
       return sendJson(res, 413, { ok: false, error: 'Dung lượng tải lên vượt quá giới hạn cho phép (tối đa 25MB)' });
     }

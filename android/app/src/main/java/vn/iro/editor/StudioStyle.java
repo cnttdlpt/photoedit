@@ -10,6 +10,7 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
 import android.graphics.RadialGradient;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
@@ -19,29 +20,26 @@ import android.graphics.drawable.RippleDrawable;
 import android.view.View;
 
 /**
- * Hệ thống ngôn ngữ thiết kế giao diện Liquid Glass & Bảng màu Ấm Tối Giản (Warm Minimal Palette).
- * Chuyển đổi trực tiếp từ file {@code ios/IRO/Views/Studio.swift}.
+ * Hệ thống ngôn ngữ thiết kế giao diện IRO PLAYFUL CLASSIC CLAYMORPHISM.
+ * Đồng bộ hoàn chỉnh trên toàn bộ các nền tảng (Web, Android, Desktop, iOS).
  *
- * <p>Các thành phần chính được đồng bộ từ iOS:
+ * <p>Đặc trưng cốt lõi của Playful Classic Claymorphism:
  * <ul>
- *     <li><b>Bảng màu Liquid Glass:</b> Nền sứ trắng kem ({@link #PORCELAIN} {@code #F9F9FB}),
- *         mặt kính ({@link #SURFACE} {@code #F6F7F9}), chữ mực đậm ({@link #INK} {@code #16181C}),
- *         chữ phụ ({@link #MUTED} {@code #8A8E98}) và điểm nhấn Cam Hổ Phách ({@link #WARM_AMBER} {@code #E07A3B}).</li>
- *     <li><b>Nền {@link AntigravityBackground}:</b> Tái tạo hai vùng sáng chuyển sắc tròn (RadialGradient)
- *         ở góc trên phải (Warm Amber Dawn Glow) và góc dưới trái (Cool Mint Sky Glow) giống hệt {@code AntigravityBackground} trên iOS.</li>
- *     <li><b>Hiệu ứng thẻ kính mờ (Liquid Glass Card / Pill / Circle):</b> Có viền phản chiếu ánh sáng chéo
- *         từ trắng sáng ở góc trên trái xuống mờ nhẹ ở góc dưới phải.</li>
- *     <li><b>Bộ icon vẽ bằng Vector ({@link Icon}):</b> Vẽ trực tiếp bằng {@link Canvas} cho toàn bộ nút điều khiển
- *         (Back, Undo, Redo, Export, Menu, Wand Auto-Balance, 11 thông số chỉnh màu, Search, Heart, Folder...).</li>
+ *     <li><b>Bảng màu kẹo mềm / Candy Pastels:</b> Coral (#FF6B8B), Sky Blue (#48DBFB),
+ *         Mint (#1DD1A1), Butter (#FECA57), Lilac (#9B59B6) trên nền mây xốp (#EBF1FA).</li>
+ *     <li><b>Hình khối phồng nổi 3D (Extrusion & Dual Inset Bevels):</b> Đổ bóng rơi mềm mại đa tầng
+ *         kết hợp phản chiếu ánh sáng trắng trên-trái và bóng chìm chiều sâu dưới-phải.</li>
+ *     <li><b>Cảm giác bấm xúc giác đàn hồi (Tactile Squishy Depth):</b> Bo góc phồng lớn (20px - 32px, Pill 999dp),
+ *         phản hồi ấn chạm chìm lõm (sunken bevel) và độ nảy cao.</li>
  * </ul>
  */
 public final class StudioStyle {
 
     // =========================================================================
-    // HỆ THỐNG MÀU MATERIAL DESIGN 3 EXPRESSIVE (DYNAMIC THEME ENGINE)
+    // HỆ THỐNG MÀU PLAYFUL CLASSIC CLAYMORPHISM (DYNAMIC THEME ENGINE)
     // =========================================================================
 
-    private static boolean darkTheme = true;
+    private static boolean darkTheme = false;
 
     public static boolean isDarkTheme() {
         return darkTheme;
@@ -55,102 +53,121 @@ public final class StudioStyle {
         applyTheme(!darkTheme);
     }
 
-    /** Nền chính ứng dụng (thích ứng theo Sáng/Tối) - Hệ màu IRO Silver Print. */
-    public static int BG = 0xff171918;
-    public static int PORCELAIN = 0xff171918;
+    /** Nền chính ứng dụng (thích ứng theo Sáng/Tối) - Clay Marshmallow Ground. */
+    public static int BG = 0xffebf1fa;
+    public static int PORCELAIN = 0xffebf1fa;
 
-    /** Bề mặt Surface Container chính (Thẻ Hero, Bảng điều khiển). */
-    public static int SURFACE = 0xff202321;
+    /** Bề mặt Surface Container chính (Thẻ Hero, Bảng điều khiển, Khối Clay nổi). */
+    public static int SURFACE = 0xffffffff;
 
     /** Bề mặt Surface Container cấp 2 (Thẻ Bento con, hộp tìm kiếm, chip). */
-    public static int SURFACE_CONTAINER = 0xff2b2f2c;
-    public static int SURFACE_CONTAINER_HIGH = 0xff373d39;
+    public static int SURFACE_CONTAINER = 0xfff5f8fd;
+    public static int SURFACE_CONTAINER_HIGH = 0xffe4ebf5;
 
-    /** Nền sân khấu ảnh (Stage Ground). */
-    public static int STAGE = 0xff111312;
+    /** Nền sân khấu ảnh (Stage Ground / Sunken Clay Base). */
+    public static int STAGE = 0xffe4ebf5;
 
-    /** Đường viền mảnh siêu tinh tế chuẩn M3 Outline / Silver Print. */
-    public static int LINE = 0xff414942;
+    /** Đường viền mềm mại chuẩn Playful Clay. */
+    public static int LINE = 0xffd2dbe8;
 
-    /** Màu chữ & biểu tượng chính (Sáng rõ trên nền tối / Đậm mực trên nền sáng). */
-    public static int INK = 0xfff1f3ef;
+    /** Màu chữ & biểu tượng chính (Slate Ink trên nền sáng / Sáng rõ trên nền tối). */
+    public static int INK = 0xff2c3e50;
 
-    /** Màu chữ & biểu tượng phụ (Muted Slate / Charcoal Muted). */
-    public static int MUTED = 0xffb1b9b2;
+    /** Màu chữ & biểu tượng phụ (Soft Slate Muted). */
+    public static int MUTED = 0xff7f8c8d;
 
-    /** Điểm nhấn IRO Silver Print (#AFCBB8 Sage Green Dark / #365F50 Deep Sage Light). */
-    public static int WARM_AMBER = 0xffafcbb8;
-    public static int ACCENT = 0xffafcbb8;
-    public static int ON_ACCENT = 0xff18231d;
+    /** Điểm nhấn Playful Clay: Candy Coral (#FF6B8B) / Coral Pastel. */
+    public static int ACCENT = 0xffff6b8b;
+    public static int ON_ACCENT = 0xffffffff;
+
+    /** Điểm nhấn thứ 2: Candy Butter / Warm Amber (#FECA57). */
+    public static int WARM_AMBER = 0xfffeca57;
 
     /** Nền trạng thái đang chọn / Tonal Container nhạt. */
-    public static int WARM_AMBER_LIGHT = 0xff232e27;
+    public static int WARM_AMBER_LIGHT = 0xfffff3d6;
 
     /** Màu nền viên thuốc tối. */
-    public static int DARK_PILL = 0xff2b2f2c;
+    public static int DARK_PILL = 0xff2c3e50;
+
+    // Bộ màu điểm nhấn kẹo Playful Claymorphism
+    public static final int CLAY_CORAL = 0xffff6b8b;
+    public static final int CLAY_SKY = 0xff48dbfb;
+    public static final int CLAY_MINT = 0xff1dd1a1;
+    public static final int CLAY_BUTTER = 0xfffeca57;
+    public static final int CLAY_LILAC = 0xff9b59b6;
 
     // Màu kênh chức năng (RGB curves, histogram, color balance)
-    public static final int GOOGLE_RED = 0xffd9483b;
-    public static final int RED_TONAL = 0xfffbeae8;
-    public static final int GOOGLE_GREEN = 0xff2e9b52;
-    public static final int GREEN_TONAL = 0xffe8f5ec;
-    public static final int GOOGLE_BLUE = 0xff2563eb;
-    public static final int BLUE_TONAL = 0xffedf2fd;
-    public static final int GOOGLE_YELLOW = 0xffd9822b;
-    public static final int YELLOW_TONAL = 0xfffbf2e6;
+    public static final int GOOGLE_RED = 0xffff6b8b;
+    public static final int RED_TONAL = 0xffffeef2;
+    public static final int GOOGLE_GREEN = 0xff1dd1a1;
+    public static final int GREEN_TONAL = 0xffe8faf4;
+    public static final int GOOGLE_BLUE = 0xff48dbfb;
+    public static final int BLUE_TONAL = 0xffeefaff;
+    public static final int GOOGLE_YELLOW = 0xfffeca57;
+    public static final int YELLOW_TONAL = 0xfffffbf0;
 
     // --- Hệ thống Token M3 Tonal Surface ---
-    public static final int M3_PRIMARY = 0xffafcbb8;
-    public static final int M3_ON_PRIMARY = 0xff18231d;
-    public static final int M3_PRIMARY_CONTAINER = 0xff232e27;
-    public static final int M3_ON_PRIMARY_CONTAINER = 0xffafcbb8;
-    public static final int M3_OUTLINE = 0xff414942;
-    public static final int M3_OUTLINE_VARIANT = 0xffd8ddd8;
-    public static final int M3_SURFACE_CONTAINER_LOW = 0xff171918;
+    public static int M3_PRIMARY = 0xffff6b8b;
+    public static int M3_ON_PRIMARY = 0xffffffff;
+    public static int M3_PRIMARY_CONTAINER = 0xffffeef2;
+    public static int M3_ON_PRIMARY_CONTAINER = 0xffff5277;
+    public static int M3_OUTLINE = 0xffd2dbe8;
+    public static int M3_OUTLINE_VARIANT = 0xffe2e8f0;
+    public static int M3_SURFACE_CONTAINER_LOW = 0xffebf1fa;
 
-    public static final int M3_DARK_BG = 0xff171918;
-    public static final int M3_DARK_SURFACE = 0xff202321;
-    public static final int M3_DARK_SURFACE_CONTAINER_LOW = 0xff1c1f1d;
-    public static final int M3_DARK_SURFACE_CONTAINER = 0xff2b2f2c;
-    public static final int M3_DARK_SURFACE_CONTAINER_HIGH = 0xff373d39;
-    public static final int M3_DARK_PRIMARY = 0xffafcbb8;
+    public static final int M3_DARK_BG = 0xff1e1f29;
+    public static final int M3_DARK_SURFACE = 0xff282a37;
+    public static final int M3_DARK_SURFACE_CONTAINER_LOW = 0xff232532;
+    public static final int M3_DARK_SURFACE_CONTAINER = 0xff323546;
+    public static final int M3_DARK_SURFACE_CONTAINER_HIGH = 0xff3d4256;
+    public static final int M3_DARK_PRIMARY = 0xffff7597;
 
     /**
-     * Cập nhật toàn bộ bảng màu giao diện tức thì theo chế độ Tối (Darkroom Studio)
-     * hoặc Sáng (Warm Porcelain Minimal) - Chuẩn IRO Silver Print.
+     * Cập nhật toàn bộ bảng màu giao diện tức thì theo chế độ Playful Dark Slate
+     * hoặc Playful Light Cloud Clay.
      */
     public static void applyTheme(boolean dark) {
         darkTheme = dark;
         if (dark) {
-            BG = 0xff171918;
-            PORCELAIN = 0xff171918;
-            SURFACE = 0xff202321;
-            SURFACE_CONTAINER = 0xff2b2f2c;
-            SURFACE_CONTAINER_HIGH = 0xff373d39;
-            STAGE = 0xff111312;
-            LINE = 0xff414942;
-            INK = 0xfff1f3ef;
-            MUTED = 0xffb1b9b2;
-            WARM_AMBER = 0xffafcbb8;
-            ACCENT = 0xffafcbb8;
-            ON_ACCENT = 0xff18231d;
-            WARM_AMBER_LIGHT = 0xff232e27;
-            DARK_PILL = 0xff2b2f2c;
+            BG = 0xff1e1f29;
+            PORCELAIN = 0xff1e1f29;
+            SURFACE = 0xff282a37;
+            SURFACE_CONTAINER = 0xff323546;
+            SURFACE_CONTAINER_HIGH = 0xff3d4256;
+            STAGE = 0xff16171f;
+            LINE = 0xff3d4256;
+            INK = 0xfff8f9fd;
+            MUTED = 0xffa0a6b8;
+            WARM_AMBER = 0xfffed36e;
+            ACCENT = 0xffff7597;
+            ON_ACCENT = 0xff1e1f29;
+            WARM_AMBER_LIGHT = 0xff3b3628;
+            DARK_PILL = 0xff323546;
+            M3_PRIMARY = 0xffff7597;
+            M3_ON_PRIMARY = 0xff1e1f29;
+            M3_PRIMARY_CONTAINER = 0xff3d2a33;
+            M3_ON_PRIMARY_CONTAINER = 0xffff7597;
+            M3_OUTLINE = 0xff3d4256;
         } else {
-            BG = 0xfff4f4f2;
-            PORCELAIN = 0xfff4f4f2;
+            BG = 0xffebf1fa;
+            PORCELAIN = 0xffebf1fa;
             SURFACE = 0xffffffff;
-            SURFACE_CONTAINER = 0xfff0f1ee;
-            SURFACE_CONTAINER_HIGH = 0xffe4e7e2;
-            STAGE = 0xffe8eae6;
-            LINE = 0xffd8ddd8;
-            INK = 0xff202322;
-            MUTED = 0xff606762;
-            WARM_AMBER = 0xff365f50;
-            ACCENT = 0xff365f50;
+            SURFACE_CONTAINER = 0xfff5f8fd;
+            SURFACE_CONTAINER_HIGH = 0xffe4ebf5;
+            STAGE = 0xffe4ebf5;
+            LINE = 0xffd2dbe8;
+            INK = 0xff2c3e50;
+            MUTED = 0xff7f8c8d;
+            WARM_AMBER = 0xfffeca57;
+            ACCENT = 0xffff6b8b;
             ON_ACCENT = 0xffffffff;
-            WARM_AMBER_LIGHT = 0xffd8e7de;
-            DARK_PILL = 0xff202322;
+            WARM_AMBER_LIGHT = 0xfffff3d6;
+            DARK_PILL = 0xff2c3e50;
+            M3_PRIMARY = 0xffff6b8b;
+            M3_ON_PRIMARY = 0xffffffff;
+            M3_PRIMARY_CONTAINER = 0xffffeef2;
+            M3_ON_PRIMARY_CONTAINER = 0xffff5277;
+            M3_OUTLINE = 0xffd2dbe8;
         }
     }
 
@@ -194,12 +211,12 @@ public final class StudioStyle {
         return MUTED;
     }
 
-    // --- Bán kính bo góc chuẩn Material Design 3 (dp) ---
-    public static final float CORNER_XS_DP = 4f;
-    public static final float CORNER_SM_DP = 8f;
-    public static final float CORNER_MD_DP = 12f;
-    public static final float CORNER_LG_DP = 16f;
-    public static final float CORNER_XL_DP = 28f;
+    // --- Bán kính bo góc đầy đặn chuẩn Playful Classic Claymorphism (dp) ---
+    public static final float CORNER_XS_DP = 8f;
+    public static final float CORNER_SM_DP = 14f;
+    public static final float CORNER_MD_DP = 20f;
+    public static final float CORNER_LG_DP = 26f;
+    public static final float CORNER_XL_DP = 32f;
     public static final float CORNER_FULL_DP = 999f;
 
     public static int dpToPx(Context context, float dp) {
@@ -207,7 +224,152 @@ public final class StudioStyle {
     }
 
     /**
-     * Tạo nền thẻ Material Design 3 kèm viền mảnh và bo góc chuẩn M3.
+     * Bộ vẽ hình khối đất sét phồng 3D (Extruded 3D Clay Drawable) với phản chiếu ánh sáng 2 lớp.
+     */
+    public static class ClayDrawable extends Drawable {
+        private int fillColor;
+        private int strokeColor;
+        private float cornerRadius;
+        private boolean isSunken;
+        private boolean isPressed;
+        private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint shadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint highlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint innerShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF boundsF = new RectF();
+
+        public ClayDrawable(int fillColor, int strokeColor, float cornerRadius) {
+            this(fillColor, strokeColor, cornerRadius, false);
+        }
+
+        public ClayDrawable(int fillColor, int strokeColor, float cornerRadius, boolean isSunken) {
+            this.fillColor = fillColor;
+            this.strokeColor = strokeColor;
+            this.cornerRadius = cornerRadius;
+            this.isSunken = isSunken;
+            fillPaint.setStyle(Paint.Style.FILL);
+            strokePaint.setStyle(Paint.Style.STROKE);
+            strokePaint.setStrokeWidth(1.6f);
+            highlightPaint.setStyle(Paint.Style.STROKE);
+            highlightPaint.setStrokeWidth(2.5f);
+            innerShadowPaint.setStyle(Paint.Style.STROKE);
+            innerShadowPaint.setStrokeWidth(2.5f);
+        }
+
+        public void setColors(int fill, int stroke) {
+            this.fillColor = fill;
+            this.strokeColor = stroke;
+            invalidateSelf();
+        }
+
+        @Override
+        public boolean isStateful() {
+            return true;
+        }
+
+        @Override
+        protected boolean onStateChange(int[] states) {
+            boolean pressed = false;
+            if (states != null) {
+                for (int s : states) {
+                    if (s == android.R.attr.state_pressed) {
+                        pressed = true;
+                        break;
+                    }
+                }
+            }
+            if (this.isPressed != pressed) {
+                this.isPressed = pressed;
+                invalidateSelf();
+                return true;
+            }
+            return super.onStateChange(states);
+        }
+
+        @Override
+        public void draw(Canvas canvas) {
+            Rect bounds = getBounds();
+            if (bounds.width() <= 0 || bounds.height() <= 0) return;
+            boundsF.set(bounds);
+            float r = Math.min(cornerRadius, Math.min(boundsF.width(), boundsF.height()) / 2f);
+
+            if (fillColor == 0 || (fillColor & 0xff000000) == 0) {
+                if (strokeColor != 0) {
+                    strokePaint.setColor(strokeColor);
+                    canvas.drawRoundRect(boundsF, r, r, strokePaint);
+                }
+                return;
+            }
+
+            if (isSunken || isPressed) {
+                // Trạng thái lõm sâu (Sunken Clay / Squishy Active): Đổ bóng chìm lòng trong
+                fillPaint.setColor(fillColor);
+                canvas.drawRoundRect(boundsF, r, r, fillPaint);
+
+                // Bóng chìm tối góc trên - trái
+                innerShadowPaint.setColor(darkTheme ? 0x55000000 : 0x242c3e50);
+                RectF insetTL = new RectF(boundsF.left + 1.5f, boundsF.top + 1.5f, boundsF.right - 1.5f, boundsF.bottom - 1.5f);
+                canvas.drawRoundRect(insetTL, Math.max(0, r - 1.5f), Math.max(0, r - 1.5f), innerShadowPaint);
+
+                // Viền phản chiếu sáng góc dưới - phải
+                highlightPaint.setColor(darkTheme ? 0x18ffffff : 0x55ffffff);
+                RectF insetBR = new RectF(boundsF.left + 2f, boundsF.top + 2f, boundsF.right - 0.5f, boundsF.bottom - 0.5f);
+                canvas.drawRoundRect(insetBR, Math.max(0, r - 1.5f), Math.max(0, r - 1.5f), highlightPaint);
+            } else {
+                // Hiệu ứng phồng nổi 3D kinh điển (Classic 3D Extrusion)
+                // Lớp 1: Bóng rơi mềm mại phía dưới (Soft Drop Shadow)
+                shadowPaint.setStyle(Paint.Style.FILL);
+                shadowPaint.setColor(darkTheme ? 0x2e000000 : 0x1870809b);
+                RectF shadowRect = new RectF(boundsF.left, boundsF.top + 2.5f, boundsF.right, boundsF.bottom + 3.5f);
+                canvas.drawRoundRect(shadowRect, r, r, shadowPaint);
+
+                // Lớp 2: Quầng sáng trắng nổi khối phía trên
+                shadowPaint.setColor(darkTheme ? 0x0cffffff : 0x50ffffff);
+                RectF glowRect = new RectF(boundsF.left, boundsF.top - 1.2f, boundsF.right, boundsF.bottom - 1.2f);
+                canvas.drawRoundRect(glowRect, r, r, shadowPaint);
+
+                // Lớp 3: Thân viên đất sét mềm
+                fillPaint.setColor(fillColor);
+                canvas.drawRoundRect(boundsF, r, r, fillPaint);
+
+                // Lớp 4: Gờ sáng phản quang trên - trái (Top-Left Specular Bevel Highlight)
+                highlightPaint.setColor(darkTheme ? 0x24ffffff : 0x75ffffff);
+                RectF bevelTL = new RectF(boundsF.left + 1.2f, boundsF.top + 1.2f, boundsF.right - 1.5f, boundsF.bottom - 1.5f);
+                canvas.drawRoundRect(bevelTL, Math.max(0, r - 1.2f), Math.max(0, r - 1.2f), highlightPaint);
+
+                // Lớp 5: Gờ bóng chiều sâu dưới - phải (Bottom-Right Soft Depth Shadow)
+                innerShadowPaint.setColor(darkTheme ? 0x3a000000 : 0x142c3e50);
+                RectF bevelBR = new RectF(boundsF.left + 1.5f, boundsF.top + 1.5f, boundsF.right - 1.2f, boundsF.bottom - 1.2f);
+                canvas.drawRoundRect(bevelBR, Math.max(0, r - 1.2f), Math.max(0, r - 1.2f), innerShadowPaint);
+            }
+
+            if (strokeColor != 0) {
+                strokePaint.setColor(strokeColor);
+                canvas.drawRoundRect(boundsF, r, r, strokePaint);
+            }
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+            fillPaint.setAlpha(alpha);
+            strokePaint.setAlpha(alpha);
+        }
+
+        @Override
+        public void setColorFilter(ColorFilter colorFilter) {
+            fillPaint.setColorFilter(colorFilter);
+            strokePaint.setColorFilter(colorFilter);
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
+    }
+
+    /**
+     * Tạo nền thẻ Claymorphism kèm viền mảnh và bo góc tròn đầy.
      */
     public static GradientDrawable createM3SurfaceDrawable(
             Context context,
@@ -227,7 +389,7 @@ public final class StudioStyle {
     }
 
     /**
-     * Tạo nút bấm hoặc Chip có hiệu ứng sóng nước (M3 Ripple State Layer).
+     * Tạo nút bấm hoặc Chip có hiệu ứng sóng nước nảy mềm (Clay Ripple Layer).
      */
     public static Drawable createM3RippleSurface(
             Context context,
@@ -236,8 +398,10 @@ public final class StudioStyle {
             int strokeColor,
             float cornerDp
     ) {
-        GradientDrawable content = createM3SurfaceDrawable(context, fillColor, strokeColor, cornerDp, 1f);
-        GradientDrawable mask = createM3SurfaceDrawable(context, Color.WHITE, Color.TRANSPARENT, cornerDp, 0f);
+        ClayDrawable content = new ClayDrawable(fillColor, strokeColor, dpToPx(context, cornerDp));
+        GradientDrawable mask = new GradientDrawable();
+        mask.setColor(Color.WHITE);
+        mask.setCornerRadius(dpToPx(context, cornerDp));
         return new RippleDrawable(ColorStateList.valueOf(rippleColor), content, mask);
     }
 
@@ -252,57 +416,80 @@ public final class StudioStyle {
     }
 
     /**
-     * Tạo hình chữ nhật bo góc cơ bản với màu nền và đường viền mảnh 1px.
+     * Tạo hình khối đất sét bo tròn với màu nền, đường viền và hiệu ứng phồng nổi 3D.
      */
-    static GradientDrawable shape(int fill, int stroke, float radius) {
-        GradientDrawable d = new GradientDrawable();
-        d.setColor(fill);
-        d.setCornerRadius(radius);
-        if (stroke != 0) {
-            d.setStroke(2, stroke);
-        }
-        return d;
+    static Drawable shape(int fill, int stroke, float radius) {
+        return new ClayDrawable(fill, stroke, radius);
     }
 
     /**
-     * Tạo bề mặt phẳng có hiệu ứng chạm nhẹ (RippleDrawable) trung tính thích ứng Sáng/Tối.
+     * Tạo bề mặt Clay phồng có hiệu ứng chạm nảy mềm (Ripple) thích ứng Sáng/Tối.
      */
     static Drawable surface(int fill, int stroke, float radius) {
+        ClayDrawable clay = new ClayDrawable(fill, stroke, radius);
+        GradientDrawable mask = new GradientDrawable();
+        mask.setCornerRadius(radius);
+        mask.setColor(Color.WHITE);
         return new RippleDrawable(
                 ColorStateList.valueOf(darkTheme ? 0x24ffffff : 0x18181a1f),
-                shape(fill, stroke, radius),
-                shape(0xffffffff, 0, radius));
+                clay,
+                mask);
     }
 
     /**
-     * Tạo thẻ Material Design 3 Expressive (nền Surface thích ứng Sáng/Tối + viền mảnh).
+     * Tạo thẻ Clay Card 3D phồng nổi (nền Surface trắng đất sét mềm + viền pastel).
+     */
+    public static Drawable clayCard(float radius) {
+        return new ClayDrawable(SURFACE, LINE, radius);
+    }
+
+    /**
+     * Tạo viên thuốc đất sét phồng màu tùy chọn.
+     */
+    public static Drawable clayPill(int fill, float radius) {
+        return surface(fill, 0, radius);
+    }
+
+    /**
+     * Tạo viên thuốc đất sét phồng có viền.
+     */
+    public static Drawable clayPill(int fill, int stroke, float radius) {
+        return surface(fill, stroke, radius);
+    }
+
+    /**
+     * Tạo khay lõm đất sét chìm (Sunken Clay Base cho Stage & Slider).
+     */
+    public static Drawable claySunken(float radius) {
+        return new ClayDrawable(STAGE, LINE, radius, true);
+    }
+
+    /**
+     * Tương thích ngược: Thẻ Liquid Glass Card chuyển đổi mượt mà sang Clay Card.
      */
     static Drawable liquidGlassCard(float radius) {
-        return shape(SURFACE, LINE, radius);
+        return clayCard(radius);
     }
 
     /**
-     * Tạo nút tròn tối giản thích ứng Sáng/Tối.
+     * Tạo nút tròn đất sét phồng mềm thích ứng Sáng/Tối.
      */
     static Drawable liquidGlassCircle() {
-        GradientDrawable circle = new GradientDrawable();
-        circle.setColor(SURFACE);
-        circle.setShape(GradientDrawable.OVAL);
-        circle.setStroke(2, LINE);
+        ClayDrawable circle = new ClayDrawable(SURFACE, LINE, 999f);
+        GradientDrawable mask = new GradientDrawable();
+        mask.setShape(GradientDrawable.OVAL);
+        mask.setColor(Color.WHITE);
         return new RippleDrawable(
                 ColorStateList.valueOf(darkTheme ? 0x28ffffff : 0x18181a1f),
                 circle,
-                circle);
+                mask);
     }
 
     /**
-     * Tạo nút viên thuốc chính màu Cam Hổ Phách (#F59E0B) chuẩn Material Design 3.
+     * Tạo nút viên thuốc chính màu Kẹo Coral / Candy Butter phồng nảy 3D.
      */
     static Drawable warmAmberPill(float radius) {
-        return new RippleDrawable(
-                ColorStateList.valueOf(0x38ffffff),
-                shape(WARM_AMBER, 0, radius),
-                shape(0xffffffff, 0, radius));
+        return surface(ACCENT, 0, radius);
     }
 
     /**
@@ -320,7 +507,7 @@ public final class StudioStyle {
     }
 
     /**
-     * Tạo viên thuốc nền Surface viền mảnh thích ứng.
+     * Tạo viên thuốc nền Surface viền mềm thích ứng.
      */
     static Drawable liquidGlassPill(float radius) {
         return surface(SURFACE, LINE, radius);
@@ -333,9 +520,9 @@ public final class StudioStyle {
     }
 
     /**
-     * Lớp nền IRO Silver Print Studio:
-     * Mặt bàn buồng tối trầm tĩnh, trung tính thích ứng Dark/Light
-     * kèm quầng sáng nhẹ nhàng, tôn vinh màu sắc của bức ảnh làm trọng tâm.
+     * Lớp nền IRO Playful Claymorphism:
+     * Nền xốp bồng bềnh Pastel Cloud với hai quầng cực quang kẹo ngọt (Coral & Sky Glow)
+     * tạo không gian 3D mềm mại, vui mắt và giàu cảm xúc.
      */
     static final class AntigravityBackground extends View {
         private final Paint glowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -353,12 +540,19 @@ public final class StudioStyle {
             canvas.drawColor(BG);
             if (w <= 0 || h <= 0) return;
 
-            // Vùng sáng vi mô dịu mắt Sage Green chuẩn IRO Silver Print
-            int sageGlow = darkTheme ? 0x0cafcbb8 : 0x05365f50;
-            RadialGradient sageGrad = new RadialGradient(
-                    w * 0.88f, h * 0.10f, Math.max(w, h) * 0.52f,
-                    sageGlow, Color.TRANSPARENT, Shader.TileMode.CLAMP);
-            glowPaint.setShader(sageGrad);
+            // Vùng sáng Playful Candy Glows
+            int coralGlow = darkTheme ? 0x16ff7597 : 0x18ff6b8b;
+            RadialGradient coralGrad = new RadialGradient(
+                    w * 0.90f, h * 0.08f, Math.max(w, h) * 0.55f,
+                    coralGlow, Color.TRANSPARENT, Shader.TileMode.CLAMP);
+            glowPaint.setShader(coralGrad);
+            canvas.drawRect(0, 0, w, h, glowPaint);
+
+            int skyGlow = darkTheme ? 0x1454e1ff : 0x1648dbfb;
+            RadialGradient skyGrad = new RadialGradient(
+                    w * 0.10f, h * 0.85f, Math.max(w, h) * 0.50f,
+                    skyGlow, Color.TRANSPARENT, Shader.TileMode.CLAMP);
+            glowPaint.setShader(skyGrad);
             canvas.drawRect(0, 0, w, h, glowPaint);
         }
     }

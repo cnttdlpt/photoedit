@@ -18,6 +18,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -918,15 +919,8 @@ public class CameraActivity extends Activity {
         return tv;
     }
 
-    private GradientDrawable createPillDrawable(int bgColor, int strokeColor, int radius) {
-        GradientDrawable gd = new GradientDrawable();
-        gd.setShape(GradientDrawable.RECTANGLE);
-        gd.setColor(bgColor);
-        gd.setCornerRadius(radius);
-        if (strokeColor != 0) {
-            gd.setStroke(dp(1f), strokeColor);
-        }
-        return gd;
+    private Drawable createPillDrawable(int bgColor, int strokeColor, int radius) {
+        return StudioStyle.clayPill(bgColor, strokeColor, radius);
     }
 
     // =========================================================================

@@ -7,6 +7,6 @@
     "start": "node start.mjs",
     "backend": "node backend/server.mjs",
     "frontend": "node frontend/server.mjs",
-    "test": "node --test tests.mjs"
+    "test": "node --test tests.mjs backend/auth.test.mjs"
   }
 }

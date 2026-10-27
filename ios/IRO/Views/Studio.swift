@@ -17,38 +17,45 @@ extension UIColor {
     }
 }
 
-// MARK: - Design System: IRO Silver Print (Synchronized with DESIGN.md & Web studio.css)
+// MARK: - Design System: IRO Playful Classic Claymorphism (Synchronized with DESIGN.md & Web studio.css)
 enum Studio {
     // Semantic surfaces matching DESIGN.md and Web studio.css
-    static let background = Color(uiColor: .dynamic(light: 0xF4F4F2, dark: 0x171918))
-    static let surface = Color(uiColor: .dynamic(light: 0xFFFFFF, dark: 0x202321))
-    static let surfaceContainer = Color(uiColor: .dynamic(light: 0xF0F1EE, dark: 0x2B2F2C))
-    static let stageGround = Color(uiColor: .dynamic(light: 0xE8EAE6, dark: 0x111312))
-    static let line = Color(uiColor: .dynamic(light: 0xD8DDD8, dark: 0x414942))
-    static let ink = Color(uiColor: .dynamic(light: 0x202322, dark: 0xF1F3EF))
-    static let muted = Color(uiColor: .dynamic(light: 0x606762, dark: 0xB1B9B2))
-    static let accent = Color(uiColor: .dynamic(light: 0x365F50, dark: 0xAFCBB8))
-    static let accentHover = Color(uiColor: .dynamic(light: 0x284B3E, dark: 0xC5DDCD))
-    static let focus = Color(uiColor: .dynamic(light: 0x29684F, dark: 0xAFCBB8))
+    static let background = Color(uiColor: .dynamic(light: 0xEBF1FA, dark: 0x1E1F29))
+    static let surface = Color(uiColor: .dynamic(light: 0xFFFFFF, dark: 0x282A37))
+    static let surfaceContainer = Color(uiColor: .dynamic(light: 0xF5F8FD, dark: 0x323546))
+    static let stageGround = Color(uiColor: .dynamic(light: 0xE4EBF5, dark: 0x16171F))
+    static let line = Color(uiColor: .dynamic(light: 0xD2DBE8, dark: 0x3D4256))
+    static let ink = Color(uiColor: .dynamic(light: 0x2C3E50, dark: 0xF8F9FD))
+    static let muted = Color(uiColor: .dynamic(light: 0x7F8C8D, dark: 0xA0A6B8))
+    static let accent = Color(uiColor: .dynamic(light: 0xFF6B8B, dark: 0xFF7597))
+    static let accentHover = Color(uiColor: .dynamic(light: 0xFF5277, dark: 0xFF8FA9))
+    static let focus = Color(uiColor: .dynamic(light: 0xFF6B8B, dark: 0xFF7597))
+
+    // Playful Candy Accents
+    static let clayCoral = Color(uiColor: .dynamic(light: 0xFF6B8B, dark: 0xFF7597))
+    static let claySky = Color(uiColor: .dynamic(light: 0x48DBFB, dark: 0x54E1FF))
+    static let clayMint = Color(uiColor: .dynamic(light: 0x1DD1A1, dark: 0x2EE6B5))
+    static let clayButter = Color(uiColor: .dynamic(light: 0xFECA57, dark: 0xFED36E))
+    static let clayLilac = Color(uiColor: .dynamic(light: 0x9B59B6, dark: 0xB368D4))
 
     static let m3SurfaceLow = surface
     static let m3SurfaceHigh = surfaceContainer
-    static let m3Amber = accent
+    static let m3Amber = clayButter
     static let m3AmberContainer = surfaceContainer
     static let accentContainer = surfaceContainer
     static let onAccentContainer = ink
     static let darkPill = ink
-    static let warmAmber = accent
+    static let warmAmber = clayButter
     static let warmAmberLight = surfaceContainer
-    static let warmAmberGlow = Color.clear
+    static let warmAmberGlow = clayButter.opacity(0.18)
     static let porcelain = background
     static let cardBorder = line
 
     // Functional RGB Channel Colors (Histograms & Tone Curves)
-    static let googleBlue = Color(red: 66/255, green: 133/255, blue: 244/255)
-    static let googleRed = Color(red: 234/255, green: 67/255, blue: 53/255)
-    static let googleYellow = Color(red: 251/255, green: 188/255, blue: 4/255)
-    static let googleGreen = Color(red: 52/255, green: 168/255, blue: 83/255)
+    static let googleBlue = claySky
+    static let googleRed = clayCoral
+    static let googleYellow = clayButter
+    static let googleGreen = clayMint
 
     // Material Design 3 Expressive Spring Animations
     static let m3Spring = Animation.spring(response: 0.28, dampingFraction: 0.72, blendDuration: 0)
@@ -113,24 +120,51 @@ struct M3ExpressiveButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(!reduceMotion && configuration.isPressed ? scaleAmount : 1.0)
+            .offset(y: !reduceMotion && configuration.isPressed ? 1.5 : 0)
             .animation(reduceMotion ? nil : Studio.m3Spring, value: configuration.isPressed)
     }
 }
 
 struct AntigravityBackground: View {
-    var body: some View { Studio.background.ignoresSafeArea() }
+    var body: some View {
+        ZStack {
+            Studio.background.ignoresSafeArea()
+            RadialGradient(
+                colors: [Studio.clayCoral.opacity(0.16), Color.clear],
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 360
+            )
+            .ignoresSafeArea()
+            RadialGradient(
+                colors: [Studio.claySky.opacity(0.14), Color.clear],
+                center: .bottomLeading,
+                startRadius: 20,
+                endRadius: 320
+            )
+            .ignoresSafeArea()
+        }
+    }
 }
 
 extension View {
-    func liquidGlassCard(cornerRadius: CGFloat = 16) -> some View {
+    func liquidGlassCard(cornerRadius: CGFloat = 24) -> some View {
         self
             .background(Studio.surface)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Studio.line, lineWidth: 1.0)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.85), Studio.line.opacity(0.35)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
             )
-            .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 2)
+            .shadow(color: Color(red: 144/255, green: 160/255, blue: 184/255).opacity(0.38), radius: 14, x: 7, y: 10)
+            .shadow(color: Color.white.opacity(0.75), radius: 10, x: -5, y: -5)
     }
 
     func liquidGlassPill() -> some View {
@@ -139,9 +173,17 @@ extension View {
             .clipShape(Capsule())
             .overlay(
                 Capsule()
-                    .strokeBorder(Studio.line, lineWidth: 1.0)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.8), Studio.line.opacity(0.3)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
             )
-            .shadow(color: Color.black.opacity(0.02), radius: 3, x: 0, y: 1)
+            .shadow(color: Color(red: 144/255, green: 160/255, blue: 184/255).opacity(0.32), radius: 10, x: 4, y: 6)
+            .shadow(color: Color.white.opacity(0.7), radius: 6, x: -3, y: -3)
     }
 
     func liquidGlassCircle(size: CGFloat = 36) -> some View {
@@ -150,10 +192,18 @@ extension View {
             .background(Studio.surface)
             .overlay(
                 Circle()
-                    .strokeBorder(Studio.line, lineWidth: 1.0)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.8), Studio.line.opacity(0.3)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
             )
             .clipShape(Circle())
-            .shadow(color: Color.black.opacity(0.02), radius: 3, x: 0, y: 1)
+            .shadow(color: Color(red: 144/255, green: 160/255, blue: 184/255).opacity(0.32), radius: 8, x: 3, y: 5)
+            .shadow(color: Color.white.opacity(0.7), radius: 5, x: -2, y: -2)
     }
 
     func liquidDarkPill() -> some View {
@@ -164,6 +214,7 @@ extension View {
                 Capsule()
                     .strokeBorder(Studio.ink, lineWidth: 1.0)
             )
+            .shadow(color: Color.black.opacity(0.2), radius: 6, x: 2, y: 4)
     }
 }
 

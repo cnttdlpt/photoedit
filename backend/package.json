@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Backend API & Database Service for IRO Film Studio 3.0",
   "scripts": {
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "test": "node --test auth.test.mjs"
   },
   "dependencies": {
     "sqlite3": "^5.1.7"

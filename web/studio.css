@@ -1,58 +1,568 @@
-/* IRO silver print: the image owns the colour; the tools stay neutral.
-   Desktop: viewport - 32px gutters - 24px gap - 376px inspector = photo stage. */
-:root,body.theme-porcelain{--bg:#f4f4f2;--panel:#fff;--panel-elevated:#f0f1ee;--text:#202322;--muted:#606762;--border:#d8ddd8;--accent:#365f50;--accent-hover:#284b3e;--amber:#365f50;--studio-ground:#e8eae6;--studio-focus:#29684f;--studio-on-primary:#fff;color-scheme:light}
-body:not(.theme-porcelain){--bg:#171918;--panel:#202321;--panel-elevated:#2b2f2c;--text:#f1f3ef;--muted:#b1b9b2;--border:#414942;--accent:#afcbb8;--accent-hover:#c5ddcd;--studio-ground:#111312;--studio-focus:#afcbb8;--studio-on-primary:#18231d;color-scheme:dark}
-html{background:var(--bg);scrollbar-color:var(--muted) var(--bg)}
-body{background:var(--bg)!important;color:var(--text)!important;font-family:'Google Sans Flex',system-ui,sans-serif;font-size:14px;line-height:1.5;margin:0;min-height:100dvh}
-*{box-sizing:border-box} [hidden]{display:none!important}
-::selection{background:var(--accent);color:var(--studio-on-primary)}
-button,input,select,textarea{font:inherit;caret-color:var(--accent)}
-button{min-height:44px;cursor:pointer;letter-spacing:0!important;box-shadow:none!important;transform:none!important}
-button:disabled{cursor:default;opacity:.45!important}
-button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--studio-focus)!important;outline-offset:3px}
-button:hover:not(:disabled){filter:none!important;background-color:var(--panel-elevated)}
-morph-icon{display:inline-flex;flex:none;vertical-align:middle;color:inherit}
-.topbar{position:sticky!important;top:0;z-index:50;display:flex!important;justify-content:space-between;gap:16px;padding:12px 24px!important;height:auto!important;min-height:72px;background:var(--bg)!important;border-bottom:1px solid var(--border);box-shadow:none!important;backdrop-filter:none!important;border-radius:0!important}
-.brand-cluster,.actions{gap:12px!important;min-width:0}.brand{gap:10px!important;cursor:pointer}.brand-badge{width:30px!important;height:30px!important;border-radius:0!important;background:none!important;box-shadow:none!important;color:var(--accent)}.brand-badge svg{width:100%;height:100%}.brand h1{font-size:22px!important;color:var(--text)!important;letter-spacing:-.02em!important}.badge-pro{background:none!important;color:var(--muted)!important;font-size:12px!important}.subtitle{font-size:12px!important;color:var(--muted)!important}.cloud-sync-badge{display:none!important}
-.m3-recipe-hero-pill{max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:0!important;background:none!important;color:var(--muted)!important;font-size:13px!important;padding:0!important}.pill-sparkle{display:none}
-.m3-center-capsule{border:0!important;box-shadow:none!important;border-radius:8px!important;background:var(--panel-elevated)!important;padding:0 4px!important;flex-shrink:0}.capsule-icon-btn{width:44px!important;height:44px!important;background:none!important;color:var(--text)!important;border:0!important}.capsule-pill-btn{min-height:44px!important;color:var(--text)!important}.capsule-divider{height:20px!important}
-.m3-outlined-btn,.m3-back-btn,.btn-user-pill,.hero-btn.outlined{background:transparent!important;border:1px solid var(--border)!important;border-radius:8px!important;color:var(--text)!important;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 14px!important;font-size:14px!important}.m3-back-btn{border:0!important;padding:8px!important}
-.primary,.m3-filled-cta,.hero-btn.primary{background:var(--text)!important;color:var(--bg)!important;border:1px solid var(--text)!important;border-radius:8px!important;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 18px!important;font-weight:600!important}
-.primary:hover:not(:disabled){opacity:.88}.btn-user-pill{border:0!important}.user-avatar-icon{font-size:18px}.m3-dropdown-menu{background:var(--panel)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:12px!important;max-height:75dvh;overflow:auto;box-shadow:0 12px 32px #0002!important;backdrop-filter:none!important}.dropdown-item{min-height:44px;color:var(--text)!important}
-body:has(#screenLanding.active) .m3-center-capsule,body:has(#screenLanding.active) #activeRecipeQuickPill,body:has(#screenLanding.active) #openBtn,body:has(#screenLanding.active) #export{display:none!important}
-#screenLanding{max-width:1200px!important;margin:0 auto!important;padding:40px 32px!important}.hero-card-banner{display:grid!important;grid-template-columns:1.35fr 1fr;gap:48px;padding:48px 0 56px!important;border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;min-height:0!important;overflow:visible!important}.hero-card-banner:before,.hero-card-banner:after{display:none!important}.hero-content{max-width:640px!important}.hero-content h2{font-size:clamp(28px,3.2vw,42px)!important;line-height:1.16!important;color:var(--text)!important;letter-spacing:-.03em!important;margin:0 0 20px!important}.hero-content p{font-size:17px!important;line-height:1.65!important;max-width:43ch;color:var(--muted)!important}.hero-action-buttons{gap:10px!important;flex-wrap:wrap;margin-top:28px!important}#heroPromptBtn{display:none!important}.intro-workflow{border-left:1px solid var(--border);padding:8px 0 8px 40px;display:grid;align-content:center;grid-template-columns:1fr 1fr;gap:22px;font-size:18px;font-weight:500}.intro-workflow p{grid-column:1/-1;font-size:14px;font-weight:400;color:var(--muted);margin:8px 0 0;max-width:32ch}.intro-workflow span{padding-bottom:12px;border-bottom:1px solid var(--border)}
-.bento-grid-container{display:block!important}.bento-card{background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important;border-radius:0!important}.bento-header{margin-bottom:20px!important}.bento-header h3{font-size:20px!important;color:var(--text)!important;letter-spacing:-.02em}.bento-header p{color:var(--muted)!important;font-size:14px!important}.sensor-chips-grid{display:flex!important;flex-wrap:wrap;gap:8px!important}.sensor-bento-pill,.tab-film-chip{color:var(--muted)!important;border:1px solid var(--border)!important;background:transparent!important;border-radius:6px!important;min-height:36px!important;padding:7px 12px!important;box-shadow:none!important}.sensor-bento-pill.active,.tab-film-chip.active{color:var(--text)!important;background:var(--panel-elevated)!important;border-color:var(--muted)!important}.landing-search-bar{margin:16px 0!important}.landing-recipe-grid{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))!important;max-height:410px!important;gap:12px!important}.landing-recipe-card{background:var(--panel)!important;border:1px solid var(--border)!important;box-shadow:none!important;border-radius:10px!important;color:var(--text)!important;padding:16px!important}.home-disclosure{margin-top:28px;border-top:1px solid var(--border);padding-top:16px}.home-disclosure summary{cursor:pointer;font-weight:600;min-height:44px}.frames-bento-card{padding-top:20px!important}.resume-editor-banner{background:var(--panel)!important;border:1px solid var(--border)!important;color:var(--text)!important;border-radius:10px!important;box-shadow:none!important}
-#screenEditor.active{display:grid!important;grid-template-columns:minmax(0,1fr) 376px;gap:24px;padding:24px!important;height:calc(100dvh - 73px);min-height:0!important;max-width:none!important;margin:0!important;align-items:stretch!important;overflow:hidden}
-.stage-column{min-width:0;min-height:0;display:flex!important}.stage{position:relative!important;flex:1;min-height:0!important;height:100%!important;width:100%!important;background:var(--studio-ground)!important;border:0!important;border-radius:12px!important;box-shadow:none!important;overflow:hidden!important}.canvas-viewport{position:absolute!important;inset:36px 24px 64px!important;display:flex!important;align-items:center;justify-content:center;overflow:hidden!important}.canvas-wrapper{max-width:100%!important;max-height:100%!important;box-shadow:none!important;border-radius:0!important}#canvas{max-width:100%!important;max-height:calc(100dvh - 235px)!important;width:auto;height:auto;object-fit:contain}.stage-info-pill{bottom:16px!important;left:16px!important;transform:none!important;background:var(--panel)!important;color:var(--muted)!important;border:0!important;box-shadow:none!important;font-size:12px!important;border-radius:6px!important;max-width:calc(100% - 32px)}.quick-peek-badge{top:12px!important;bottom:auto!important;right:12px!important;background:var(--panel)!important;color:var(--text)!important;box-shadow:none!important;min-height:36px!important}.m3-zoom-badge{right:16px!important;bottom:16px!important;background:var(--panel)!important;color:var(--text)!important;box-shadow:none!important}.empty-state{position:relative;z-index:2;max-width:420px;margin:auto!important;background:none!important;color:var(--text)!important}.empty-state h2{font-size:24px!important}.empty-icon-wrapper{display:none!important}
-.controls{width:auto!important;min-width:0!important;height:100%!important;max-height:none!important;display:flex!important;flex-direction:column;gap:0!important;overflow:hidden!important;background:var(--panel)!important;border:1px solid var(--border)!important;border-radius:12px!important;box-shadow:none!important;padding:0!important;backdrop-filter:none!important}.deck-tab-bar{display:grid!important;grid-template-columns:repeat(4,1fr);gap:0!important;background:var(--panel)!important;border-bottom:1px solid var(--border)!important;padding:0 8px!important;flex-shrink:0}.deck-tab-btn{flex-direction:column;gap:4px!important;border:0!important;border-bottom:2px solid transparent!important;border-radius:0!important;min-width:0!important;padding:12px 2px!important;background:transparent!important;color:var(--muted)!important;font-size:12px!important}.deck-tab-btn.active{color:var(--text)!important;border-bottom-color:var(--accent)!important;background:none!important}.tab-icon{font-size:20px!important;line-height:1!important}.deck-pane{padding:18px!important;overflow:auto!important;min-height:0;flex:1}.deck-card-box{background:none!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;margin:0 0 24px!important}.section-header{font-size:14px!important;font-weight:600!important;letter-spacing:0!important;text-transform:none!important;align-items:center;gap:12px;margin:0 0 14px!important;color:var(--text)!important;flex-wrap:wrap}.section-header-links{gap:8px!important;display:flex;flex-wrap:wrap}.reset-link{font-size:12px!important;min-height:36px!important;padding:4px 0!important;color:var(--accent)!important}.catalog-manage{display:none!important}#tabFilmCountBadge{font-weight:400;color:var(--muted);font-variant-numeric:tabular-nums;margin-left:4px}.tab-film-chips{display:flex!important;overflow-x:auto;flex-wrap:nowrap!important;gap:6px!important;margin-top:12px!important;padding-bottom:6px}.tab-film-chip{flex-shrink:0;font-size:12px!important}.preset-ribbon{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;max-height:none!important;overflow:visible!important;padding:0!important}.preset-pill{min-width:0!important;min-height:64px!important;height:auto!important;white-space:normal!important;text-align:left!important;align-items:flex-start!important;border:1px solid var(--border)!important;background:var(--panel)!important;color:var(--text)!important;border-radius:8px!important;padding:10px!important;content-visibility:auto;contain-intrinsic-size:auto 76px}.preset-pill.active{border-color:var(--accent)!important;background:var(--panel-elevated)!important;outline:1px solid var(--accent);outline-offset:-2px}.p-name{font-size:13px!important;font-weight:600!important;line-height:1.4!important;white-space:normal!important;color:var(--text)!important}.p-sub{font-size:11px!important;line-height:1.5!important;white-space:normal!important;color:var(--muted)!important;margin-top:4px}.studio-disclosure,.deck-details-box{border:0!important;border-top:1px solid var(--border)!important;border-radius:0!important;background:transparent!important;padding:12px 0!important;margin-top:20px!important}.studio-disclosure summary,.deck-details-box summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:14px;font-weight:600;color:var(--text)!important;gap:10px}.studio-disclosure summary:after,.deck-details-box summary:after{content:'+';margin-left:auto;font-size:20px}.studio-disclosure[open] summary:after,.deck-details-box[open] summary:after{content:'−'}.studio-disclosure .deck-card-box{margin:12px 0!important}.film-dr-row{display:block!important}.select-row{display:flex!important;flex-direction:column;align-items:stretch!important;gap:6px!important;margin-bottom:12px!important;font-size:13px!important;color:var(--muted)!important}
-input:not([type=range]):not([type=file]):not([type=checkbox]),select,textarea{background:var(--panel)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:8px!important;min-height:44px;padding:10px 12px!important;max-width:100%;font-size:14px!important;box-shadow:none!important}input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:1}.sliders-double-column{display:block!important}.slider-row{margin-bottom:16px}.m3-param-pill-strip{display:none!important}.ruler-card-box{margin-bottom:16px!important}.m3-ruler-header{flex-wrap:wrap;gap:8px}#m3TickRulerCanvas{max-width:100%;touch-action:pan-y}.param-select{width:100%;margin-bottom:20px}.param-select label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}.param-select select{width:100%}.curve-container,.color-wheels-row{max-width:100%;flex-wrap:wrap}.color-wheels-row{gap:12px}.wheel-box{min-width:0}.wheel-box canvas{max-width:100%}#status{font-size:12px!important;color:var(--muted)!important;background:var(--panel)!important;border:0!important;border-top:1px solid var(--border)!important;border-radius:0!important;padding:12px 18px!important;max-height:76px;overflow:auto;margin:0!important;flex-shrink:0}.modal-overlay{backdrop-filter:none!important}.modal-content,.modal-card{background:var(--panel)!important;color:var(--text)!important;border-radius:12px!important;max-height:90dvh;overflow:auto}.bento-link-btn{color:var(--accent)!important}.empty-hint{color:var(--muted)!important}
-@media(min-width:1000px){body:has(#screenEditor.active){overflow:hidden}}
-@media(max-width:1100px){.topbar{padding:10px 16px!important;gap:8px}.brand-cluster{gap:8px!important}#activeRecipeQuickPill,.subtitle,#userAccountLabel{display:none!important}#screenEditor.active{grid-template-columns:minmax(0,1fr) 340px;gap:16px;padding:16px!important}.actions{gap:4px!important}.deck-pane{padding:14px!important}}
-@media(max-width:760px){.topbar{flex-wrap:wrap;position:relative!important;min-height:60px;padding:8px 12px!important}.brand h1{font-size:20px!important}.m3-back-btn span,.badge-pro,#openBtn span,#export span{display:none!important}.actions{margin-left:auto}.m3-center-capsule{order:3;width:100%;justify-content:center!important}.m3-center-capsule .capsule-icon-btn{width:48px!important}.brand-cluster{max-width:40%}.btn-user-pill{padding:8px!important}#screenEditor.active{display:flex!important;flex-direction:column;gap:12px;padding:12px!important;height:auto!important;overflow:visible}.stage-column{height:43dvh;min-height:240px}.stage{min-height:240px!important}.canvas-viewport{inset:16px 12px 48px!important}#canvas{max-height:calc(43dvh - 64px)!important}.controls{height:auto!important;max-height:none!important;overflow:visible!important;flex:none}.deck-tab-bar{position:sticky;top:0;z-index:8;border-radius:12px 12px 0 0}.deck-pane{max-height:52dvh;overflow:auto!important;overscroll-behavior:contain}.stage-info-pill{font-size:11px!important;bottom:10px!important}.quick-peek-badge{display:none!important}#screenLanding{padding:24px 20px!important}.hero-card-banner{grid-template-columns:1fr;gap:24px;padding:20px 0 32px!important}.hero-content h2{font-size:32px!important;max-width:13ch}.hero-content p{font-size:16px!important}.intro-workflow{border-left:0;border-top:1px solid var(--border);padding:20px 0 0;gap:12px;font-size:15px;grid-template-columns:repeat(4,1fr)}.intro-workflow p{max-width:none;font-size:13px}.intro-workflow span{border:0;padding:0}.hero-action-buttons{margin-top:20px!important}.landing-recipe-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.bento-header{align-items:start!important;gap:12px}.bento-header h3{font-size:18px!important}.bento-header p{font-size:13px!important}.landing-recipe-card{padding:12px!important}.hero-btn{flex:1;white-space:nowrap}.m3-zoom-badge{display:none!important}.section-header{gap:4px}.film-dr-row{display:block!important}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
-/* Override obsolete themed component rules while retaining their functional hooks. */
-body.theme-porcelain .hero-card-banner,body.theme-porcelain .bento-card{background:transparent!important;box-shadow:none!important;border:0!important}
-body.theme-porcelain .hero-btn,body.theme-porcelain .sensor-bento-pill{box-shadow:none!important}
-body.theme-porcelain .sensor-bento-pill.active{background:var(--panel-elevated)!important;color:var(--text)!important;border-color:var(--muted)!important}
-body.theme-porcelain .hero-content h2,body.theme-porcelain .bento-header h3{color:var(--text)!important}
-#canvasViewport{width:auto!important;height:auto!important}
-#tabFilmSearchInput{width:100%!important}
-.studio-loading{position:fixed;z-index:2000;bottom:24px;left:50%;transform:translateX(-50%);display:flex;gap:24px;align-items:center;max-width:calc(100% - 32px);padding:12px 16px;background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px #0002}
-.studio-loading button{background:var(--panel-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 16px}
-#quickPeekBadge{left:auto!important;width:auto!important;transform:none!important;padding:6px 12px!important}
-body.theme-porcelain .l-card-sensor{background:var(--panel-elevated)!important;color:var(--muted)!important;border:0!important}
-.landing-recipe-card .l-card-name{color:var(--text)!important}
+/* =========================================================================
+   IRO STUDIO — PLAYFUL CLASSIC CLAYMORPHISM DESIGN SYSTEM
+   3D Inflated Surfaces, Dual Inset Bevels, Chunky Pills & Tactile Depth
+   ========================================================================= */
 
-@media(min-width:761px){.topbar{flex-wrap:nowrap!important}.brand-cluster{min-width:0}.m3-center-capsule,.actions{flex-shrink:0;flex-wrap:nowrap!important}#activeRecipeQuickPill{max-width:130px!important;min-width:0;overflow:hidden}#topActiveFilmLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.brand-cluster{gap:10px!important}#userAccountLabel{display:none!important}}
+:root, body.theme-porcelain {
+  --bg: #ebf1fa;
+  --panel: #ffffff;
+  --panel-elevated: #f5f8fd;
+  --text: #2c3e50;
+  --muted: #7f8c8d;
+  --border: #d2dbe8;
+  
+  /* Playful Clay Accents */
+  --accent: #ff6b8b;
+  --accent-hover: #ff5277;
+  --amber: #feca57;
+  --sky: #48dbfb;
+  --mint: #1dd1a1;
+  --grape: #9b59b6;
+  
+  --studio-ground: #e4ebf5;
+  --studio-focus: #ff6b8b;
+  --studio-on-primary: #ffffff;
+  
+  /* Clay 3D Extrusion Shadows */
+  --clay-card-shadow: 14px 18px 36px rgba(160, 175, 205, 0.45), -10px -10px 24px rgba(255, 255, 255, 0.95), inset 4px 4px 8px rgba(255, 255, 255, 0.9), inset -4px -4px 10px rgba(160, 175, 205, 0.3);
+  --clay-btn-shadow: 8px 12px 24px rgba(160, 175, 205, 0.42), -6px -6px 16px rgba(255, 255, 255, 0.95), inset 3px 3px 6px rgba(255, 255, 255, 0.85), inset -3px -3px 8px rgba(160, 175, 205, 0.3);
+  --clay-pill-shadow: 6px 8px 18px rgba(160, 175, 205, 0.38), -4px -4px 12px rgba(255, 255, 255, 0.95), inset 2px 2px 5px rgba(255, 255, 255, 0.8), inset -2px -2px 6px rgba(160, 175, 205, 0.25);
+  --clay-pressed-shadow: 3px 4px 8px rgba(160, 175, 205, 0.3), inset 4px 4px 8px rgba(0, 0, 0, 0.12), inset -4px -4px 8px rgba(255, 255, 255, 0.8);
+  --clay-sunken-shadow: inset 4px 4px 10px rgba(160, 175, 205, 0.45), inset -4px -4px 10px rgba(255, 255, 255, 0.9);
+  
+  color-scheme: light;
+}
 
-#m3BottomNav{display:none!important}
-@media(max-width:760px){.topbar{gap:6px!important}.actions{gap:2px!important;width:auto!important;flex-wrap:nowrap!important}.brand-cluster{gap:6px!important}.brand-badge{display:none!important}#authTriggerBtn{width:44px;padding:0!important}.m3-right-actions #openBtn,.m3-right-actions #export{width:44px;min-width:44px;padding:0!important}.stage-info-pill{white-space:nowrap!important;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}}
+body:not(.theme-porcelain) {
+  --bg: #1e1f29;
+  --panel: #282a37;
+  --panel-elevated: #323546;
+  --text: #f8f9fd;
+  --muted: #a0a6b8;
+  --border: #3d4256;
+  
+  /* Playful Clay Accents (Dark Mode) */
+  --accent: #ff7597;
+  --accent-hover: #ff8fa9;
+  --amber: #fed36e;
+  --sky: #54e1ff;
+  --mint: #2ee6b5;
+  --grape: #b368d4;
+  
+  --studio-ground: #16171f;
+  --studio-focus: #ff7597;
+  --studio-on-primary: #1e1f29;
+  
+  /* Clay 3D Extrusion Shadows (Dark Mode) */
+  --clay-card-shadow: 14px 18px 36px rgba(12, 13, 18, 0.6), -8px -8px 20px rgba(60, 64, 84, 0.22), inset 3px 3px 6px rgba(255, 255, 255, 0.14), inset -4px -4px 10px rgba(0, 0, 0, 0.45);
+  --clay-btn-shadow: 8px 12px 24px rgba(12, 13, 18, 0.55), -5px -5px 14px rgba(60, 64, 84, 0.2), inset 3px 3px 5px rgba(255, 255, 255, 0.15), inset -3px -3px 6px rgba(0, 0, 0, 0.4);
+  --clay-pill-shadow: 6px 8px 18px rgba(12, 13, 18, 0.5), -4px -4px 10px rgba(60, 64, 84, 0.18), inset 2px 2px 4px rgba(255, 255, 255, 0.12), inset -2px -2px 5px rgba(0, 0, 0, 0.35);
+  --clay-pressed-shadow: 2px 4px 8px rgba(0, 0, 0, 0.4), inset 4px 4px 8px rgba(0, 0, 0, 0.45), inset -3px -3px 6px rgba(255, 255, 255, 0.1);
+  --clay-sunken-shadow: inset 4px 4px 10px rgba(10, 11, 15, 0.65), inset -4px -4px 10px rgba(50, 54, 72, 0.2);
+  
+  color-scheme: dark;
+}
 
+html {
+  background: var(--bg);
+  scrollbar-color: var(--muted) var(--bg);
+}
 
-#canvasWrapper{height:100%!important;width:100%!important;display:flex!important;align-items:center;justify-content:center}#canvasWrapper[hidden]{display:none!important}#canvas{max-height:100%!important;max-width:100%!important;width:auto!important;height:auto!important}.preset-pill .p-sub{font-size:12px!important}#stageFilmText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#stageDimensionText{flex-shrink:0}.stage-info-pill{display:flex;gap:8px}.stage-info-pill[hidden]{display:none!important}
-@media(max-width:760px){.stage-column{flex:none!important;height:38dvh!important;min-height:260px}.canvas-viewport{inset:16px 12px 48px!important}#stageFrameText,.stage-info-pill .dot-separator{display:none!important}.stage-info-pill{width:calc(100% - 32px);white-space:nowrap!important}}
-.badge-role,.dropdown-section-title{font-size:12px!important}.empty-state{color:var(--text)!important;box-shadow:none!important;border-color:var(--border)!important}.empty-state p,.empty-state .empty-hint{color:var(--muted)!important}input::placeholder{color:var(--muted)!important}
+body {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: 'Google Sans Flex', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  min-height: 100dvh;
+}
 
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
-#canvasWrapper{height:auto!important;width:auto!important;display:block!important}#canvas{display:block;max-height:calc(100dvh - 221px)!important}@media(max-width:760px){#canvas{max-height:max(196px,calc(38dvh - 64px))!important}}
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
 
+/* =========================================================================
+   CLAYMORPHIC BUTTONS & INPUTS
+   ========================================================================= */
+
+button, input, select, textarea {
+  font: inherit;
+  caret-color: var(--accent);
+}
+
+button {
+  min-height: 44px;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  border: 0 !important;
+  border-radius: 9999px !important;
+  box-shadow: var(--clay-btn-shadow) !important;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, background 0.2s ease !important;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2.5px) scale(1.02) !important;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(2px) scale(0.97) !important;
+  box-shadow: var(--clay-pressed-shadow) !important;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.55 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+button:focus-visible, a:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid var(--studio-focus) !important;
+  outline-offset: 3px;
+}
+
+/* Primary Chunky Candy Clay Button */
+.primary, .m3-filled-cta, .hero-btn.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover)) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  border-radius: 9999px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 24px !important;
+  font-weight: 700 !important;
+  box-shadow: 8px 14px 28px rgba(255, 107, 139, 0.42), inset 3px 3px 6px rgba(255, 255, 255, 0.65), inset -3px -3px 8px rgba(180, 20, 60, 0.3) !important;
+}
+
+.primary:hover:not(:disabled), .m3-filled-cta:hover:not(:disabled), .hero-btn.primary:hover:not(:disabled) {
+  filter: brightness(1.06) !important;
+  box-shadow: 10px 18px 34px rgba(255, 107, 139, 0.5), inset 3px 3px 6px rgba(255, 255, 255, 0.8), inset -3px -3px 8px rgba(180, 20, 60, 0.3) !important;
+}
+
+/* Secondary / Outlined Clay Pill */
+.m3-outlined-btn, .m3-back-btn, .btn-user-pill, .hero-btn.outlined {
+  background: var(--panel) !important;
+  border: 0 !important;
+  border-radius: 9999px !important;
+  color: var(--text) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  box-shadow: var(--clay-pill-shadow) !important;
+}
+
+.m3-back-btn {
+  width: 44px !important;
+  height: 44px !important;
+  padding: 0 !important;
+}
+
+/* =========================================================================
+   TOPBAR & NAVIGATION CAPSULE
+   ========================================================================= */
+
+.topbar {
+  position: sticky !important;
+  top: 0;
+  z-index: 50;
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 32px !important;
+  height: auto !important;
+  min-height: 78px;
+  background: var(--bg) !important;
+  box-shadow: 0 12px 28px rgba(160, 175, 205, 0.25) !important;
+  border-bottom: 0 !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.brand-cluster, .actions {
+  gap: 14px !important;
+  min-width: 0;
+}
+
+.brand {
+  gap: 12px !important;
+  cursor: pointer;
+}
+
+.brand-badge {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 14px !important;
+  background: linear-gradient(135deg, var(--accent), var(--amber)) !important;
+  box-shadow: 4px 6px 14px rgba(255, 107, 139, 0.4), inset 2px 2px 4px rgba(255, 255, 255, 0.8) !important;
+  color: #fff !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+}
+
+.brand-badge svg {
+  width: 100%;
+  height: 100%;
+}
+
+.brand h1 {
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  color: var(--text) !important;
+  letter-spacing: -0.02em !important;
+}
+
+.m3-center-capsule {
+  border: 0 !important;
+  border-radius: 9999px !important;
+  background: var(--panel) !important;
+  box-shadow: var(--clay-pill-shadow) !important;
+  padding: 4px 10px !important;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.capsule-icon-btn {
+  width: 44px !important;
+  height: 44px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--text) !important;
+  border-radius: 50% !important;
+}
+
+.capsule-icon-btn:hover:not(:disabled) {
+  background: var(--panel-elevated) !important;
+  box-shadow: var(--clay-pill-shadow) !important;
+}
+
+.m3-dropdown-menu {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border: 0 !important;
+  border-radius: 24px !important;
+  padding: 12px !important;
+  box-shadow: var(--clay-card-shadow) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+.dropdown-item {
+  min-height: 44px;
+  border-radius: 16px !important;
+  color: var(--text) !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  transition: background 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: var(--panel-elevated) !important;
+  box-shadow: var(--clay-pill-shadow) !important;
+}
+
+/* =========================================================================
+   HERO & BENTO LANDING (PLAYFUL CLAY)
+   ========================================================================= */
+
+#screenLanding {
+  max-width: 1240px !important;
+  margin: 0 auto !important;
+  padding: 48px 32px !important;
+}
+
+.hero-card-banner {
+  display: grid !important;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 48px;
+  padding: 48px !important;
+  border: 0 !important;
+  background: var(--panel) !important;
+  box-shadow: var(--clay-card-shadow) !important;
+  border-radius: 36px !important;
+  overflow: visible !important;
+  margin-bottom: 40px !important;
+}
+
+.hero-content h2 {
+  font-size: clamp(32px, 3.8vw, 48px) !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  color: var(--text) !important;
+  letter-spacing: -0.03em !important;
+  margin: 0 0 20px !important;
+}
+
+.hero-content p {
+  font-size: 17px !important;
+  line-height: 1.65 !important;
+  color: var(--muted) !important;
+}
+
+.bento-card, .landing-recipe-card, .resume-editor-banner {
+  background: var(--panel) !important;
+  border: 0 !important;
+  box-shadow: var(--clay-card-shadow) !important;
+  border-radius: 28px !important;
+  color: var(--text) !important;
+  padding: 24px !important;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease !important;
+}
+
+.landing-recipe-card:hover {
+  transform: translateY(-5px) scale(1.02) !important;
+  box-shadow: 18px 24px 44px rgba(160, 175, 205, 0.55), -12px -12px 28px rgba(255, 255, 255, 0.98), inset 4px 4px 8px rgba(255, 255, 255, 0.9), inset -4px -4px 10px rgba(160, 175, 205, 0.3) !important;
+}
+
+.sensor-bento-pill, .tab-film-chip {
+  color: var(--muted) !important;
+  border: 0 !important;
+  background: var(--panel) !important;
+  border-radius: 9999px !important;
+  min-height: 40px !important;
+  padding: 8px 18px !important;
+  font-weight: 600 !important;
+  box-shadow: var(--clay-pill-shadow) !important;
+  transition: all 0.2s ease !important;
+}
+
+.sensor-bento-pill:hover, .tab-film-chip:hover {
+  transform: translateY(-2px) scale(1.03) !important;
+}
+
+.sensor-bento-pill.active, .tab-film-chip.active {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, var(--sky), #0abde3) !important;
+  box-shadow: 6px 10px 22px rgba(72, 219, 251, 0.45), inset 2px 2px 5px rgba(255, 255, 255, 0.7), inset -2px -2px 6px rgba(0, 100, 140, 0.3) !important;
+}
+
+/* =========================================================================
+   STAGE & EDITOR SCREEN
+   ========================================================================= */
+
+#screenEditor.active {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  gap: 28px;
+  padding: 24px 32px !important;
+  height: calc(100dvh - 82px);
+  min-height: 0 !important;
+  overflow: hidden;
+}
+
+.stage {
+  position: relative !important;
+  flex: 1;
+  min-height: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+  background: var(--studio-ground) !important;
+  border: 0 !important;
+  border-radius: 32px !important;
+  box-shadow: var(--clay-sunken-shadow) !important;
+  overflow: hidden !important;
+}
+
+.stage-info-pill, .quick-peek-badge, .m3-zoom-badge {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border: 0 !important;
+  box-shadow: var(--clay-pill-shadow) !important;
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  padding: 8px 16px !important;
+}
+
+/* =========================================================================
+   INSPECTOR CONTROLS PANEL
+   ========================================================================= */
+
+.controls {
+  width: auto !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column;
+  background: var(--panel) !important;
+  border: 0 !important;
+  border-radius: 32px !important;
+  box-shadow: var(--clay-card-shadow) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.deck-tab-bar {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px !important;
+  background: var(--panel-elevated) !important;
+  box-shadow: var(--clay-sunken-shadow) !important;
+  padding: 8px !important;
+  border-radius: 28px 28px 0 0 !important;
+  border-bottom: 0 !important;
+}
+
+.deck-tab-btn {
+  flex-direction: column;
+  gap: 4px !important;
+  border: 0 !important;
+  border-radius: 20px !important;
+  min-width: 0 !important;
+  padding: 10px 4px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.deck-tab-btn:hover {
+  background: var(--panel) !important;
+  box-shadow: var(--clay-pill-shadow) !important;
+}
+
+.deck-tab-btn.active {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover)) !important;
+  box-shadow: 6px 8px 18px rgba(255, 107, 139, 0.4), inset 2px 2px 4px rgba(255, 255, 255, 0.6) !important;
+}
+
+.deck-pane {
+  padding: 24px !important;
+  overflow: auto !important;
+  min-height: 0;
+  flex: 1;
+}
+
+/* Puffy Recipe Pills */
+.preset-pill {
+  min-width: 0 !important;
+  min-height: 68px !important;
+  height: auto !important;
+  border: 0 !important;
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-radius: 20px !important;
+  padding: 12px 14px !important;
+  box-shadow: var(--clay-pill-shadow) !important;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease !important;
+}
+
+.preset-pill:hover {
+  transform: translateY(-3px) scale(1.02) !important;
+}
+
+.preset-pill.active {
+  background: linear-gradient(135deg, rgba(255, 107, 139, 0.12), rgba(254, 202, 87, 0.12)) !important;
+  box-shadow: 6px 10px 20px rgba(255, 107, 139, 0.35), inset 3px 3px 6px rgba(255, 107, 139, 0.2), inset -3px -3px 6px rgba(255, 255, 255, 0.9) !important;
+  outline: 2px solid var(--accent);
+}
+
+/* =========================================================================
+   CHUNKY CLAY SLIDERS & TEXT INPUTS
+   ========================================================================= */
+
+input:not([type=range]):not([type=file]):not([type=checkbox]), select, textarea {
+  background: var(--panel-elevated) !important;
+  color: var(--text) !important;
+  border: 0 !important;
+  border-radius: 18px !important;
+  min-height: 48px;
+  padding: 12px 18px !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  box-shadow: var(--clay-sunken-shadow) !important;
+  transition: box-shadow 0.2s ease, outline 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: 3px solid var(--studio-focus) !important;
+  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.1), inset -2px -2px 5px rgba(255, 255, 255, 0.8) !important;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  border-radius: 9999px;
+  background: var(--panel-elevated);
+  box-shadow: var(--clay-sunken-shadow);
+  outline: none;
+  margin: 12px 0;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  cursor: pointer;
+  box-shadow: 4px 6px 14px rgba(255, 107, 139, 0.45), inset 2px 2px 4px rgba(255, 255, 255, 0.85);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  filter: brightness(1.08);
+}
+
+input[type=range]::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+  cursor: pointer;
+  box-shadow: 4px 6px 14px rgba(255, 107, 139, 0.45), inset 2px 2px 4px rgba(255, 255, 255, 0.85);
+}
+
+/* =========================================================================
+   RESPONSIVE LAYOUT
+   ========================================================================= */
+
+@media (max-width: 1100px) {
+  #screenEditor.active {
+    grid-template-columns: minmax(0, 1fr) 350px;
+    gap: 20px;
+    padding: 16px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    padding: 12px 16px !important;
+    min-height: 64px;
+  }
+  #screenEditor.active {
+    display: flex !important;
+    flex-direction: column;
+    gap: 16px;
+    padding: 12px !important;
+    height: auto !important;
+  }
+  .stage-column {
+    height: 44dvh;
+    min-height: 250px;
+  }
+  .hero-card-banner {
+    grid-template-columns: 1fr;
+    padding: 28px 20px !important;
+    border-radius: 28px !important;
+  }
+}
